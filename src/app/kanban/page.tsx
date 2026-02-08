@@ -125,27 +125,35 @@ export default function KanbanPage() {
     const { taskId, sourceColId } = draggedData;
 
     setBoardData(prevData => {
-      const newBoardData = JSON.parse(JSON.stringify(prevData));
-      
-      const sourceCol = newBoardData.columns.find((c: any) => c.id === sourceColId);
-      if (!sourceCol) return prevData;
+        const sourceCol = prevData.columns.find(c => c.id === sourceColId);
+        if (!sourceCol) return prevData;
+        const taskToMove = sourceCol.tasks.find(t => t.id === taskId);
+        if (!taskToMove) return prevData;
 
-      const taskIndex = sourceCol.tasks.findIndex((t: any) => t.id === taskId);
-      if (taskIndex === -1) return prevData;
-      
-      const [task] = sourceCol.tasks.splice(taskIndex, 1);
+        // Create new column data by first removing the task
+        const columnsWithRemoval = prevData.columns.map(c => {
+            if(c.id === sourceColId) {
+                return {...c, tasks: c.tasks.filter(t => t.id !== taskId)}
+            }
+            return c;
+        });
 
-      const targetCol = newBoardData.columns.find((c: any) => c.id === targetColId);
-      if (!targetCol) return prevData;
-      
-      if (targetTaskId) {
-        const dropIndex = targetCol.tasks.findIndex((t: any) => t.id === targetTaskId);
-        targetCol.tasks.splice(dropIndex, 0, task);
-      } else {
-        targetCol.tasks.push(task);
-      }
+        // Then add the task to the target column
+        const columnsWithAddition = columnsWithRemoval.map(c => {
+            if (c.id === targetColId) {
+                const newTasks = [...c.tasks];
+                const dropIndex = targetTaskId ? newTasks.findIndex(t => t.id === targetTaskId) : newTasks.length;
+                if (dropIndex === -1) {
+                    newTasks.push(taskToMove);
+                } else {
+                    newTasks.splice(dropIndex, 0, taskToMove);
+                }
+                return {...c, tasks: newTasks};
+            }
+            return c;
+        });
 
-      return newBoardData;
+        return {...prevData, columns: columnsWithAddition};
     });
 
     setDraggedItem(null);
@@ -165,24 +173,25 @@ export default function KanbanPage() {
       text: newComment.trim(),
     };
 
-    const updatedTask = JSON.parse(JSON.stringify(selectedTask));
-    if (!updatedTask.comments) updatedTask.comments = [];
-    updatedTask.comments.push(newCommentObj);
-    if (updatedTask.hasOwnProperty('commentsCount')) {
-      updatedTask.commentsCount = updatedTask.comments.length;
-    }
+    const updatedTask = {
+        ...selectedTask,
+        comments: [...(selectedTask.comments || []), newCommentObj],
+        commentsCount: (selectedTask.comments?.length || 0) + 1
+    };
+
     setSelectedTask(updatedTask);
 
     setBoardData(prevData => {
-        const newBoardData = JSON.parse(JSON.stringify(prevData));
-        for (const col of newBoardData.columns) {
-            const taskIndex = col.tasks.findIndex((t: any) => t.id === selectedTask.id);
-            if (taskIndex > -1) {
-                col.tasks[taskIndex] = updatedTask;
-                break;
-            }
+      const newColumns = prevData.columns.map(col => {
+        const taskIndex = col.tasks.findIndex(t => t.id === selectedTask.id);
+        if (taskIndex !== -1) {
+          const newTasks = [...col.tasks];
+          newTasks[taskIndex] = updatedTask;
+          return { ...col, tasks: newTasks };
         }
-        return newBoardData;
+        return col;
+      });
+      return { ...prevData, columns: newColumns };
     });
 
     setNewComment("");
