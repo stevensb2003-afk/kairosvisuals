@@ -83,14 +83,6 @@ const initialKanbanData = {
       title: "In Progress",
       tasks: [
         {
-          id: 'KV-1025-cover',
-          title: '16s Teaser',
-          image: { id: 'nike-teaser', hint: 'abstract video' },
-          isCover: true,
-          comments: [],
-          commentsCount: 0,
-        },
-        {
           id: "KV-1011",
           type: 'campaign',
           title: "Nike Campaign - Social Reel",
