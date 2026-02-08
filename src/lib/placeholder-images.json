@@ -1,3 +1,46 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "sarah-j",
+      "description": "Avatar for Sarah J.",
+      "imageUrl": "https://images.unsplash.com/photo-1679611978819-f10168367155?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHx3b21hbiUyMGZhY2V8ZW58MHx8fHwxNzcwNDczNzI1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman face"
+    },
+    {
+      "id": "marcus-t",
+      "description": "Avatar for Marcus T.",
+      "imageUrl": "https://images.unsplash.com/photo-1624395213043-fa2e123b2656?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxtYW4lMjBmYWNlfGVufDB8fHx8MTc3MDUyMTgzNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man face"
+    },
+    {
+      "id": "alex-chen",
+      "description": "Avatar for Alex Chen",
+      "imageUrl": "https://images.unsplash.com/photo-1583692331507-fc0bd348695d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtYW4lMjBmYWNlfGVufDB8fHx8MTc3MDUyMTgzNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man face"
+    },
+    {
+      "id": "editor-nike",
+      "description": "Avatar for a male editor for Nike project",
+      "imageUrl": "https://images.unsplash.com/photo-1698510047345-ff32de8a3b74?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxtYW4lMjBmYWNlfGVufDB8fHx8MTc3MDUyMTgzNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man face"
+    },
+    {
+      "id": "editor-spotify",
+      "description": "Avatar for a female editor for Spotify project",
+      "imageUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHx3b21hbiUyMGZhY2V8ZW58MHx8fHwxNzcwNDczNzI1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman face"
+    },
+    {
+      "id": "nike-logo",
+      "description": "Logo for Nike Inc.",
+      "imageUrl": "https://images.unsplash.com/photo-1637844528486-6dc108bd5c7f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzd29vc2glMjBsb2dvfGVufDB8fHx8MTc3MDUyMTgzNXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "swoosh logo"
+    },
+    {
+      "id": "spotify-logo",
+      "description": "Logo for Spotify",
+      "imageUrl": "https://images.unsplash.com/photo-1617994452722-4145e196248b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzb3VuZCUyMHdhdmVzfGVufDB8fHx8MTc3MDQ0MDI0MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sound waves"
+    }
+  ]
 }

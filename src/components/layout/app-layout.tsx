@@ -18,38 +18,41 @@ import {
   FileText,
   Receipt,
   Users,
-  BarChart2,
-  List,
   LayoutGrid,
   Settings,
-  CreditCard,
   Infinity,
   Kanban,
+  RefreshCw,
+  Plus,
 } from 'lucide-react';
 import React from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 const navItems = [
   { href: '/', label: 'Home', icon: LayoutGrid },
-  { href: '/calendar', label: 'Calendario', icon: Calendar },
-  { href: '/quotations', label: 'Cotizaciones', icon: FileText },
-  { href: '/invoicing', label: 'Facturador', icon: Receipt },
-  { href: '/clients', label: 'Clientes', icon: Users },
-  { href: '/reports', label: 'Reportes', icon: BarChart2 },
-  { href: '/backlog', label: 'Backlog', icon: List },
   { href: '/kanban', label: 'Kanban', icon: Kanban },
-  { href: '/expenses', label: 'Gastos y Créditos', icon: CreditCard },
+  { href: '/calendar', label: 'Calendar', icon: Calendar },
+  { href: '/quotations', label: 'Quotes', icon: FileText },
+  { href: '/invoicing', label: 'Billing', icon: Receipt },
+  { href: '/clients', label: 'Clients', icon: Users },
 ];
 
-const settingsNav = { href: '/settings', label: 'Configuraciones', icon: Settings };
+const settingsNav = { href: '/settings', label: 'Settings', icon: Settings };
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const getPageTitle = () => {
-    if (pathname === settingsNav.href) {
+    if (pathname === '/') return 'Control Tower';
+    if (pathname.startsWith(settingsNav.href)) {
       return settingsNav.label;
     }
-    const currentNav = navItems.find(item => item.href === pathname);
+    const currentNav = navItems.find(item => {
+        if (item.href === '/') return false;
+        return pathname.startsWith(item.href);
+    });
     return currentNav ? currentNav.label : 'Kairos Visuals';
   };
 
@@ -83,7 +86,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <SidebarMenu>
+           <SidebarMenu>
             <SidebarMenuItem>
               <Link href={settingsNav.href} passHref>
                 <SidebarMenuButton
@@ -96,14 +99,36 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             </SidebarMenuItem>
           </SidebarMenu>
+          <Separator className="my-1 bg-sidebar-border/50" />
+          <div className="p-2">
+            <div className="flex items-center gap-3 p-2">
+                <Avatar className="h-9 w-9">
+                    <AvatarImage src="https://picsum.photos/seed/alex/40/40" alt="Alex Chen" />
+                    <AvatarFallback>AC</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+                    <span className="font-medium text-sm text-sidebar-foreground">Alex Chen</span>
+                    <span className="text-xs text-sidebar-foreground/70">Head of Post-Prod</span>
+                </div>
+            </div>
+          </div>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6 md:px-8">
+        <header className="sticky top-0 z-10 flex h-20 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6 md:px-8">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="text-lg font-semibold md:text-xl font-headline">
-              {getPageTitle()}
-            </h1>
+            <div className="flex-1">
+                <h1 className="text-2xl font-bold font-headline">
+                    {getPageTitle()}
+                </h1>
+                {pathname === '/' && <p className="text-sm text-muted-foreground">Overview of current production metrics and critical paths.</p>}
+            </div>
+            {pathname === '/' && (
+                <div className="hidden md:flex items-center gap-2">
+                    <Button variant="outline"><RefreshCw className="mr-2"/> Refresh Data</Button>
+                    <Button><Plus className="mr-2"/> New Project</Button>
+                </div>
+            )}
         </header>
         <main className="flex-1 p-4 sm:p-6 md:p-8">
             {children}

@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, X } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Laptop } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -43,11 +43,13 @@ export function PwaInstallBanner() {
   }, []);
 
   const handleInstallClick = async () => {
-    setIsVisible(false);
     if (window.deferredPrompt) {
       window.deferredPrompt.prompt();
-      await window.deferredPrompt.userChoice;
-      window.deferredPrompt = null;
+      const { outcome } = await window.deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsVisible(false);
+        window.deferredPrompt = null;
+      }
     }
   };
 
@@ -60,26 +62,22 @@ export function PwaInstallBanner() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-full max-w-md">
-        <Card className="shadow-2xl animate-in fade-in-0 slide-in-from-bottom-10">
-        <CardContent className="p-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-            <div className="p-3 bg-primary/10 rounded-lg">
-                <Download className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-                <p className="font-semibold font-headline">Instalar Kairos OS</p>
-                <p className="text-sm text-muted-foreground">Acceso rápido desde tu dispositivo.</p>
-            </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-            <Button size="sm" onClick={handleInstallClick}>Instalar</Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleDismissClick}>
-                <X className="h-4 w-4" />
-            </Button>
-            </div>
-        </CardContent>
-        </Card>
-    </div>
+    <Alert className="flex items-center justify-between p-4 bg-card border-border">
+      <div className="flex items-center gap-4">
+        <div className="p-2 bg-secondary rounded-lg">
+            <Laptop className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <AlertTitle className="font-semibold text-card-foreground">Get the full experience</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
+            Install the Kairos OS Desktop App for better performance and offline access.
+          </AlertDescription>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Button variant="ghost" size="sm" onClick={handleDismissClick}>Dismiss</Button>
+        <Button size="sm" onClick={handleInstallClick}>Install App</Button>
+      </div>
+    </Alert>
   );
 }
