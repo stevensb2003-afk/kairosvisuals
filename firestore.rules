@@ -1,0 +1,289 @@
+/**
+ * Core Philosophy: This ruleset implements a dual security model. User-specific data
+ * (like profiles and personal tasks) is protected by a strict path-based ownership
+ * model, ensuring users can only access their own documents. All other top-level
+ * collections (Clients, Expenses, Sprints, etc.) are considered administrative data,
+ * accessible only by users designated as administrators.
+ *
+ * Data Structure:
+ * - /users/{userId}/... : Private data tree for each user. Access is restricted
+ *   to the user whose UID matches {userId}.
+ * - /clients/{clientId}/... : Collaborative data, secured by an admin-only policy.
+ * - /{collection}/{docId} : Various top-level collections for system-wide data
+ *   (e.g., TaskTypes, Packs) or administrative records (e.g., Expenses, Sprints).
+ * - /roles_admin/{userId} : A special collection where the existence of a document
+ *   grants a user administrative privileges across the entire database.
+ *
+ * Key Security Decisions:
+ * - Admin Role: A user is considered an admin if a document with their UID exists
+ *   in the /roles_admin collection. This provides a centralized and efficient way
+ *   to manage permissions for all non-user-specific data.
+ * - No User Enumeration: Listing documents in the top-level /users collection
+ *   is explicitly forbidden to protect user privacy.
+ * - Secure Defaults: Collections intended for collaboration, like /clients, default to
+ *   a secure admin-only policy as a starting point. This can be evolved to a more
+ *   granular role-based system by denormalizing a 'members' map onto each client
+ *   document in the future.
+ * - Public Data: Collections containing non-sensitive, system-wide definitions like
+ *   /task_types and /packs are publicly readable to facilitate client-side logic,
+ *   but are only writable by administrators.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------------
+    // Helper Functions
+    // ------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the foundation of the user ownership model.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks for ownership on an existing document. Used for safe updates and deletes.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Checks if the user has an admin role.
+     * Admin status is conferred by the existence of a document for the user
+     * in the 'roles_admin' collection. This is a fast and secure check.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * Validates that the user document being created has an 'id' field matching the document's ID.
+     */
+    function isNewUserDocValid(userId) {
+      return request.resource.data.id == userId;
+    }
+
+    /**
+     * Enforces immutability of the user 'id' field during updates.
+     */
+    function isExistingUserDocValid() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * Validates that the task being created has 'userId' and 'id' fields matching the path.
+     */
+    function isNewTaskDocValid(userId, taskId) {
+      return request.resource.data.userId == userId && request.resource.data.id == taskId;
+    }
+
+    /**
+     * Enforces immutability of relational keys ('userId', 'id') on task updates.
+     */
+    function isExistingTaskDocValid() {
+      return request.resource.data.userId == resource.data.userId && request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * Validates that a sub-document being created under a client has a 'clientId' matching the path.
+     */
+    function isNewClientSubDocValid(clientId) {
+      return request.resource.data.clientId == clientId;
+    }
+
+    /**
+     * Enforces immutability of the 'clientId' field on sub-document updates.
+     */
+    function isExistingClientSubDocValid() {
+      return request.resource.data.clientId == resource.data.clientId;
+    }
+
+    // ------------------------------------------------------------------------
+    // User Data Rules
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Controls access to a user's own profile document.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user can create their own profile document.
+     * @deny (list) Another user (auth.uid='user-xyz') attempts to list all user profiles.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isNewUserDocValid(userId);
+      allow update: if isExistingOwner(userId) && isExistingUserDocValid();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secures tasks within a user's private data space.
+     * @path /users/{userId}/tasks/{taskId}
+     * @allow (create) An authenticated user (auth.uid='user-abc') creates a task under their own path `/users/user-abc/tasks/task-123`.
+     * @deny (get) Another user (auth.uid='user-xyz') attempts to read a task from `/users/user-abc/tasks/task-123`.
+     * @principle Enforces strict ownership for all operations on a user's subcollections.
+     */
+    match /users/{userId}/tasks/{taskId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && isNewTaskDocValid(userId, taskId);
+      allow update: if isExistingOwner(userId) && isExistingTaskDocValid();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    // ------------------------------------------------------------------------
+    // Administrative & Collaborative Data Rules
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Manages client records. Access is restricted to administrators.
+     * @path /clients/{clientId}
+     * @allow (create) An admin user creates a new client document.
+     * @deny (list) A non-admin user attempts to list all clients.
+     * @principle Secures sensitive business data by defaulting to an admin-only access policy.
+     */
+    match /clients/{clientId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Secures quotations, which are sub-documents of a client. Inherits admin-only access.
+     * @path /clients/{clientId}/quotations/{quotationId}
+     * @allow (update) An admin user updates an existing quotation for a client.
+     * @deny (create) A non-admin user attempts to create a quotation.
+     * @principle Validates relational integrity by ensuring the document's internal 'clientId' matches its path.
+     */
+    match /clients/{clientId}/quotations/{quotationId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin() && isNewClientSubDocValid(clientId);
+      allow update: if isAdmin() && resource != null && isExistingClientSubDocValid();
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Secures invoices, which are sub-documents of a client. Inherits admin-only access.
+     * @path /clients/{clientId}/invoices/{invoiceId}
+     * @allow (delete) An admin user deletes an existing invoice for a client.
+     * @deny (get) A regular user attempts to read an invoice.
+     * @principle Validates relational integrity by ensuring the document's internal 'clientId' matches its path.
+     */
+    match /clients/{clientId}/invoices/{invoiceId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin() && isNewClientSubDocValid(clientId);
+      allow update: if isAdmin() && resource != null && isExistingClientSubDocValid();
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Manages system-wide task type definitions. Publicly readable, admin-only writes.
+     * @path /task_types/{taskTypeId}
+     * @allow (get) Any user, including unauthenticated ones, can read a task type definition.
+     * @deny (create) A non-admin user attempts to create a new task type.
+     * @principle Allows public read access for common data while protecting its integrity with admin-only writes.
+     */
+    match /task_types/{taskTypeId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Manages predefined service packs. Publicly readable, admin-only writes.
+     * @path /packs/{packId}
+     * @allow (list) Any client application can list all available service packs.
+     * @deny (update) A non-admin user attempts to change the price of a pack.
+     * @principle Allows public read access for common data while protecting its integrity with admin-only writes.
+     */
+    match /packs/{packId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Manages internal expense records. Access is restricted to administrators.
+     * @path /expenses/{expenseId}
+     * @allow (get) An admin user reads a specific expense document.
+     * @deny (list) A non-admin user attempts to list all company expenses.
+     * @principle Secures sensitive financial data by restricting all access to administrators.
+     */
+    match /expenses/{expenseId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Manages internal credit purchase records. Access is restricted to administrators.
+     * @path /credit_purchases/{creditPurchaseId}
+     * @allow (create) An admin user adds a new credit purchase record.
+     * @deny (get) A non-admin user attempts to read a financial record.
+     * @principle Secures sensitive financial data by restricting all access to administrators.
+     */
+    match /credit_purchases/{creditPurchaseId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Manages sprint records. Access is restricted to administrators.
+     * @path /sprints/{sprintId}
+     * @allow (list) An admin user lists all past and current sprints.
+     * @deny (update) A non-admin user attempts to change the dates of a sprint.
+     * @principle Secures project management data by defaulting to an admin-only access policy.
+     */
+    match /sprints/{sprintId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    // ------------------------------------------------------------------------
+    // Authorization Role Rules
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description Manages which users are administrators. Only other admins can modify this list.
+     * @path /roles_admin/{userId}
+     * @allow (create) An existing admin (auth.uid='admin-abc') grants admin rights to a new user by creating a document at `/roles_admin/user-xyz`.
+     * @deny (delete) A non-admin user attempts to revoke their own admin rights (or anyone else's).
+     * @principle Secures the role-management system itself, ensuring only authorized users can grant or revoke privileges.
+     */
+    match /roles_admin/{userId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+  }
+}

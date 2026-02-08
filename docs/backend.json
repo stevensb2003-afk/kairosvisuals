@@ -1,0 +1,556 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the Kairos OS system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "User's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "User's last name."
+        },
+        "role": {
+          "type": "string",
+          "description": "User's role within the system (e.g., Admin Master, Creative)."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "role"
+      ]
+    },
+    "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Client",
+      "type": "object",
+      "description": "Represents a client in the Kairos OS system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Client entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Client's name."
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "Client's contact email address.",
+          "format": "email"
+        },
+        "assetLink": {
+          "type": "string",
+          "description": "Link to client's assets (e.g., Drive/Dropbox).",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "contactEmail"
+      ]
+    },
+    "TaskType": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TaskType",
+      "type": "object",
+      "description": "Represents a type of task (e.g., Reel, Post, Video Cinematográfico).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the TaskType entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the task type."
+        },
+        "color": {
+          "type": "string",
+          "description": "Color associated with the task type (Hex code)."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "color"
+      ]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "Represents a task in the Kairos OS system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Task entity."
+        },
+        "taskTypeId": {
+          "type": "string",
+          "description": "Reference to TaskType. (Relationship: TaskType 1:N Task)"
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to Client. (Relationship: Client 1:N Task)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Task).  Assigned User"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name or description of the task."
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "Due date for the task.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the task (e.g., Pending, In Progress, Completed)."
+        }
+      },
+      "required": [
+        "id",
+        "taskTypeId",
+        "clientId",
+        "name",
+        "dueDate",
+        "status"
+      ]
+    },
+    "Quotation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Quotation",
+      "type": "object",
+      "description": "Represents a quotation in the Kairos OS system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Quotation entity."
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to Client. (Relationship: Client 1:N Quotation)"
+        },
+        "validityDays": {
+          "type": "number",
+          "description": "Number of days the quotation is valid for."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Date and time when the quotation was created.",
+          "format": "date-time"
+        },
+        "taskIds": {
+          "type": "array",
+          "description": "References to Tasks. (Relationship: Quotation 1:N Tasks)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "clientId",
+        "validityDays",
+        "createdAt"
+      ]
+    },
+    "Invoice": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Invoice",
+      "type": "object",
+      "description": "Represents an invoice in the Kairos OS system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Invoice entity."
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to Client. (Relationship: Client 1:N Invoice)"
+        },
+        "invoiceDate": {
+          "type": "string",
+          "description": "Date when the invoice was issued.",
+          "format": "date-time"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Total amount of the invoice."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of services or products invoiced."
+        }
+      },
+      "required": [
+        "id",
+        "clientId",
+        "invoiceDate",
+        "amount"
+      ]
+    },
+    "Pack": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pack",
+      "type": "object",
+      "description": "Represents a predefined pack of services.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Pack entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the pack (e.g., Pack Social Media Starter)."
+        },
+        "price": {
+          "type": "number",
+          "description": "Base price of the pack."
+        },
+        "taskTypeQuantities": {
+          "type": "array",
+          "description": "Quantities for each TaskType included in the pack.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "price"
+      ]
+    },
+    "Expense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expense",
+      "type": "object",
+      "description": "Represents an expense in the Kairos OS system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Expense entity."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the expense (e.g., Adobe license, Internet bill)."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the expense."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the expense.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "amount",
+        "date"
+      ]
+    },
+    "CreditPurchase": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CreditPurchase",
+      "type": "object",
+      "description": "Represents a credit purchase with payment schedule.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CreditPurchase entity."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the purchased item (e.g., Camera Sony Z10)."
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total amount of the purchase."
+        },
+        "monthlyPayment": {
+          "type": "number",
+          "description": "Monthly payment amount."
+        },
+        "numberOfMonths": {
+          "type": "number",
+          "description": "Number of months for the payment schedule."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date of the payment schedule.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "totalAmount",
+        "monthlyPayment",
+        "numberOfMonths",
+        "startDate"
+      ]
+    },
+    "Sprint": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Sprint",
+      "type": "object",
+      "description": "Represents a sprint in the Kairos OS system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Sprint entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the sprint."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date of the sprint.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "End date of the sprint.",
+          "format": "date-time"
+        },
+        "taskIds": {
+          "type": "array",
+          "description": "References to Tasks. (Relationship: Sprint 1:N Tasks)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "startDate",
+        "endDate"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Authorization is based on path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/backend/entities/Task"
+          },
+          "description": "Stores tasks associated with a specific user. Authorization is based on path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "taskId",
+              "description": "The unique identifier of the task."
+            }
+          ]
+        }
+      },
+      {
+        "path": "clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Stores client information.  Managed through a membership model on each document.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier of the client."
+            }
+          ]
+        }
+      },
+      {
+        "path": "clients/{clientId}/quotations/{quotationId}",
+        "definition": {
+          "entityName": "Quotation",
+          "schema": {
+            "$ref": "#/backend/entities/Quotation"
+          },
+          "description": "Stores quotations associated with a specific client. Includes denormalized 'clientId' for authorization independence.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier of the client."
+            },
+            {
+              "name": "quotationId",
+              "description": "The unique identifier of the quotation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "clients/{clientId}/invoices/{invoiceId}",
+        "definition": {
+          "entityName": "Invoice",
+          "schema": {
+            "$ref": "#/backend/entities/Invoice"
+          },
+          "description": "Stores invoices associated with a specific client. Includes denormalized 'clientId' for authorization independence.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier of the client."
+            },
+            {
+              "name": "invoiceId",
+              "description": "The unique identifier of the invoice."
+            }
+          ]
+        }
+      },
+      {
+        "path": "task_types/{taskTypeId}",
+        "definition": {
+          "entityName": "TaskType",
+          "schema": {
+            "$ref": "#/backend/entities/TaskType"
+          },
+          "description": "Stores task types.",
+          "params": [
+            {
+              "name": "taskTypeId",
+              "description": "The unique identifier of the task type."
+            }
+          ]
+        }
+      },
+      {
+        "path": "packs/{packId}",
+        "definition": {
+          "entityName": "Pack",
+          "schema": {
+            "$ref": "#/backend/entities/Pack"
+          },
+          "description": "Stores predefined packs of services.",
+          "params": [
+            {
+              "name": "packId",
+              "description": "The unique identifier of the pack."
+            }
+          ]
+        }
+      },
+      {
+        "path": "expenses/{expenseId}",
+        "definition": {
+          "entityName": "Expense",
+          "schema": {
+            "$ref": "#/backend/entities/Expense"
+          },
+          "description": "Stores expense records.",
+          "params": [
+            {
+              "name": "expenseId",
+              "description": "The unique identifier of the expense."
+            }
+          ]
+        }
+      },
+      {
+        "path": "credit_purchases/{creditPurchaseId}",
+        "definition": {
+          "entityName": "CreditPurchase",
+          "schema": {
+            "$ref": "#/backend/entities/CreditPurchase"
+          },
+          "description": "Stores credit purchase records.",
+          "params": [
+            {
+              "name": "creditPurchaseId",
+              "description": "The unique identifier of the credit purchase."
+            }
+          ]
+        }
+      },
+      {
+        "path": "sprints/{sprintId}",
+        "definition": {
+          "entityName": "Sprint",
+          "schema": {
+            "$ref": "#/backend/entities/Sprint"
+          },
+          "description": "Stores sprint information.",
+          "params": [
+            {
+              "name": "sprintId",
+              "description": "The unique identifier of the sprint."
+            }
+          ]
+        }
+      },
+      {
+        "path": "roles_admin/{userId}",
+        "definition": {
+          "entityName": "role",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Marks a user as an admin. Existence of document confers admin role.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the Kairos OS application, focusing on authorization independence, clarity, and scalability. The structure leverages path-based ownership for user-specific data and membership maps for collaborative data access. Denormalization is used extensively to ensure authorization independence, eliminating the need for `get()` calls in security rules.\n\n**Authorization Independence (CRITICAL):**\n\n*   **User Data:** The `users/{userId}` collection stores user profiles. This is private data, accessible only to the user with the matching `userId`. No denormalization is needed here as authorization is based solely on the path.\n*   **Tasks:** Tasks are stored in a subcollection `/users/{userId}/tasks/{taskId}`. This structure establishes clear ownership and avoids the need to check parent documents for authorization.\n*   **Clients:** Clients are stored in the `clients/{clientId}` collection. Authorization is managed through a membership model on each document.\n*   **Quotations, Invoices:** These are client-owned and stored in `/clients/{clientId}/quotations/{quotationId}` and `/clients/{clientId}/invoices/{invoiceId}`, respectively. The `clientId` is denormalized into each document, making list operations and data access rules simple and independent.\n*   **TaskTypes, Packs, Expenses, CreditPurchases, Sprints:** These are stored in root-level collections. Access control is determined by user roles, managed through the `roles_admin/{uid}` collection or team memberships denormalized into these documents where necessary.\n\n**QAPs (Rules Are Not Filters):**\n\nThe structure supports secure list operations by segregating data based on access needs. Private user data is stored under `/users/{userId}`, enabling rules that allow users to only list their own data. Membership models on collaborative documents (e.g., Clients) ensure that only authorized users can list and access these documents.\n\nThe use of root-level collections for TaskTypes and Packs also enables efficient and secure listing, as security rules can be applied at the collection level without needing to filter based on document content.\n\n**Invariants:**\n\n*   The structure supports ownership invariants through path-based ownership (`/users/{userId}/tasks/{taskId}`).\n*   Timestamps (e.g., `createdAt` in Quotations) are enforced via rules.\n*   Denormalized data (e.g., `clientId` in invoices) ensures data consistency across related documents.\n\nBy adhering to these principles and strategies, the data structure provides a secure, scalable, and easily debuggable foundation for the Kairos OS application."
+  }
+}
