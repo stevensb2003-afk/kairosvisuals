@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { PwaInstallBanner } from '@/components/dashboard/pwa-install-banner';
-import { UserWorkloadChart } from "@/components/dashboard/user-workload-chart";
+import UserWorkloadChart from "@/components/dashboard/user-workload-chart-dynamic";
 
 const weeklyKpi = {
   pending: 12,
