@@ -1,6 +1,7 @@
 'use client';
 
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useCollection, useFirestore, useUser } from '@/firebase';
+import { useMemo } from 'react';
 import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,7 @@ const userSchema = z.object({
 export function UserManagement() {
     const firestore = useFirestore();
     const { isUserLoading } = useUser();
-    const usersCollection = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'users') : null, [firestore, isUserLoading]);
+    const usersCollection = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'users') : null, [firestore, isUserLoading]);
     const { data: users, isLoading } = useCollection<{firstName: string, lastName: string, email: string, role: string}>(usersCollection);
 
     const form = useForm<z.infer<typeof userSchema>>({

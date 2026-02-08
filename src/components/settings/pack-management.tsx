@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useState, useMemo } from 'react';
+import { useCollection, useFirestore, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,10 +34,10 @@ type Pack = { id: string; name: string; price: number; taskTypeQuantities: { tas
 export function PackManagement() {
     const firestore = useFirestore();
     const { isUserLoading } = useUser();
-    const packsCollection = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'packs') : null, [firestore, isUserLoading]);
+    const packsCollection = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'packs') : null, [firestore, isUserLoading]);
     const { data: packs, isLoading: isLoadingPacks } = useCollection<Pack>(packsCollection);
     
-    const taskTypesCollection = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'task_types') : null, [firestore, isUserLoading]);
+    const taskTypesCollection = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'task_types') : null, [firestore, isUserLoading]);
     const { data: taskTypes, isLoading: isLoadingTaskTypes } = useCollection<TaskType>(taskTypesCollection);
 
     const [newTaskType, setNewTaskType] = useState('');

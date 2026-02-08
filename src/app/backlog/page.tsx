@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useCollection, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Skeleton } from "@/components/ui/skeleton";
 import { collection, query, where, doc } from 'firebase/firestore';
 import { Calendar } from "@/components/ui/calendar";
@@ -41,12 +41,12 @@ export default function BacklogPage() {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
 
-    const backlogTasksQuery = useMemoFirebase(() => 
+    const backlogTasksQuery = useMemo(() => 
         (firestore && !isUserLoading && user) ? query(collection(firestore, 'tasks'), where('sprintId', '==', null)) : null,
     [firestore, isUserLoading, user]);
     const { data: backlogTasks, isLoading: isLoadingBacklog } = useCollection<any>(backlogTasksQuery);
 
-    const sprintTasksQuery = useMemoFirebase(() =>
+    const sprintTasksQuery = useMemo(() =>
         (firestore && !isUserLoading && user) ? query(collection(firestore, 'tasks'), where('sprintId', '==', SPRINT_ID)) : null,
     [firestore, isUserLoading, user]);
     const { data: sprintTasks, isLoading: isLoadingSprint } = useCollection<any>(sprintTasksQuery);

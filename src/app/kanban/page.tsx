@@ -19,7 +19,7 @@ import { es } from 'date-fns/locale';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser } from "@/firebase";
+import { useCollection, useFirestore, updateDocumentNonBlocking, useUser } from "@/firebase";
 import { collection, doc, query, where, orderBy } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -43,7 +43,7 @@ export default function KanbanPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
 
-  const tasksQuery = useMemoFirebase(() => 
+  const tasksQuery = useMemo(() => 
       (firestore && !isUserLoading)
           ? query(
               collection(firestore, 'tasks'), 
@@ -54,7 +54,7 @@ export default function KanbanPage() {
   [firestore, isUserLoading]);
   const { data: tasks, isLoading: isLoadingTasks } = useCollection<any>(tasksQuery);
 
-  const usersQuery = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'users') : null, [firestore, isUserLoading]);
+  const usersQuery = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'users') : null, [firestore, isUserLoading]);
   const { data: usersData } = useCollection<any>(usersQuery);
 
   const boardData = useMemo(() => {

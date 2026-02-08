@@ -1,6 +1,6 @@
 'use client';
 
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useCollection, useFirestore, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Pencil, Trash2, Check, X } from 'lucide-react';
 
 const taskTypeSchema = z.object({
@@ -31,7 +31,7 @@ type TaskType = {
 export function TaskTypeManagement() {
     const firestore = useFirestore();
     const { isUserLoading } = useUser();
-    const taskTypesCollection = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'task_types') : null, [firestore, isUserLoading]);
+    const taskTypesCollection = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'task_types') : null, [firestore, isUserLoading]);
     const { data: taskTypes, isLoading } = useCollection<TaskType>(taskTypesCollection);
 
     const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
