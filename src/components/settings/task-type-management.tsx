@@ -1,6 +1,6 @@
 'use client';
 
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,8 @@ type TaskType = {
 
 export function TaskTypeManagement() {
     const firestore = useFirestore();
-    const taskTypesCollection = useMemoFirebase(() => firestore ? collection(firestore, 'task_types') : null, [firestore]);
+    const { isUserLoading } = useUser();
+    const taskTypesCollection = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'task_types') : null, [firestore, isUserLoading]);
     const { data: taskTypes, isLoading } = useCollection<TaskType>(taskTypesCollection);
 
     const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -134,7 +135,7 @@ export function TaskTypeManagement() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading && Array.from({ length: 3 }).map((_, i) => (
+                                {(isLoading || isUserLoading) && Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
                                         <TableCell><Skeleton className="h-5 w-5 rounded-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -203,7 +204,7 @@ export function TaskTypeManagement() {
                                 ))}
                             </TableBody>
                         </Table>
-                        {taskTypes?.length === 0 && !isLoading && (
+                        {taskTypes?.length === 0 && !(isLoading || isUserLoading) && (
                             <p className="p-4 text-center text-sm text-muted-foreground">No hay tipos de tarea.</p>
                         )}
                     </div>

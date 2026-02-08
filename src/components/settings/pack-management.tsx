@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,10 +33,11 @@ type Pack = { id: string; name: string; price: number; taskTypeQuantities: { tas
 
 export function PackManagement() {
     const firestore = useFirestore();
-    const packsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'packs') : null, [firestore]);
+    const { isUserLoading } = useUser();
+    const packsCollection = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'packs') : null, [firestore, isUserLoading]);
     const { data: packs, isLoading: isLoadingPacks } = useCollection<Pack>(packsCollection);
     
-    const taskTypesCollection = useMemoFirebase(() => firestore ? collection(firestore, 'task_types') : null, [firestore]);
+    const taskTypesCollection = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'task_types') : null, [firestore, isUserLoading]);
     const { data: taskTypes, isLoading: isLoadingTaskTypes } = useCollection<TaskType>(taskTypesCollection);
 
     const [newTaskType, setNewTaskType] = useState('');
@@ -71,6 +72,7 @@ export function PackManagement() {
     }
 
     const getTaskTypeName = (id: string) => taskTypes?.find(t => t.id === id)?.name || 'Desconocido';
+    const isLoading = isUserLoading || isLoadingPacks || isLoadingTaskTypes;
 
     return (
         <Card>
@@ -142,7 +144,7 @@ export function PackManagement() {
                  <div className="space-y-4">
                     <h3 className="font-semibold">Packs Actuales</h3>
                     <div className="space-y-4">
-                         {isLoadingPacks && Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+                         {isLoading && Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
                          {packs && packs.map(pack => (
                              <Card key={pack.id}>
                                 <CardHeader className="flex-row items-start justify-between p-4">
@@ -164,7 +166,7 @@ export function PackManagement() {
                                 </CardContent>
                              </Card>
                          ))}
-                         {packs?.length === 0 && !isLoadingPacks && (
+                         {packs?.length === 0 && !isLoading && (
                             <div className="border rounded-md p-4 text-center text-sm text-muted-foreground">
                                 No hay packs configurados.
                             </div>

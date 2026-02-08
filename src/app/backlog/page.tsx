@@ -49,13 +49,13 @@ export default function BacklogPage() {
     }, [isUserLoading, user, auth]);
 
     const backlogTasksQuery = useMemoFirebase(() => 
-        firestore ? query(collection(firestore, 'tasks'), where('sprintId', '==', null)) : null,
-    [firestore]);
+        (firestore && !isUserLoading) ? query(collection(firestore, 'tasks'), where('sprintId', '==', null)) : null,
+    [firestore, isUserLoading]);
     const { data: backlogTasks, isLoading: isLoadingBacklog } = useCollection<any>(backlogTasksQuery);
 
     const sprintTasksQuery = useMemoFirebase(() =>
-        firestore ? query(collection(firestore, 'tasks'), where('sprintId', '==', SPRINT_ID)) : null,
-    [firestore]);
+        (firestore && !isUserLoading) ? query(collection(firestore, 'tasks'), where('sprintId', '==', SPRINT_ID)) : null,
+    [firestore, isUserLoading]);
     const { data: sprintTasks, isLoading: isLoadingSprint } = useCollection<any>(sprintTasksQuery);
     
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);

@@ -41,20 +41,20 @@ const getImageUrl = (id: string) => PlaceHolderImages.find(img => img.id === id)
 
 export default function KanbanPage() {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
 
   const tasksQuery = useMemoFirebase(() => 
-      firestore 
+      (firestore && !isUserLoading)
           ? query(
               collection(firestore, 'tasks'), 
               where('sprintId', '==', KANBAN_SPRINT_ID),
               orderBy('updatedAt', 'desc')
             ) 
           : null,
-  [firestore]);
+  [firestore, isUserLoading]);
   const { data: tasks, isLoading: isLoadingTasks } = useCollection<any>(tasksQuery);
 
-  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersQuery = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'users') : null, [firestore, isUserLoading]);
   const { data: usersData } = useCollection<any>(usersQuery);
 
   const boardData = useMemo(() => {
@@ -252,7 +252,7 @@ export default function KanbanPage() {
     setIsRenameDialogOpen(false);
   };
   
-  if (isLoadingTasks || !boardData) {
+  if (isLoadingTasks || isUserLoading || !boardData) {
     return (
         <div className="flex flex-col h-full space-y-6">
             <header><Skeleton className="h-12 w-full" /></header>

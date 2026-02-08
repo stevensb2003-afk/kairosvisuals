@@ -1,6 +1,6 @@
 'use client';
 
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,8 @@ const userSchema = z.object({
 
 export function UserManagement() {
     const firestore = useFirestore();
-    const usersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+    const { isUserLoading } = useUser();
+    const usersCollection = useMemoFirebase(() => (firestore && !isUserLoading) ? collection(firestore, 'users') : null, [firestore, isUserLoading]);
     const { data: users, isLoading } = useCollection<{firstName: string, lastName: string, email: string, role: string}>(usersCollection);
 
     const form = useForm<z.infer<typeof userSchema>>({
@@ -109,7 +110,7 @@ export function UserManagement() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading && Array.from({ length: 3 }).map((_, i) => (
+                                {(isLoading || isUserLoading) && Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
                                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
@@ -127,7 +128,7 @@ export function UserManagement() {
                                 ))}
                             </TableBody>
                         </Table>
-                         {users?.length === 0 && !isLoading && (
+                         {users?.length === 0 && !(isLoading || isUserLoading) && (
                             <p className="p-4 text-center text-sm text-muted-foreground">No hay usuarios.</p>
                         )}
                     </div>
