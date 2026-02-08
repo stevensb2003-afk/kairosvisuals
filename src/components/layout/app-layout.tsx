@@ -14,7 +14,6 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home,
   Calendar,
   FileText,
   Receipt,
@@ -24,19 +23,20 @@ import {
   LayoutGrid,
   Settings,
   CreditCard,
-  Briefcase,
+  Infinity,
+  Kanban,
 } from 'lucide-react';
 import React from 'react';
 
 const navItems = [
-  { href: '/', label: 'Home', icon: Home },
+  { href: '/', label: 'Home', icon: LayoutGrid },
   { href: '/calendar', label: 'Calendario', icon: Calendar },
   { href: '/quotations', label: 'Cotizaciones', icon: FileText },
   { href: '/invoicing', label: 'Facturador', icon: Receipt },
   { href: '/clients', label: 'Clientes', icon: Users },
   { href: '/reports', label: 'Reportes', icon: BarChart2 },
   { href: '/backlog', label: 'Backlog', icon: List },
-  { href: '/kanban', label: 'Kanban', icon: LayoutGrid },
+  { href: '/kanban', label: 'Kanban', icon: Kanban },
   { href: '/expenses', label: 'Gastos y Créditos', icon: CreditCard },
 ];
 
@@ -50,16 +50,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       return settingsNav.label;
     }
     const currentNav = navItems.find(item => item.href === pathname);
-    return currentNav ? currentNav.label : 'Kairos OS';
+    return currentNav ? currentNav.label : 'Kairos Visuals';
   };
 
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          <Link href="/" className="flex items-center gap-2 p-2" aria-label="Kairos OS Home">
-            <Briefcase className="w-8 h-8 text-primary" />
-            <span className="text-xl font-headline font-bold text-sidebar-foreground group-data-[collapsible=icon]:hidden">Kairos OS</span>
+          <Link href="/" className="flex items-start gap-1 p-2 flex-col" aria-label="Kairos Visuals Home">
+            <div className="flex items-center gap-2">
+              <Infinity className="w-7 h-7 text-sidebar-foreground" />
+              <span className="text-lg font-headline font-bold text-sidebar-foreground group-data-[collapsible=icon]:hidden">Kairos Visuals</span>
+            </div>
+            <span className="text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden pl-[36px]">INTERNAL OS V2.4</span>
           </Link>
         </SidebarHeader>
         <SidebarContent>
