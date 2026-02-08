@@ -117,7 +117,7 @@ export default function BacklogPage() {
                     <Card className="sticky top-24">
                         <CardHeader className="pb-2">
                             <CardTitle>Próximo Sprint</CardTitle>
-                            <CardDescription>Puntos totales: <span className="font-bold text-foreground">{totalPoints}</span></caltoken>
+                            <CardDescription>Puntos totales: <span className="font-bold text-foreground">{totalPoints}</span></CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="min-h-[200px] border-2 border-dashed rounded-lg p-4 space-y-3 bg-secondary/20">
