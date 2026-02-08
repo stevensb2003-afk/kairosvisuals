@@ -19,7 +19,7 @@ const userSchema = z.object({
   firstName: z.string().min(1, 'El nombre es requerido.'),
   lastName: z.string().min(1, 'El apellido es requerido.'),
   email: z.string().email('Email inválido.'),
-  role: z.enum(['Admin Master', 'Creative'], { required_error: 'El rol es requerido.' }),
+  role: z.enum(['Administrativo', 'Creativo'], { required_error: 'El rol es requerido.' }),
 });
 
 export function UserManagement() {
@@ -33,7 +33,7 @@ export function UserManagement() {
             firstName: '',
             lastName: '',
             email: '',
-            role: 'Creative',
+            role: 'Creativo',
         }
     });
 
@@ -41,15 +41,7 @@ export function UserManagement() {
         if (!firestore) return;
         const newDocRef = doc(collection(firestore, 'users'));
         
-        // This is a non-blocking call
         setDocumentNonBlocking(newDocRef, { ...values, id: newDocRef.id }, { merge: true });
-
-        // If the user is an admin master, also create a document in the roles_admin collection
-        if (values.role === 'Admin Master') {
-            const adminRoleRef = doc(firestore, 'roles_admin', newDocRef.id);
-            // The document can be empty, its existence is what grants the role.
-            setDocumentNonBlocking(adminRoleRef, { created: new Date().toISOString() }, { merge: true });
-        }
 
         form.reset();
     }
@@ -94,8 +86,8 @@ export function UserManagement() {
                                             <SelectTrigger><SelectValue placeholder="Selecciona un rol" /></SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="Admin Master">Admin Master</SelectItem>
-                                            <SelectItem value="Creative">Creativo</SelectItem>
+                                            <SelectItem value="Administrativo">Administrativo</SelectItem>
+                                            <SelectItem value="Creativo">Creativo</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -129,7 +121,7 @@ export function UserManagement() {
                                         <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
-                                            <Badge variant={user.role === 'Admin Master' ? 'default' : 'secondary'}>{user.role}</Badge>
+                                            <Badge variant={user.role === 'Administrativo' ? 'default' : 'secondary'}>{user.role}</Badge>
                                         </TableCell>
                                     </TableRow>
                                 ))}
