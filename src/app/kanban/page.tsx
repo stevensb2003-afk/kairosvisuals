@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
-import { Clock, Filter, MessageSquare, MoreHorizontal, Palette, Search } from "lucide-react";
+import { Clock, Filter, MessageSquare, MoreHorizontal, Palette, Search, Trash2 } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -135,6 +135,7 @@ export default function KanbanPage() {
   const [boardData, setBoardData] = useState(initialKanbanData);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [newComment, setNewComment] = useState("");
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   
   const [draggedItem, setDraggedItem] = useState<{ taskId: string } | null>(null);
 
@@ -165,29 +166,28 @@ export default function KanbanPage() {
     }
     
     setBoardData(currentBoardData => {
-        const newBoardData = { ...currentBoardData, columns: [...currentBoardData.columns] };
-        const sourceColIndex = newBoardData.columns.findIndex(c => c.id === sourceColId);
-        const targetColIndex = newBoardData.columns.findIndex(c => c.id === targetColId);
+      const newBoardData = {
+        ...currentBoardData,
+        columns: currentBoardData.columns.map(c => ({ ...c, tasks: [...c.tasks] })),
+      };
 
-        if (sourceColIndex === -1 || targetColIndex === -1) return currentBoardData;
+      const sourceColIndex = newBoardData.columns.findIndex(c => c.id === sourceColId);
+      const targetColIndex = newBoardData.columns.findIndex(c => c.id === targetColId);
 
-        const sourceCol = { ...newBoardData.columns[sourceColIndex], tasks: [...newBoardData.columns[sourceColIndex].tasks] };
-        const taskIndex = sourceCol.tasks.findIndex(t => t.id === taskId);
-        
-        if (taskIndex === -1) return currentBoardData;
+      if (sourceColIndex === -1 || targetColIndex === -1) return currentBoardData;
+      
+      const sourceCol = newBoardData.columns[sourceColIndex];
+      const taskIndex = sourceCol.tasks.findIndex(t => t.id === taskId);
+      
+      if (taskIndex === -1) return currentBoardData;
+      
+      const [taskToMove] = sourceCol.tasks.splice(taskIndex, 1);
+      
+      const targetCol = newBoardData.columns[targetColIndex];
+      const dropIndex = targetTaskId ? targetCol.tasks.findIndex(t => t.id === targetTaskId) : targetCol.tasks.length;
+      targetCol.tasks.splice(dropIndex, 0, taskToMove);
 
-        const [taskToMove] = sourceCol.tasks.splice(taskIndex, 1);
-        newBoardData.columns[sourceColIndex] = sourceCol;
-
-        const targetCol = sourceColId === targetColId 
-            ? sourceCol 
-            : { ...newBoardData.columns[targetColIndex], tasks: [...newBoardData.columns[targetColIndex].tasks] };
-
-        const dropIndex = targetTaskId ? targetCol.tasks.findIndex(t => t.id === targetTaskId) : targetCol.tasks.length;
-        targetCol.tasks.splice(dropIndex, 0, taskToMove);
-        newBoardData.columns[targetColIndex] = targetCol;
-
-        return newBoardData;
+      return newBoardData;
     });
 
 
@@ -209,23 +209,22 @@ export default function KanbanPage() {
     };
 
     setBoardData(prevData => {
-        const newColumns = prevData.columns.map(column => {
-            const taskIndex = column.tasks.findIndex(t => t.id === selectedTask.id);
-            if (taskIndex > -1) {
-                const updatedTasks = [...column.tasks];
-                const task = updatedTasks[taskIndex];
-                const updatedTask = {
-                    ...task,
-                    comments: [...(task.comments || []), newCommentObj],
-                    commentsCount: (task.comments?.length || 0) + 1,
-                    updatedAt: new Date().toISOString(),
-                };
-                updatedTasks[taskIndex] = updatedTask;
-                setSelectedTask(updatedTask);
-                return { ...column, tasks: updatedTasks };
-            }
-            return column;
-        });
+        const newColumns = prevData.columns.map(column => ({
+            ...column,
+            tasks: column.tasks.map(task => {
+                if (task.id === selectedTask.id) {
+                    const updatedTask = {
+                        ...task,
+                        comments: [...(task.comments || []), newCommentObj],
+                        commentsCount: (task.comments?.length || 0) + 1,
+                        updatedAt: new Date().toISOString(),
+                    };
+                    setSelectedTask(updatedTask);
+                    return updatedTask;
+                }
+                return task;
+            })
+        }));
         return { ...prevData, columns: newColumns };
     });
 
@@ -247,7 +246,7 @@ export default function KanbanPage() {
                 ) || [];
                 
                 const completedCount = updatedSubtasks.filter((s: any) => s.completed).length;
-                const newProgress = Math.round((completedCount / updatedSubtasks.length) * 100);
+                const newProgress = updatedSubtasks.length > 0 ? Math.round((completedCount / updatedSubtasks.length) * 100) : 0;
 
                 const updatedTask = {
                     ...campaignTask,
@@ -257,6 +256,78 @@ export default function KanbanPage() {
                 };
                 updatedTasks[taskIndex] = updatedTask;
                 
+                setSelectedTask(updatedTask);
+
+                return { ...column, tasks: updatedTasks };
+            }
+            return column;
+        });
+        return { ...prevData, columns: newColumns };
+    });
+  };
+
+  const handleSubtaskAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubtaskTitle.trim() || !selectedTask || selectedTask.type !== 'campaign') return;
+
+    const newSubtask = {
+        id: `SUB-${Date.now()}`,
+        title: newSubtaskTitle.trim(),
+        completed: false,
+        tag: { text: 'Task', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' }
+    };
+
+    setBoardData(prevData => {
+        const newColumns = prevData.columns.map(column => {
+            const taskIndex = column.tasks.findIndex(t => t.id === selectedTask.id);
+            if (taskIndex > -1) {
+                const updatedTasks = [...column.tasks];
+                const campaignTask = updatedTasks[taskIndex];
+
+                const updatedSubtasks = [...(campaignTask.subtasks || []), newSubtask];
+                const completedCount = updatedSubtasks.filter((s: any) => s.completed).length;
+                const newProgress = Math.round((completedCount / updatedSubtasks.length) * 100);
+
+                const updatedTask = {
+                    ...campaignTask,
+                    subtasks: updatedSubtasks,
+                    progress: newProgress,
+                    updatedAt: new Date().toISOString(),
+                };
+                updatedTasks[taskIndex] = updatedTask;
+                setSelectedTask(updatedTask);
+
+                return { ...column, tasks: updatedTasks };
+            }
+            return column;
+        });
+        return { ...prevData, columns: newColumns };
+    });
+
+    setNewSubtaskTitle("");
+  };
+
+  const handleDeleteSubtask = (subtaskId: string) => {
+    if (!selectedTask || selectedTask.type !== 'campaign') return;
+
+    setBoardData(prevData => {
+        const newColumns = prevData.columns.map(column => {
+            const taskIndex = column.tasks.findIndex(t => t.id === selectedTask.id);
+            if (taskIndex > -1) {
+                const updatedTasks = [...column.tasks];
+                const campaignTask = updatedTasks[taskIndex];
+
+                const updatedSubtasks = campaignTask.subtasks?.filter((sub: any) => sub.id !== subtaskId) || [];
+                const completedCount = updatedSubtasks.filter((s: any) => s.completed).length;
+                const newProgress = updatedSubtasks.length > 0 ? Math.round((completedCount / updatedSubtasks.length) * 100) : 0;
+
+                const updatedTask = {
+                    ...campaignTask,
+                    subtasks: updatedSubtasks,
+                    progress: newProgress,
+                    updatedAt: new Date().toISOString(),
+                };
+                updatedTasks[taskIndex] = updatedTask;
                 setSelectedTask(updatedTask);
 
                 return { ...column, tasks: updatedTasks };
@@ -458,7 +529,7 @@ export default function KanbanPage() {
                                 <Progress value={selectedTask.progress} className="h-2" />
                                 <div className="space-y-2">
                                     {selectedTask.subtasks.map((subtask: any) => (
-                                        <div key={subtask.id} className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-secondary/50">
+                                        <div key={subtask.id} className="group flex items-center justify-between gap-3 rounded-md p-2 hover:bg-secondary/50">
                                             <div className="flex items-center gap-3">
                                                 <Checkbox 
                                                     id={`subtask-${subtask.id}`} 
@@ -467,17 +538,32 @@ export default function KanbanPage() {
                                                 />
                                                 <label
                                                     htmlFor={`subtask-${subtask.id}`}
-                                                    className={cn("text-sm cursor-pointer", subtask.completed && "line-through text-muted-foreground")}
+                                                    className={cn("cursor-pointer text-sm", subtask.completed && "text-muted-foreground line-through")}
                                                 >
                                                     {subtask.title}
                                                 </label>
                                             </div>
-                                            {subtask.tag && (
-                                                <Badge variant="outline" className={cn("text-xs font-semibold", subtask.tag.className)}>{subtask.tag.text}</Badge>
-                                            )}
+                                             <div className="flex items-center gap-2">
+                                                {subtask.tag && (
+                                                    <Badge variant="outline" className={cn("text-xs font-semibold", subtask.tag.className)}>{subtask.tag.text}</Badge>
+                                                )}
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" onClick={() => handleDeleteSubtask(subtask.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">Delete subtask</span>
+                                                </Button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
+                                <form onSubmit={handleSubtaskAdd} className="flex gap-2 pt-4">
+                                    <Input
+                                        placeholder="Añadir nueva sub-tarea..."
+                                        value={newSubtaskTitle}
+                                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                        className="h-9"
+                                    />
+                                    <Button type="submit" size="sm" disabled={!newSubtaskTitle.trim()}>Añadir</Button>
+                                </form>
                             </div>
                         )}
 
