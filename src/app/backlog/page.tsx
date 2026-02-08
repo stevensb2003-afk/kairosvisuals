@@ -108,19 +108,6 @@ const subtaskTypes: Record<string, { text: string; className: string }> = {
     image: { text: 'Image', className: 'bg-teal-500/10 text-teal-400 border-teal-500/20' },
 };
 
-const taskFormSchema = z.object({
-  title: z.string().min(1, 'El título es requerido.'),
-  description: z.string().optional(),
-  client: z.string().min(1, 'El cliente es requerido.'),
-  taskType: z.string().min(1, 'El tipo de tarea es requerido.'),
-  category: z.string().min(1, 'La categoría es requerida.'),
-  points: z.coerce.number().min(0, 'Los puntos deben ser un número no negativo.'),
-  subtasks: z.array(z.object({
-    title: z.string(),
-    type: z.string(),
-  })).optional(),
-});
-
 export default function BacklogPage() {
     const [tasks, setTasks] = useState(initialTasks);
     const [sprintTasks, setSprintTasks] = useState(initialSprintTasks);
@@ -131,6 +118,29 @@ export default function BacklogPage() {
 
     const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
     const [newSubtaskType, setNewSubtaskType] = useState(Object.keys(subtaskTypes)[0]);
+
+    const taskFormSchema = z.object({
+      title: z.string().min(1, 'El título es requerido.'),
+      description: z.string().optional(),
+      client: z.string().min(1, 'El cliente es requerido.'),
+      taskType: z.string().optional(),
+      category: z.string().min(1, 'La categoría es requerida.'),
+      points: z.coerce.number().min(0, 'Los puntos deben ser un número no negativo.'),
+      subtasks: z.array(z.object({
+        title: z.string(),
+        type: z.string(),
+      })).optional(),
+    }).superRefine((data, ctx) => {
+        if (selectedType === 'task') {
+            if (!data.taskType || data.taskType.trim().length === 0) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['taskType'],
+                    message: "El tipo de tarea es requerido.",
+                });
+            }
+        }
+    });
 
     const form = useForm<z.infer<typeof taskFormSchema>>({
         resolver: zodResolver(taskFormSchema),
@@ -204,7 +214,7 @@ export default function BacklogPage() {
             assignee: null,
             type: selectedType,
             client: values.client,
-            taskType: values.taskType,
+            taskType: values.taskType ?? '',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             comments: [],
@@ -326,19 +336,21 @@ export default function BacklogPage() {
                                                 </FormItem>
                                             )}
                                         />
-                                        <FormField
-                                            control={form.control}
-                                            name="taskType"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Tipo de Tarea</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder="Ej: Motion Graphics" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                        {selectedType === 'task' && (
+                                            <FormField
+                                                control={form.control}
+                                                name="taskType"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Tipo de Tarea</FormLabel>
+                                                        <FormControl>
+                                                            <Input placeholder="Ej: Motion Graphics" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        )}
                                         <FormField
                                             control={form.control}
                                             name="category"

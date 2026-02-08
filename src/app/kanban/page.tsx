@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
-import { Clock, Filter, MessageSquare, Palette, Search, Trash2 } from "lucide-react";
+import { Clock, Filter, MessageSquare, Palette, Search, Trash2, MoreHorizontal } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -391,6 +391,29 @@ export default function KanbanPage() {
 
   const { sprint, users } = boardData;
 
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [columnToRename, setColumnToRename] = useState<any>(null);
+  const [newColumnName, setNewColumnName] = useState("");
+
+  const handleRenameClick = (column: any) => {
+    setColumnToRename(column);
+    setNewColumnName(column.title);
+    setIsRenameDialogOpen(true);
+  };
+  
+  const handleRenameSubmit = () => {
+    if (!newColumnName.trim() || !columnToRename) return;
+  
+    setBoardData(prevData => ({
+      ...prevData,
+      columns: prevData.columns.map(c => 
+        c.id === columnToRename.id ? { ...c, title: newColumnName.trim() } : c
+      ),
+    }));
+
+    setIsRenameDialogOpen(false);
+  };
+
   return (
     <>
       <div className="flex flex-col h-full space-y-6">
@@ -444,6 +467,17 @@ export default function KanbanPage() {
                   <h2 className="font-semibold font-headline">{col.title}</h2>
                   <Badge variant="secondary" className="text-xs">{col.tasks.length}</Badge>
                 </div>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <MoreHorizontal className="h-4 w-4"/>
+                            <span className="sr-only">Column actions</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuRadioItem onClick={() => handleRenameClick(col)}>Renombrar</DropdownMenuRadioItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="space-y-4">
               {col.tasks.map((task: any) => {
@@ -529,6 +563,35 @@ export default function KanbanPage() {
         </main>
       </div>
 
+      <Dialog open={isRenameDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setColumnToRename(null);
+          setNewColumnName("");
+        }
+        setIsRenameDialogOpen(open);
+      }}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Renombrar Columna</DialogTitle>
+                <DialogDescription>
+                    Introduce el nuevo nombre para la columna &quot;{columnToRename?.title}&quot;.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <Input 
+                    value={newColumnName}
+                    onChange={(e) => setNewColumnName(e.target.value)}
+                    placeholder="Nuevo nombre de la columna"
+                />
+            </div>
+            <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsRenameDialogOpen(false)}>Cancelar</Button>
+                <Button type="button" onClick={handleRenameSubmit}>Guardar</Button>
+            </div>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
             {selectedTask && (
@@ -544,10 +607,12 @@ export default function KanbanPage() {
                                 <p className="text-muted-foreground font-semibold">Cliente</p>
                                 <p>{selectedTask.client}</p>
                             </div>
-                            <div>
-                                <p className="text-muted-foreground font-semibold">Tipo de Tarea</p>
-                                <p>{selectedTask.taskType}</p>
-                            </div>
+                            {selectedTask.type === 'task' && selectedTask.taskType && (
+                              <div>
+                                  <p className="text-muted-foreground font-semibold">Tipo de Tarea</p>
+                                  <p>{selectedTask.taskType}</p>
+                              </div>
+                            )}
                             <div>
                                 <p className="text-muted-foreground font-semibold">Fecha de Creación</p>
                                 <p>{selectedTask.createdAt ? format(new Date(selectedTask.createdAt), "dd MMM, yyyy", { locale: es }) : 'N/A'}</p>
