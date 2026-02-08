@@ -9,26 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
-import { Clock, Filter, MessageSquare, MoreHorizontal, Palette, Search, Trash2 } from "lucide-react";
+import { Clock, Filter, MessageSquare, Palette, Search, Trash2 } from "lucide-react";
 import Image from "next/image";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 const subtaskTypes: Record<string, { text: string; className: string }> = {
@@ -163,20 +153,6 @@ export default function KanbanPage() {
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [newSubtaskType, setNewSubtaskType] = useState(Object.keys(subtaskTypes)[0]);
   
-  const [renamingColumn, setRenamingColumn] = useState<any>(null);
-  const [newColumnName, setNewColumnName] = useState("");
-  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-  
-  useEffect(() => {
-    if (!isRenameDialogOpen) {
-      const timer = setTimeout(() => {
-        setRenamingColumn(null);
-        setNewColumnName("");
-      }, 200); // Delay to allow animation
-      return () => clearTimeout(timer);
-    }
-  }, [isRenameDialogOpen]);
-
   const [draggedItem, setDraggedItem] = useState<{ taskId: string } | null>(null);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, task: any, sourceColId: string) => {
@@ -413,22 +389,6 @@ export default function KanbanPage() {
     });
   };
 
-  const handleRenameColumn = () => {
-    if (!newColumnName.trim() || !renamingColumn) {
-      setIsRenameDialogOpen(false);
-      return;
-    }
-
-    setBoardData(prevData => {
-        const newColumns = prevData.columns.map(column => 
-            column.id === renamingColumn.id ? { ...column, title: newColumnName.trim() } : column
-        );
-        return { ...prevData, columns: newColumns };
-    });
-    
-    setIsRenameDialogOpen(false);
-  };
-
   const { sprint, users } = boardData;
 
   return (
@@ -484,22 +444,6 @@ export default function KanbanPage() {
                   <h2 className="font-semibold font-headline">{col.title}</h2>
                   <Badge variant="secondary" className="text-xs">{col.tasks.filter(t => !t.isCover).length}</Badge>
                 </div>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                            setRenamingColumn(col);
-                            setNewColumnName(col.title);
-                            setIsRenameDialogOpen(true);
-                        }}>
-                        Renombrar
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
               </div>
               <div className="space-y-4">
               {col.tasks.map((task: any) => {
@@ -732,35 +676,6 @@ export default function KanbanPage() {
             )}
         </DialogContent>
       </Dialog>
-
-       <AlertDialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Renombrar columna</AlertDialogTitle>
-            <AlertDialogDescription>
-              Introduce el nuevo nombre para la columna "{renamingColumn?.title}".
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Input
-            value={newColumnName}
-            onChange={(e) => setNewColumnName(e.target.value)}
-            className="mt-4"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleRenameColumn();
-              }
-            }}
-          />
-          <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRenameColumn}>Guardar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
-
-    
