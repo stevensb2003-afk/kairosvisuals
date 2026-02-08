@@ -1,5 +1,6 @@
 'use client';
 
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
-import { Clock, Filter, MessageSquare, MoreHorizontal, Palette, Play, Search } from "lucide-react";
+import { Clock, Filter, MessageSquare, MoreHorizontal, Palette, Search } from "lucide-react";
 import Image from "next/image";
 
 // Data
@@ -113,7 +114,9 @@ export default function KanbanPage() {
               <AvatarFallback>+2</AvatarFallback>
             </Avatar>
           </div>
-          <Button size="sm"><Play className="w-4 h-4 mr-2" /> Start Sprint</Button>
+          <Button asChild size="sm">
+            <Link href="/backlog">Review Backlog</Link>
+          </Button>
         </div>
       </header>
       
