@@ -266,7 +266,21 @@
           "type": "array",
           "description": "Quantities for each TaskType included in the pack.",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "taskTypeId": {
+                "type": "string",
+                "description": "ID of the task type."
+              },
+              "quantity": {
+                "type": "number",
+                "description": "Quantity of this task type in the pack."
+              }
+            },
+            "required": [
+              "taskTypeId",
+              "quantity"
+            ]
           }
         }
       },
@@ -588,3 +602,4 @@
     "reasoning": "The Firestore data structure is designed to support the Kairos OS application, focusing on authorization independence, clarity, and scalability. The structure leverages path-based ownership for user-specific data and membership maps for collaborative data access. Denormalization is used extensively to ensure authorization independence, eliminating the need for `get()` calls in security rules.\n\n**Authorization Independence (CRITICAL):**\n\n*   **User Data:** The `users/{userId}` collection stores user profiles. This is private data, accessible only to the user with the matching `userId`. No denormalization is needed here as authorization is based solely on the path.\n*   **Tasks:** Tasks are stored in a subcollection `/users/{userId}/tasks/{taskId}`. This structure establishes clear ownership and avoids the need to check parent documents for authorization.\n*   **Clients:** Clients are stored in the `clients/{clientId}` collection. Authorization is managed through a membership model on each document.\n*   **Quotations, Invoices:** These are client-owned and stored in `/clients/{clientId}/quotations/{quotationId}` and `/clients/{clientId}/invoices/{invoiceId}`, respectively. The `clientId` is denormalized into each document, making list operations and data access rules simple and independent.\n*   **TaskTypes, Packs, Expenses, CreditPurchases, Sprints:** These are stored in root-level collections. Access control is determined by user roles, managed through the `roles_admin/{uid}` collection or team memberships denormalized into these documents where necessary.\n\n**QAPs (Rules Are Not Filters):**\n\nThe structure supports secure list operations by segregating data based on access needs. Private user data is stored under `/users/{userId}`, enabling rules that allow users to only list their own data. Membership models on collaborative documents (e.g., Clients) ensure that only authorized users can list and access these documents.\n\nThe use of root-level collections for TaskTypes and Packs also enables efficient and secure listing, as security rules can be applied at the collection level without needing to filter based on document content.\n\n**Invariants:**\n\n*   The structure supports ownership invariants through path-based ownership (`/users/{userId}/tasks/{taskId}`).\n*   Timestamps (e.g., `createdAt` in Quotations) are enforced via rules.\n*   Denormalized data (e.g., `clientId` in invoices) ensures data consistency across related documents.\n\nBy adhering to these principles and strategies, the data structure provides a secure, scalable, and easily debuggable foundation for the Kairos OS application."
   }
 }
+    
