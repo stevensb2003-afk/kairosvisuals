@@ -248,7 +248,9 @@ export default function KanbanPage() {
                 </Button>
               </div>
               <div className="space-y-4">
-              {col.tasks.map((task) => (
+              {col.tasks.map((task) => {
+                const ActionIcon = task.actionIcon;
+                return (
                 <div key={task.id} 
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, col.id, task.id)}
@@ -279,7 +281,7 @@ export default function KanbanPage() {
                             {task.description && <p className="text-sm text-muted-foreground mt-1">{task.description}</p>}
                           </div>
                           <div className="flex items-center">
-                            {task.actionIcon ? <task.actionIcon className="w-5 h-5 text-muted-foreground shrink-0" /> : 
+                            {ActionIcon ? <ActionIcon className="w-5 h-5 text-muted-foreground shrink-0" /> : 
                             task.commentsCount > 0 ? (
                               <div className="flex items-center gap-1 text-muted-foreground">
                                 <MessageSquare className="h-4 w-4" />
@@ -329,7 +331,7 @@ export default function KanbanPage() {
                     )}
                   </Card>
                 </div>
-              ))}
+                )})}
               </div>
             </div>
           ))}
