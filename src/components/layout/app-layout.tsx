@@ -12,7 +12,7 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Calendar,
   FileText,
@@ -24,11 +24,14 @@ import {
   Kanban,
   RefreshCw,
   Plus,
+  LogOut,
 } from 'lucide-react';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { useAuth, useUser } from '@/firebase';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const navItems = [
   { href: '/', label: 'Home', icon: LayoutGrid },
@@ -41,11 +44,36 @@ const navItems = [
 
 const settingsNav = { href: '/settings', label: 'Settings', icon: Settings };
 
+const publicRoutes = ['/login', '/register'];
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+
+  useEffect(() => {
+    if (isUserLoading) return; // Wait until user state is determined
+
+    const isPublicRoute = publicRoutes.includes(pathname);
+
+    if (!user && !isPublicRoute) {
+      router.push('/login');
+    } else if (user && isPublicRoute) {
+      router.push('/');
+    }
+  }, [user, isUserLoading, pathname, router]);
+
+  const handleSignOut = async () => {
+    if (auth) {
+        await auth.signOut();
+        router.push('/login');
+    }
+  };
 
   const getPageTitle = () => {
     if (pathname === '/') return 'Control Tower';
+    if (pathname.startsWith('/settings')) return 'Settings';
     const currentNav = navItems.find(item => {
         if (item.href === '/') return false;
         return pathname.startsWith(item.href);
@@ -54,6 +82,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const pageTitle = getPageTitle();
+  
+  // Don't render layout for public routes or while loading
+  if (publicRoutes.includes(pathname) || isUserLoading) {
+      return <main className="flex-1">{children}</main>;
+  }
+
 
   return (
     <SidebarProvider>
@@ -89,7 +123,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <Link href={settingsNav.href} passHref>
                 <SidebarMenuButton
-                  isActive={pathname === settingsNav.href}
+                  isActive={pathname.startsWith(settingsNav.href)}
                   tooltip={settingsNav.label}
                 >
                   <settingsNav.icon />
@@ -100,16 +134,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
           <Separator className="my-1 bg-sidebar-border/50" />
           <div className="p-2">
-            <div className="flex items-center gap-3 p-2">
-                <Avatar className="h-9 w-9">
-                    <AvatarImage src="https://picsum.photos/seed/alex/40/40" alt="Alex Chen" />
-                    <AvatarFallback>AC</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                    <span className="font-medium text-sm text-sidebar-foreground">Alex Chen</span>
-                    <span className="text-xs text-sidebar-foreground/70">Head of Post-Prod</span>
-                </div>
-            </div>
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <div className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover:bg-sidebar-accent">
+                        <Avatar className="h-9 w-9">
+                            <AvatarImage src={user?.photoURL || "https://picsum.photos/seed/user/40/40"} alt={user?.displayName || 'User'} />
+                            <AvatarFallback>{user?.displayName?.split(' ').map(n => n[0]).join('') || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col group-data-[collapsible=icon]:hidden overflow-hidden">
+                            <span className="font-medium text-sm text-sidebar-foreground truncate">{user?.displayName || 'Usuario'}</span>
+                            <span className="text-xs text-sidebar-foreground/70 truncate">{user?.email}</span>
+                        </div>
+                    </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="end" className="w-56">
+                    <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Cerrar Sesión</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+             </DropdownMenu>
           </div>
         </SidebarFooter>
       </Sidebar>

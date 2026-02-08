@@ -5,20 +5,12 @@ import { Users, Palette, Package } from 'lucide-react';
 import { UserManagement } from '@/components/settings/user-management';
 import { TaskTypeManagement } from '@/components/settings/task-type-management';
 import { PackManagement } from '@/components/settings/pack-management';
-import { useUser, useAuth } from '@/firebase';
-import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { useUser } from '@/firebase';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SettingsPage() {
   const { user, isUserLoading } = useUser();
-  const auth = useAuth();
-
-  useEffect(() => {
-    if (!isUserLoading && !user && auth) {
-      initiateAnonymousSignIn(auth);
-    }
-  }, [isUserLoading, user, auth]);
 
   if (isUserLoading || !user) {
     return (
@@ -69,5 +61,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    
