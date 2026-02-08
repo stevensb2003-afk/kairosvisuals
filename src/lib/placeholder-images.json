@@ -41,6 +41,24 @@
       "description": "Logo for Spotify",
       "imageUrl": "https://images.unsplash.com/photo-1617994452722-4145e196248b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzb3VuZCUyMHdhdmVzfGVufDB8fHx8MTc3MDQ0MDI0MXww&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "sound waves"
+    },
+    {
+      "id": "motion-icon",
+      "description": "Icon for motion graphics task",
+      "imageUrl": "https://images.unsplash.com/photo-1666166935887-bdd4cdd71687?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxhYnN0cmFjdCUyMG1vdGlvbnxlbnwwfHx8fDE3NzA0ODUzMTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract motion"
+    },
+    {
+      "id": "audio-icon",
+      "description": "Icon for audio task",
+      "imageUrl": "https://images.unsplash.com/photo-1729420199992-c85770a255fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8c291bmQlMjB3YXZlfGVufDB8fHx8MTc3MDUyMjA1Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sound wave"
+    },
+    {
+      "id": "nike-teaser",
+      "description": "Teaser image for a Nike project",
+      "imageUrl": "https://images.unsplash.com/photo-1754366310288-cb944fc6a56d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxhYnN0cmFjdCUyMHZpZGVvfGVufDB8fHx8MTc3MDQ2NDQ0NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract video"
     }
   ]
 }
