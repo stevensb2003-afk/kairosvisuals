@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Laptop } from 'lucide-react';
+import { Laptop, X } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -68,15 +68,15 @@ export function PwaInstallBanner() {
             <Laptop className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <AlertTitle className="font-semibold text-card-foreground">Get the full experience</AlertTitle>
+          <AlertTitle className="font-semibold text-card-foreground">Instala la App de Escritorio</AlertTitle>
           <AlertDescription className="text-muted-foreground">
-            Install the Kairos OS Desktop App for better performance and offline access.
+            Accede sin conexión y obtén una experiencia de usuario mejorada.
           </AlertDescription>
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <Button variant="ghost" size="sm" onClick={handleDismissClick}>Dismiss</Button>
-        <Button size="sm" onClick={handleInstallClick}>Install App</Button>
+        <Button variant="ghost" size="sm" onClick={handleDismissClick}>Omitir</Button>
+        <Button size="sm" onClick={handleInstallClick}>Instalar</Button>
       </div>
     </Alert>
   );
