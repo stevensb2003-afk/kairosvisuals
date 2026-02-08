@@ -26,37 +26,37 @@ import { es } from "date-fns/locale";
 
 const SPRINT_ID = "next-sprint";
 
-const subtaskTypes: Record<string, { text: string; className: string }> = {
-    task: { text: 'Task', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' },
-    footage: { text: 'Footage', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' },
-    reel: { text: 'Reel', className: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-    graphics: { text: 'Graphics', className: 'bg-purple-600/10 text-purple-400 border-purple-600/20' },
-    audio: { text: 'Audio', className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
-    export: { text: 'Export', className: 'bg-green-500/10 text-green-400 border-green-500/20' },
-    post: { text: 'Post', className: 'bg-pink-500/10 text-pink-400 border-pink-500/20' },
-    image: { text: 'Image', className: 'bg-teal-500/10 text-teal-400 border-teal-500/20' },
-};
-
 export default function BacklogPage() {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
 
     const backlogTasksQuery = useMemo(() => 
-        (firestore && !isUserLoading && user) ? query(collection(firestore, 'tasks'), where('sprintId', '==', null)) : null,
-    [firestore, isUserLoading, user]);
+        (firestore && !isUserLoading) ? query(collection(firestore, 'tasks'), where('sprintId', '==', null)) : null,
+    [firestore, isUserLoading]);
     const { data: backlogTasks, isLoading: isLoadingBacklog } = useCollection<any>(backlogTasksQuery);
 
     const sprintTasksQuery = useMemo(() =>
-        (firestore && !isUserLoading && user) ? query(collection(firestore, 'tasks'), where('sprintId', '==', SPRINT_ID)) : null,
-    [firestore, isUserLoading, user]);
+        (firestore && !isUserLoading) ? query(collection(firestore, 'tasks'), where('sprintId', '==', SPRINT_ID)) : null,
+    [firestore, isUserLoading]);
     const { data: sprintTasks, isLoading: isLoadingSprint } = useCollection<any>(sprintTasksQuery);
+    
+    const taskTypesQuery = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'task_types') : null, [firestore, isUserLoading]);
+    const { data: taskTypesData, isLoading: isLoadingTaskTypes } = useCollection<any>(taskTypesQuery);
+
+    const taskTypeMap = useMemo(() => {
+        if (!taskTypesData) return {};
+        return taskTypesData.reduce((acc: any, tt: any) => {
+            acc[tt.id] = tt;
+            return acc;
+        }, {});
+    }, [taskTypesData]);
     
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [step, setStep] = useState(1);
     const [selectedType, setSelectedType] = useState<'task' | 'campaign' | null>(null);
 
     const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
-    const [newSubtaskType, setNewSubtaskType] = useState(Object.keys(subtaskTypes)[0]);
+    const [newSubtaskType, setNewSubtaskType] = useState("");
 
     const [selectedTask, setSelectedTask] = useState<any>(null);
     const [draggedItem, setDraggedItem] = useState<{ id: string; source: 'backlog' | 'sprint' } | null>(null);
@@ -128,11 +128,11 @@ export default function BacklogPage() {
         setSelectedType(null);
         form.reset();
         setNewSubtaskTitle("");
-        setNewSubtaskType(Object.keys(subtaskTypes)[0]);
+        setNewSubtaskType("");
     };
 
     const handleSubtaskAdd = () => {
-        if (!newSubtaskTitle.trim() || !subtaskTypes[newSubtaskType]) return;
+        if (!newSubtaskTitle.trim() || !newSubtaskType) return;
 
         append({
             title: newSubtaskTitle.trim(),
@@ -140,7 +140,7 @@ export default function BacklogPage() {
         });
 
         setNewSubtaskTitle("");
-        setNewSubtaskType(Object.keys(subtaskTypes)[0]);
+        setNewSubtaskType("");
     };
 
     function onSubmit(values: z.infer<typeof taskFormSchema>) {
@@ -206,7 +206,7 @@ export default function BacklogPage() {
 
     const totalPoints = sprintTasks?.reduce((sum, task) => sum + task.points, 0) ?? 0;
 
-    const isLoading = isUserLoading || isLoadingBacklog || isLoadingSprint;
+    const isLoading = isUserLoading || isLoadingBacklog || isLoadingSprint || isLoadingTaskTypes;
 
     if (isLoading) {
         return (
@@ -345,9 +345,24 @@ export default function BacklogPage() {
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Tipo de Tarea</FormLabel>
-                                                        <FormControl>
-                                                            <Input placeholder="Ej: Motion Graphics" {...field} />
-                                                        </FormControl>
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                            <FormControl>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="Selecciona un tipo de tarea" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                {isLoadingTaskTypes ? (
+                                                                    <SelectItem value="loading" disabled>Cargando...</SelectItem>
+                                                                ) : (
+                                                                    taskTypesData?.map((taskType: any) => (
+                                                                        <SelectItem key={taskType.id} value={taskType.id}>
+                                                                            {taskType.name}
+                                                                        </SelectItem>
+                                                                    ))
+                                                                )}
+                                                            </SelectContent>
+                                                        </Select>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -423,18 +438,23 @@ export default function BacklogPage() {
                                             <div className="space-y-4 rounded-md border p-4">
                                                 <h4 className="font-semibold text-foreground">Sub-tareas de la Campaña</h4>
                                                 <div className="space-y-2">
-                                                    {fields.map((field, index) => (
-                                                        <div key={field.id} className="group flex items-center justify-between gap-3 rounded-md p-2 hover:bg-secondary/50">
-                                                            <div className="flex items-center gap-3">
-                                                                <Badge variant="outline" className={cn("text-xs font-semibold", subtaskTypes[field.type]?.className)}>{subtaskTypes[field.type]?.text}</Badge>
-                                                                <span className="text-sm">{field.title}</span>
+                                                    {fields.map((field, index) => {
+                                                        const taskType = taskTypeMap[field.type];
+                                                        return (
+                                                            <div key={field.id} className="group flex items-center justify-between gap-3 rounded-md p-2 hover:bg-secondary/50">
+                                                                <div className="flex items-center gap-3">
+                                                                    {taskType ? (
+                                                                        <Badge variant="outline" className="text-xs font-semibold" style={{ backgroundColor: `${taskType.color}20`, color: taskType.color, borderColor: `${taskType.color}30` }}>{taskType.name}</Badge>
+                                                                    ) : <Badge variant="secondary">{field.type}</Badge>}
+                                                                    <span className="text-sm">{field.title}</span>
+                                                                </div>
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" onClick={() => remove(index)}>
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                    <span className="sr-only">Eliminar subtarea</span>
+                                                                </Button>
                                                             </div>
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" onClick={() => remove(index)}>
-                                                                <Trash2 className="h-4 w-4" />
-                                                                <span className="sr-only">Eliminar subtarea</span>
-                                                            </Button>
-                                                        </div>
-                                                    ))}
+                                                        )
+                                                    })}
                                                     {fields.length === 0 && (
                                                         <p className="text-sm text-muted-foreground text-center py-2">No hay sub-tareas añadidas.</p>
                                                     )}
@@ -451,14 +471,20 @@ export default function BacklogPage() {
                                                             <SelectValue placeholder="Tipo" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {Object.entries(subtaskTypes).map(([key, { text, className }]) => (
-                                                                <SelectItem key={key} value={key}>
-                                                                    <Badge variant="outline" className={cn("text-xs font-semibold border-none shadow-none", className)}>{text}</Badge>
-                                                                </SelectItem>
-                                                            ))}
+                                                            {isLoadingTaskTypes ? (
+                                                                <SelectItem value="loading" disabled>Cargando...</SelectItem>
+                                                            ) : (
+                                                                taskTypesData?.map((taskType: any) => (
+                                                                    <SelectItem key={taskType.id} value={taskType.id}>
+                                                                        <Badge variant="outline" className="text-xs font-semibold border-none shadow-none" style={{ backgroundColor: `${taskType.color}20`, color: taskType.color, borderColor: `${taskType.color}30` }}>
+                                                                            {taskType.name}
+                                                                        </Badge>
+                                                                    </SelectItem>
+                                                                ))
+                                                            )}
                                                         </SelectContent>
                                                     </Select>
-                                                    <Button type="button" size="sm" disabled={!newSubtaskTitle.trim()} onClick={handleSubtaskAdd}>
+                                                    <Button type="button" size="sm" disabled={!newSubtaskTitle.trim() || !newSubtaskType} onClick={handleSubtaskAdd}>
                                                         Añadir
                                                     </Button>
                                                 </div>
@@ -646,12 +672,19 @@ export default function BacklogPage() {
                                     <div className="space-y-3 border-t pt-4">
                                         <h4 className="font-semibold text-foreground">Sub-tareas</h4>
                                         <div className="space-y-2">
-                                            {selectedTask.subtasks.map((sub: any) => (
-                                                <div key={sub.id} className="flex items-center gap-3 rounded-md p-2 bg-secondary/50">
-                                                    <Badge variant="outline" className={cn("text-xs font-semibold", subtaskTypes[sub.type]?.className)}>{subtaskTypes[sub.type]?.text}</Badge>
-                                                    <span className="text-sm">{sub.title}</span>
-                                                </div>
-                                            ))}
+                                            {selectedTask.subtasks.map((sub: any) => {
+                                                const taskType = taskTypeMap[sub.type];
+                                                return (
+                                                    <div key={sub.id} className="flex items-center gap-3 rounded-md p-2 bg-secondary/50">
+                                                        {taskType ? (
+                                                            <Badge variant="outline" className="text-xs font-semibold" style={{ backgroundColor: `${taskType.color}20`, color: taskType.color, borderColor: `${taskType.color}30` }}>{taskType.name}</Badge>
+                                                        ) : (
+                                                            <Badge variant="secondary">{sub.type}</Badge>
+                                                        )}
+                                                        <span className="text-sm">{sub.title}</span>
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
                                     </div>
                                 )}

@@ -20,22 +20,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useCollection, useFirestore, updateDocumentNonBlocking, useUser } from "@/firebase";
-import { collection, doc, query, where } from "firebase/firestore";
+import { collection, doc, query, where, orderBy } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
-const KANBAN_SPRINT_ID = "current-sprint"; // Example sprint ID
-
-const subtaskTypes: Record<string, { text: string; className: string }> = {
-    task: { text: 'Task', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' },
-    footage: { text: 'Footage', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' },
-    reel: { text: 'Reel', className: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-    graphics: { text: 'Graphics', className: 'bg-purple-600/10 text-purple-400 border-purple-600/20' },
-    audio: { text: 'Audio', className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
-    export: { text: 'Export', className: 'bg-green-500/10 text-green-400 border-green-500/20' },
-    post: { text: 'Post', className: 'bg-pink-500/10 text-pink-400 border-pink-500/20' },
-    image: { text: 'Image', className: 'bg-teal-500/10 text-teal-400 border-teal-500/20' },
-};
+const KANBAN_SPRINT_ID = "next-sprint"; // Note: Using next-sprint for Kanban now as well.
 
 const getImageUrl = (id: string) => PlaceHolderImages.find(img => img.id === id)?.imageUrl;
 
@@ -44,17 +33,28 @@ export default function KanbanPage() {
   const { user, isUserLoading } = useUser();
 
   const tasksQuery = useMemo(() => 
-      (firestore && !isUserLoading && user)
+      (firestore && !isUserLoading)
           ? query(
               collection(firestore, 'tasks'), 
               where('sprintId', '==', KANBAN_SPRINT_ID)
             ) 
           : null,
-  [firestore, isUserLoading, user]);
+  [firestore, isUserLoading]);
   const { data: tasks, isLoading: isLoadingTasks } = useCollection<any>(tasksQuery);
 
-  const usersQuery = useMemo(() => (firestore && !isUserLoading && user) ? collection(firestore, 'users') : null, [firestore, isUserLoading, user]);
+  const usersQuery = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'users') : null, [firestore, isUserLoading]);
   const { data: usersData } = useCollection<any>(usersQuery);
+
+  const taskTypesQuery = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'task_types') : null, [firestore, isUserLoading]);
+  const { data: taskTypesData, isLoading: isLoadingTaskTypes } = useCollection<any>(taskTypesQuery);
+
+  const taskTypeMap = useMemo(() => {
+    if (!taskTypesData) return {};
+    return taskTypesData.reduce((acc: any, tt: any) => {
+        acc[tt.id] = tt;
+        return acc;
+    }, {});
+  }, [taskTypesData]);
 
   const boardData = useMemo(() => {
     if (!tasks || !usersData) return null;
@@ -92,7 +92,7 @@ export default function KanbanPage() {
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [newComment, setNewComment] = useState("");
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
-  const [newSubtaskType, setNewSubtaskType] = useState(Object.keys(subtaskTypes)[0]);
+  const [newSubtaskType, setNewSubtaskType] = useState("");
   
   const [draggedItem, setDraggedItem] = useState<{ taskId: string } | null>(null);
 
@@ -169,7 +169,7 @@ export default function KanbanPage() {
   };
 
   const handleSubtaskTypeChange = (subtaskId: string, newTypeKey: string) => {
-    if (!selectedTask || selectedTask.type !== 'campaign' || !subtaskTypes[newTypeKey] || !firestore) return;
+    if (!selectedTask || selectedTask.type !== 'campaign' || !newTypeKey || !firestore) return;
 
     const updatedSubtasks = selectedTask.subtasks?.map((sub: any) => 
         sub.id === subtaskId ? { ...sub, type: newTypeKey } : sub
@@ -181,15 +181,15 @@ export default function KanbanPage() {
       updatedAt: new Date().toISOString(),
     });
     
-    setSelectedTask((prev: any) => ({ ...prev, subtasks: updatedSubtasks.map((s:any) => s.id === subtaskId ? {...s, tag: subtaskTypes[newTypeKey]} : s) }));
+    setSelectedTask((prev: any) => ({ ...prev, subtasks: updatedSubtasks }));
 };
 
   const handleSubtaskAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSubtaskTitle.trim() || !selectedTask || selectedTask.type !== 'campaign' || !subtaskTypes[newSubtaskType] || !firestore) return;
+    if (!newSubtaskTitle.trim() || !selectedTask || selectedTask.type !== 'campaign' || !newSubtaskType || !firestore) return;
 
     const newSubtask = {
-        id: `SUB-${Date.now()}`,
+        id: `SUB-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         title: newSubtaskTitle.trim(),
         completed: false,
         type: newSubtaskType
@@ -208,7 +208,7 @@ export default function KanbanPage() {
     
     setSelectedTask((prev: any) => ({ ...prev, subtasks: updatedSubtasks, progress: newProgress }));
     setNewSubtaskTitle("");
-    setNewSubtaskType(Object.keys(subtaskTypes)[0]);
+    setNewSubtaskType("");
   };
 
   const handleDeleteSubtask = (subtaskId: string) => {
@@ -250,7 +250,7 @@ export default function KanbanPage() {
     setIsRenameDialogOpen(false);
   };
   
-  if (isLoadingTasks || isUserLoading || !boardData) {
+  if (isLoadingTasks || isUserLoading || !boardData || isLoadingTaskTypes) {
     return (
         <div className="flex flex-col h-full space-y-6">
             <header><Skeleton className="h-12 w-full" /></header>
@@ -294,7 +294,7 @@ export default function KanbanPage() {
               ))}
             </div>
             <Button asChild size="sm">
-              <Link href="/backlog">Review Backlog</Link>
+              <Link href="/backlog">Gestionar Backlog</Link>
             </Button>
           </div>
         </header>
@@ -349,28 +349,32 @@ export default function KanbanPage() {
                     onDragEnd={handleDragEnd}
                     onClick={() => setSelectedTask(task)}
                     className={cn(
-                      "bg-card cursor-grab active:cursor-grabbing",
+                      "bg-card cursor-grab active:cursor-grabbing hover:bg-card/80 transition-colors",
                       draggedItem?.taskId === task.id && "opacity-30"
                     )}
                   >
-                    <CardContent className="p-3 space-y-2">
+                    <CardContent className="p-3 space-y-3">
                       <div className="flex justify-between items-start gap-2">
-                        <div className="flex-1 overflow-hidden">
-                          <p className="text-xs text-muted-foreground truncate">{task.id.substring(0, 7)} {task.clientId && `• ${task.clientId}`}</p>
-                          <h3 className="font-semibold font-headline leading-tight truncate">{task.name}</h3>
-                        </div>
-                        <div className="flex items-center shrink-0">
-                          {ActionIcon ? <ActionIcon className="w-5 h-5 text-muted-foreground" /> : 
-                          task.commentsCount > 0 ? (
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <MessageSquare className="h-4 w-4" />
-                              <span className="text-xs">{task.commentsCount}</span>
-                            </div>
-                          ) : null}
-                        </div>
+                        <h3 className="font-semibold font-headline leading-tight flex-1">{task.name}</h3>
+                        {task.commentsCount > 0 && (
+                          <div className="flex items-center gap-1 text-muted-foreground text-xs shrink-0">
+                            <MessageSquare className="h-3 w-3" />
+                            <span>{task.commentsCount}</span>
+                          </div>
+                        )}
                       </div>
+                      
+                      {task.type === 'campaign' && task.progress !== undefined && (
+                        <div className="space-y-1.5 pt-1">
+                          <div className="flex justify-between items-center text-xs text-muted-foreground">
+                            <span>Progreso</span>
+                            <span className="font-semibold">{task.progress}%</span>
+                          </div>
+                          <Progress value={task.progress} className="h-1.5" />
+                        </div>
+                      )}
 
-                      <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-end justify-between pt-2">
                         <div className="flex items-center gap-2">
                            {task.userId && (
                             <Avatar className="h-6 w-6">
@@ -378,27 +382,20 @@ export default function KanbanPage() {
                               <AvatarFallback>U</AvatarFallback>
                             </Avatar>
                           )}
-                          {task.category && (
-                            <Badge variant="outline">{task.category}</Badge>
-                          )}
+                           <div className="flex flex-col">
+                            {task.category && (
+                              <Badge variant="outline">{task.category}</Badge>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">{task.clientId}</p>
+                           </div>
                         </div>
-                        {task.deadline && (
+                        {task.dueDate && (
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
                             <span>{format(new Date(task.dueDate), 'dd MMM', {locale: es})}</span>
                           </div>
                         )}
                       </div>
-                      
-                      {task.type === 'campaign' && task.progress !== undefined && (
-                        <div className="space-y-1 pt-1">
-                          <div className="flex justify-between items-center text-xs text-muted-foreground">
-                            <span>Progress</span>
-                            <span className="font-semibold">{task.progress}%</span>
-                          </div>
-                          <Progress value={task.progress} className="h-1.5" />
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -456,7 +453,7 @@ export default function KanbanPage() {
                             {selectedTask.type === 'task' && selectedTask.taskTypeId && (
                               <div>
                                   <p className="text-muted-foreground font-semibold">Tipo de Tarea</p>
-                                  <p>{selectedTask.taskTypeId}</p>
+                                  <p>{taskTypeMap[selectedTask.taskTypeId]?.name || selectedTask.taskTypeId}</p>
                               </div>
                             )}
                             <div>
@@ -498,12 +495,18 @@ export default function KanbanPage() {
                                                 {subtask.type && (
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Badge variant="outline" className={cn("cursor-pointer text-xs font-semibold", subtaskTypes[subtask.type]?.className)}>{subtaskTypes[subtask.type]?.text}</Badge>
+                                                          {taskTypeMap[subtask.type] ? (
+                                                              <Badge variant="outline" className="cursor-pointer text-xs font-semibold" style={{ backgroundColor: `${taskTypeMap[subtask.type].color}20`, color: taskTypeMap[subtask.type].color, borderColor: `${taskTypeMap[subtask.type].color}30` }}>
+                                                                  {taskTypeMap[subtask.type].name}
+                                                              </Badge>
+                                                          ) : (
+                                                              <Badge variant="secondary" className="cursor-pointer">Tipo no encontrado</Badge>
+                                                          )}
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent>
                                                             <DropdownMenuRadioGroup value={currentTagKey} onValueChange={(newType) => handleSubtaskTypeChange(subtask.id, newType)}>
-                                                                {Object.entries(subtaskTypes).map(([key, { text }]) => (
-                                                                    <DropdownMenuRadioItem key={key} value={key}>{text}</DropdownMenuRadioItem>
+                                                                {taskTypesData?.map((taskType: any) => (
+                                                                    <DropdownMenuRadioItem key={taskType.id} value={taskType.id}>{taskType.name}</DropdownMenuRadioItem>
                                                                 ))}
                                                             </DropdownMenuRadioGroup>
                                                         </DropdownMenuContent>
@@ -529,14 +532,20 @@ export default function KanbanPage() {
                                             <SelectValue placeholder="Tipo" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {Object.entries(subtaskTypes).map(([key, { text, className }]) => (
-                                                <SelectItem key={key} value={key}>
-                                                  <Badge variant="outline" className={cn("text-xs font-semibold border-none shadow-none", className)}>{text}</Badge>
-                                                </SelectItem>
-                                            ))}
+                                            {isLoadingTaskTypes ? (
+                                                <SelectItem value="loading" disabled>Cargando...</SelectItem>
+                                            ) : (
+                                                taskTypesData?.map((taskType: any) => (
+                                                    <SelectItem key={taskType.id} value={taskType.id}>
+                                                        <Badge variant="outline" className="text-xs font-semibold border-none shadow-none" style={{ backgroundColor: `${taskType.color}20`, color: taskType.color, borderColor: `${taskType.color}30` }}>
+                                                            {taskType.name}
+                                                        </Badge>
+                                                    </SelectItem>
+                                                ))
+                                            )}
                                         </SelectContent>
                                     </Select>
-                                    <Button type="submit" size="sm" disabled={!newSubtaskTitle.trim()}>Añadir</Button>
+                                    <Button type="submit" size="sm" disabled={!newSubtaskTitle.trim() || !newSubtaskType}>Añadir</Button>
                                 </form>
                             </div>
                         )}
