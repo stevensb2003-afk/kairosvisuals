@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type Task = {
   title: string;
@@ -37,9 +38,68 @@ const generateSampleTasks = (date: Date): { [key: string]: Task[] } => {
 };
 
 export default function CalendarPage() {
-    const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentDate, setCurrentDate] = useState<Date | null>(null);
 
-    const tasks = useMemo(() => generateSampleTasks(currentDate), [currentDate]);
+    useEffect(() => {
+        // This runs only on the client, after hydration
+        setCurrentDate(new Date());
+    }, []);
+
+    const tasks = useMemo(() => {
+        if (!currentDate) return {};
+        return generateSampleTasks(currentDate)
+    }, [currentDate]);
+
+    // While mounting on client, currentDate will be null, so we show a loader.
+    // This matches the server-rendered HTML, avoiding hydration error.
+    if (!currentDate) {
+        return (
+            <div className="flex flex-col h-full space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                     <div>
+                        <Skeleton className="h-9 w-48 mb-2" />
+                        <Skeleton className="h-5 w-80" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" disabled>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" disabled>
+                            Hoy
+                        </Button>
+                        <Button variant="outline" size="icon" disabled>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+
+                <Card className="flex-1 flex flex-col">
+                  <CardContent className="p-0 flex flex-col flex-1">
+                    <div className="grid grid-cols-7">
+                        {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"].map(day => (
+                            <div key={day} className="p-2 border-b border-r text-center font-medium text-sm text-muted-foreground first:border-l">
+                                {day.substring(0,3)}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-7 auto-rows-fr flex-1">
+                        {Array.from({ length: 35 }).map((_, dayIdx) => (
+                            <div
+                                key={dayIdx}
+                                className={cn(
+                                    "border-b border-r p-2 flex flex-col bg-muted/30",
+                                    dayIdx % 7 === 0 && "border-l"
+                                )}
+                            >
+                                <Skeleton className="h-6 w-6 self-start p-1" />
+                            </div>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
     const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
