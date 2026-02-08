@@ -1,0 +1,23 @@
+{
+  "name": "Kairos OS",
+  "short_name": "KairosOS",
+  "description": "Sistema central de Kairos Visuals",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2E9FF",
+  "theme_color": "#6A29EA",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
