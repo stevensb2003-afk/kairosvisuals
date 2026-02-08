@@ -17,7 +17,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
+
+const subtaskTypes: Record<string, { text: string; className: string }> = {
+    task: { text: 'Task', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' },
+    footage: { text: 'Footage', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' },
+    reel: { text: 'Reel', className: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+    graphics: { text: 'Graphics', className: 'bg-purple-600/10 text-purple-400 border-purple-600/20' },
+    audio: { text: 'Audio', className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
+    export: { text: 'Export', className: 'bg-green-500/10 text-green-400 border-green-500/20' },
+    post: { text: 'Post', className: 'bg-pink-500/10 text-pink-400 border-pink-500/20' },
+    image: { text: 'Image', className: 'bg-teal-500/10 text-teal-400 border-teal-500/20' },
+};
 
 const initialKanbanData = {
   sprint: {
@@ -84,11 +97,11 @@ const initialKanbanData = {
           description: null,
           progress: 60,
           subtasks: [
-              { id: 'SUB-01', title: 'Select footage', completed: true, tag: { text: 'Footage', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' } },
-              { id: 'SUB-02', title: 'First edit (Reel)', completed: true, tag: { text: 'Reel', className: 'bg-blue-500/10 text-blue-400 border-blue-500/20' } },
-              { id: 'SUB-03', title: 'Add graphics', completed: true, tag: { text: 'Graphics', className: 'bg-purple-600/10 text-purple-400 border-purple-600/20' } },
-              { id: 'SUB-04', title: 'Sound mixing', completed: false, tag: { text: 'Audio', className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' } },
-              { id: 'SUB-05', title: 'Client review version', completed: false, tag: { text: 'Export', className: 'bg-green-500/10 text-green-400 border-green-500/20' } },
+              { id: 'SUB-01', title: 'Select footage', completed: true, tag: subtaskTypes.footage },
+              { id: 'SUB-02', title: 'First edit (Reel)', completed: true, tag: subtaskTypes.reel },
+              { id: 'SUB-03', title: 'Add graphics', completed: true, tag: subtaskTypes.graphics },
+              { id: 'SUB-04', title: 'Sound mixing', completed: false, tag: subtaskTypes.audio },
+              { id: 'SUB-05', title: 'Client review version', completed: false, tag: subtaskTypes.export },
           ],
           editor: { id: "editor-nike", name: "Nike Editor" },
           tag: { text: "EDITING", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
@@ -136,6 +149,7 @@ export default function KanbanPage() {
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [newComment, setNewComment] = useState("");
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [newSubtaskType, setNewSubtaskType] = useState(Object.keys(subtaskTypes)[0]);
   
   const [draggedItem, setDraggedItem] = useState<{ taskId: string } | null>(null);
 
@@ -266,15 +280,46 @@ export default function KanbanPage() {
     });
   };
 
+  const handleSubtaskTypeChange = (subtaskId: string, newTypeKey: string) => {
+    if (!selectedTask || selectedTask.type !== 'campaign' || !subtaskTypes[newTypeKey]) return;
+
+    setBoardData(prevData => {
+        const newColumns = prevData.columns.map(column => {
+            const taskIndex = column.tasks.findIndex(t => t.id === selectedTask.id);
+            if (taskIndex > -1) {
+                const updatedTasks = [...column.tasks];
+                const campaignTask = updatedTasks[taskIndex];
+
+                const updatedSubtasks = campaignTask.subtasks?.map((sub: any) => 
+                    sub.id === subtaskId ? { ...sub, tag: subtaskTypes[newTypeKey] } : sub
+                ) || [];
+                
+                const updatedTask = {
+                    ...campaignTask,
+                    subtasks: updatedSubtasks,
+                    updatedAt: new Date().toISOString(),
+                };
+                updatedTasks[taskIndex] = updatedTask;
+                
+                setSelectedTask(updatedTask);
+
+                return { ...column, tasks: updatedTasks };
+            }
+            return column;
+        });
+        return { ...prevData, columns: newColumns };
+    });
+};
+
   const handleSubtaskAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSubtaskTitle.trim() || !selectedTask || selectedTask.type !== 'campaign') return;
+    if (!newSubtaskTitle.trim() || !selectedTask || selectedTask.type !== 'campaign' || !subtaskTypes[newSubtaskType]) return;
 
     const newSubtask = {
         id: `SUB-${Date.now()}`,
         title: newSubtaskTitle.trim(),
         completed: false,
-        tag: { text: 'Task', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' }
+        tag: subtaskTypes[newSubtaskType]
     };
 
     setBoardData(prevData => {
@@ -305,6 +350,7 @@ export default function KanbanPage() {
     });
 
     setNewSubtaskTitle("");
+    setNewSubtaskType(Object.keys(subtaskTypes)[0]);
   };
 
   const handleDeleteSubtask = (subtaskId: string) => {
@@ -528,7 +574,9 @@ export default function KanbanPage() {
                                 </div>
                                 <Progress value={selectedTask.progress} className="h-2" />
                                 <div className="space-y-2">
-                                    {selectedTask.subtasks.map((subtask: any) => (
+                                    {selectedTask.subtasks.map((subtask: any) => {
+                                        const currentTagKey = Object.keys(subtaskTypes).find(key => subtaskTypes[key as keyof typeof subtaskTypes].text === subtask.tag.text) || 'task';
+                                        return (
                                         <div key={subtask.id} className="group flex items-center justify-between gap-3 rounded-md p-2 hover:bg-secondary/50">
                                             <div className="flex items-center gap-3">
                                                 <Checkbox 
@@ -545,7 +593,18 @@ export default function KanbanPage() {
                                             </div>
                                              <div className="flex items-center gap-2">
                                                 {subtask.tag && (
-                                                    <Badge variant="outline" className={cn("text-xs font-semibold", subtask.tag.className)}>{subtask.tag.text}</Badge>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Badge variant="outline" className={cn("cursor-pointer text-xs font-semibold", subtask.tag.className)}>{subtask.tag.text}</Badge>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent>
+                                                            <DropdownMenuRadioGroup value={currentTagKey} onValueChange={(newType) => handleSubtaskTypeChange(subtask.id, newType)}>
+                                                                {Object.entries(subtaskTypes).map(([key, { text }]) => (
+                                                                    <DropdownMenuRadioItem key={key} value={key}>{text}</DropdownMenuRadioItem>
+                                                                ))}
+                                                            </DropdownMenuRadioGroup>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 )}
                                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" onClick={() => handleDeleteSubtask(subtask.id)}>
                                                     <Trash2 className="h-4 w-4" />
@@ -553,15 +612,27 @@ export default function KanbanPage() {
                                                 </Button>
                                             </div>
                                         </div>
-                                    ))}
+                                    )})}
                                 </div>
                                 <form onSubmit={handleSubtaskAdd} className="flex gap-2 pt-4">
                                     <Input
                                         placeholder="Añadir nueva sub-tarea..."
                                         value={newSubtaskTitle}
                                         onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                                        className="h-9"
+                                        className="h-9 flex-grow"
                                     />
+                                    <Select value={newSubtaskType} onValueChange={setNewSubtaskType}>
+                                        <SelectTrigger className="w-[120px] h-9 shrink-0">
+                                            <SelectValue placeholder="Tipo" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(subtaskTypes).map(([key, { text, className }]) => (
+                                                <SelectItem key={key} value={key}>
+                                                  <Badge variant="outline" className={cn("text-xs font-semibold border-none shadow-none", className)}>{text}</Badge>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <Button type="submit" size="sm" disabled={!newSubtaskTitle.trim()}>Añadir</Button>
                                 </form>
                             </div>
