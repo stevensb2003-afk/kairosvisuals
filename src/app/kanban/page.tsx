@@ -196,7 +196,10 @@ export default function KanbanPage() {
     setBoardData(currentBoardData => {
         const newBoardData = {
           ...currentBoardData,
-          columns: currentBoardData.columns.map(c => ({ ...c, tasks: [...c.tasks] })),
+          columns: currentBoardData.columns.map(c => ({ 
+              ...c, 
+              tasks: c.tasks.map(t => ({...t}))
+          })),
         };
   
         const sourceColIndex = newBoardData.columns.findIndex(c => c.id === sourceColId);
@@ -683,7 +686,7 @@ export default function KanbanPage() {
                         
                         <div className="space-y-4">
                             <h4 className="font-semibold text-foreground">Comentarios</h4>
-                            <div className="space-y-4 pr-2">
+                            <div className="space-y-4">
                                 {selectedTask.comments?.map((comment: any, index: number) => (
                                     <div key={index} className="flex gap-3">
                                         <Avatar className="h-8 w-8">
@@ -723,24 +726,24 @@ export default function KanbanPage() {
         }
       }}>
         <AlertDialogContent>
-          <form onSubmit={handleRenameColumn}>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Renombrar columna</AlertDialogTitle>
-              <AlertDialogDescription>
-                Introduce el nuevo nombre para la columna "{renamingColumn?.title}".
-              </AlertDialogDescription>
-            </AlertDialogHeader>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Renombrar columna</AlertDialogTitle>
+            <AlertDialogDescription>
+              Introduce el nuevo nombre para la columna "{renamingColumn?.title}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <form id="rename-column-form" onSubmit={handleRenameColumn}>
             <Input
               value={newColumnName}
               onChange={(e) => setNewColumnName(e.target.value)}
               className="mt-4"
               autoFocus
             />
-            <AlertDialogFooter className="mt-4">
-              <AlertDialogCancel type="button">Cancelar</AlertDialogCancel>
-              <AlertDialogAction type="submit">Guardar</AlertDialogAction>
-            </AlertDialogFooter>
           </form>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction type="submit" form="rename-column-form">Guardar</AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
