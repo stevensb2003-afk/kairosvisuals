@@ -1,8 +1,10 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, Plus } from "lucide-react";
+import { GripVertical, Plus, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Link from "next/link";
 
 const tasks = [
     {
@@ -62,10 +64,18 @@ export default function BacklogPage() {
                     <h1 className="text-3xl font-bold font-headline">Backlog</h1>
                     <p className="text-muted-foreground">Planifica y organiza el trabajo futuro de forma visual.</p>
                 </div>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nueva Tarea
-                </Button>
+                <div className="flex items-center gap-4">
+                    <Button asChild variant="outline">
+                        <Link href="/kanban">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Volver al Kanban
+                        </Link>
+                    </Button>
+                    <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nueva Tarea
+                    </Button>
+                </div>
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8 items-start">
@@ -107,7 +117,7 @@ export default function BacklogPage() {
                     <Card className="sticky top-24">
                         <CardHeader className="pb-2">
                             <CardTitle>Próximo Sprint</CardTitle>
-                            <CardDescription>Puntos totales: <span className="font-bold text-foreground">{totalPoints}</span></CardDescription>
+                            <CardDescription>Puntos totales: <span className="font-bold text-foreground">{totalPoints}</span></caltoken>
                         </CardHeader>
                         <CardContent>
                             <div className="min-h-[200px] border-2 border-dashed rounded-lg p-4 space-y-3 bg-secondary/20">
