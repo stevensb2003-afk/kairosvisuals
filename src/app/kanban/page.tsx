@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from "@/components/ui/textarea";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 const initialKanbanData = {
@@ -36,6 +37,7 @@ const initialKanbanData = {
       tasks: [
         {
           id: "KV-1024",
+          type: 'task',
           title: "Intro Animation - Spring Collection",
           description: "Create a 5s intro animation using the new branding assets.",
           icon: { id: "motion-icon", hint: "abstract motion" },
@@ -49,6 +51,7 @@ const initialKanbanData = {
         },
         {
           id: "KV-1033",
+          type: 'task',
           title: "Podcast Ep 4 - Rough Cut",
           description: null,
           icon: { id: "audio-icon", hint: "sound wave" },
@@ -76,9 +79,17 @@ const initialKanbanData = {
         },
         {
           id: "KV-1011",
+          type: 'campaign',
           title: "Nike Campaign - Social Reel",
           description: null,
           progress: 60,
+          subtasks: [
+              { id: 'SUB-01', title: 'Select footage', completed: true },
+              { id: 'SUB-02', title: 'First edit', completed: true },
+              { id: 'SUB-03', title: 'Add graphics', completed: true },
+              { id: 'SUB-04', title: 'Sound mixing', completed: false },
+              { id: 'SUB-05', title: 'Client review version', completed: false },
+          ],
           editor: { id: "editor-nike", name: "Nike Editor" },
           tag: { text: "EDITING", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
           deadline: "2d",
@@ -97,6 +108,7 @@ const initialKanbanData = {
       tasks: [
         {
           id: "KV-0980",
+          type: 'task',
           title: "Corporate Doc v2",
           description: "Awaiting feedback on the color grade.",
           editor: { id: "editor-spotify", name: "Spotify Editor" },
@@ -151,31 +163,33 @@ export default function KanbanPage() {
         return;
       }
     }
+    
+    setBoardData(currentBoardData => {
+        const newBoardData = { ...currentBoardData, columns: [...currentBoardData.columns] };
+        const sourceColIndex = newBoardData.columns.findIndex(c => c.id === sourceColId);
+        const targetColIndex = newBoardData.columns.findIndex(c => c.id === targetColId);
 
-    setBoardData(prevData => {
-      let taskToMove: any;
-      const newColumns = prevData.columns.map(col => {
-        if (col.id === sourceColId) {
-          taskToMove = col.tasks.find(t => t.id === taskId);
-          return { ...col, tasks: col.tasks.filter(t => t.id !== taskId) };
-        }
-        return col;
-      });
+        if (sourceColIndex === -1 || targetColIndex === -1) return currentBoardData;
 
-      if (!taskToMove) return prevData;
+        const sourceCol = { ...newBoardData.columns[sourceColIndex], tasks: [...newBoardData.columns[sourceColIndex].tasks] };
+        const taskIndex = sourceCol.tasks.findIndex(t => t.id === taskId);
+        
+        if (taskIndex === -1) return currentBoardData;
 
-      const finalColumns = newColumns.map(col => {
-        if (col.id === targetColId) {
-          const newTasks = [...col.tasks];
-          const dropIndex = targetTaskId ? newTasks.findIndex(t => t.id === targetTaskId) : newTasks.length;
-          newTasks.splice(dropIndex, 0, taskToMove);
-          return { ...col, tasks: newTasks };
-        }
-        return col;
-      });
+        const [taskToMove] = sourceCol.tasks.splice(taskIndex, 1);
+        newBoardData.columns[sourceColIndex] = sourceCol;
 
-      return { ...prevData, columns: finalColumns };
+        const targetCol = sourceColId === targetColId 
+            ? sourceCol 
+            : { ...newBoardData.columns[targetColIndex], tasks: [...newBoardData.columns[targetColIndex].tasks] };
+
+        const dropIndex = targetTaskId ? targetCol.tasks.findIndex(t => t.id === targetTaskId) : targetCol.tasks.length;
+        targetCol.tasks.splice(dropIndex, 0, taskToMove);
+        newBoardData.columns[targetColIndex] = targetCol;
+
+        return newBoardData;
     });
+
 
     setDraggedItem(null);
   };
@@ -351,7 +365,7 @@ export default function KanbanPage() {
                               </div>
                             )}
                         </div>
-                        {task.progress !== undefined && (
+                        {task.type === 'campaign' && task.progress !== undefined && (
                           <div className="space-y-1">
                             <div className="flex justify-between items-center text-xs text-muted-foreground">
                               <span>Progress</span>
@@ -399,6 +413,25 @@ export default function KanbanPage() {
                                 <p>{selectedTask.updatedAt ? format(new Date(selectedTask.updatedAt), "dd MMM, yyyy 'a las' HH:mm", { locale: es }) : 'N/A'}</p>
                             </div>
                         </div>
+                        
+                        {selectedTask.type === 'campaign' && selectedTask.subtasks && (
+                            <div className="space-y-4">
+                                <h4 className="font-semibold text-foreground">Sub-tareas</h4>
+                                <div className="space-y-2">
+                                    {selectedTask.subtasks.map((subtask: any) => (
+                                        <div key={subtask.id} className="flex items-center gap-3">
+                                            <Checkbox id={`subtask-${subtask.id}`} checked={subtask.completed} disabled />
+                                            <label
+                                                htmlFor={`subtask-${subtask.id}`}
+                                                className={cn("text-sm", subtask.completed && "line-through text-muted-foreground")}
+                                            >
+                                                {subtask.title}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {selectedTask.description && <p className="text-muted-foreground">{selectedTask.description}</p>}
                         
