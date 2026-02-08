@@ -1,9 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read and write access to all documents for any authenticated user.
+    // WARNING: These rules are wide open. Any client can read and write to
+    // your entire database. This is not recommended for production applications.
+    // For a small, trusted team during development, this can be acceptable.
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }
