@@ -9,27 +9,36 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useState } from 'react';
+import { Pencil, Trash2, Check, X } from 'lucide-react';
 
 const taskTypeSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   price: z.coerce.number().min(0, 'El precio debe ser un número no negativo.'),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Debe ser un color hexadecimal válido (ej: #RRGGBB).'),
 });
+
+type TaskType = {
+    id: string;
+    name: string;
+    price: number;
+};
 
 export function TaskTypeManagement() {
     const firestore = useFirestore();
     const taskTypesCollection = useMemoFirebase(() => firestore ? collection(firestore, 'task_types') : null, [firestore]);
-    const { data: taskTypes, isLoading } = useCollection<{name: string, color: string, price: number}>(taskTypesCollection);
+    const { data: taskTypes, isLoading } = useCollection<TaskType>(taskTypesCollection);
+
+    const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState({ name: '', price: 0 });
 
     const form = useForm<z.infer<typeof taskTypeSchema>>({
         resolver: zodResolver(taskTypeSchema),
         defaultValues: {
             name: '',
             price: 0,
-            color: '#6A29EA',
         }
     });
 
@@ -40,11 +49,35 @@ export function TaskTypeManagement() {
         form.reset();
     }
 
+    const handleEditClick = (taskType: TaskType) => {
+        setEditingTaskId(taskType.id);
+        setEditForm({ name: taskType.name, price: taskType.price });
+    };
+
+    const handleCancelEdit = () => {
+        setEditingTaskId(null);
+    };
+
+    const handleSaveEdit = (id: string) => {
+        if (!firestore) return;
+        const docRef = doc(firestore, 'task_types', id);
+        updateDocumentNonBlocking(docRef, editForm);
+        setEditingTaskId(null);
+    };
+
+    const handleDelete = (id: string) => {
+        if (!firestore) return;
+        if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de tarea?')) {
+            const docRef = doc(firestore, 'task_types', id);
+            deleteDocumentNonBlocking(docRef);
+        }
+    };
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Tipos de Tarea</CardTitle>
-                <CardDescription>Define los tipos de tareas, asígnales un precio individual y un color para una mejor organización.</CardDescription>
+                <CardDescription>Define los tipos de tareas y asígnales un precio individual para trabajos puntuales.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-10 md:grid-cols-2">
                 <div className="space-y-4">
@@ -60,18 +93,8 @@ export function TaskTypeManagement() {
                             )} />
                             <FormField control={form.control} name="price" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Precio Individual</FormLabel>
-                                    <FormControl><Input type="number" min="0" placeholder="Ej: 150" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={form.control} name="color" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Color</FormLabel>
-                                    <div className="flex items-center gap-2">
-                                      <FormControl><Input type="color" className="w-12 h-10 p-1" {...field} /></FormControl>
-                                      <FormControl><Input placeholder="#RRGGBB" {...field} /></FormControl>
-                                    </div>
+                                    <FormLabel>Precio Individual (CRC)</FormLabel>
+                                    <FormControl><Input type="number" min="0" placeholder="Ej: 85000" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -85,27 +108,65 @@ export function TaskTypeManagement() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Muestra</TableHead>
                                     <TableHead>Nombre</TableHead>
                                     <TableHead>Precio</TableHead>
-                                    <TableHead>Color (Hex)</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading && Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell><Skeleton className="h-5 w-5 rounded-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                                        <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                                     </TableRow>
                                 ))}
                                 {taskTypes && taskTypes.map(taskType => (
                                     <TableRow key={taskType.id}>
-                                        <TableCell><div className="h-5 w-5 rounded-full" style={{ backgroundColor: taskType.color }} /></TableCell>
-                                        <TableCell className="font-medium">{taskType.name}</TableCell>
-                                        <TableCell><span className="font-mono text-sm">${taskType.price}</span></TableCell>
-                                        <TableCell><span className="font-mono text-sm">{taskType.color}</span></TableCell>
+                                        {editingTaskId === taskType.id ? (
+                                            <>
+                                                <TableCell>
+                                                    <Input
+                                                        value={editForm.name}
+                                                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                                        className="h-8"
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Input
+                                                        type="number"
+                                                        value={editForm.price}
+                                                        onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
+                                                        className="h-8"
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSaveEdit(taskType.id)}>
+                                                            <Check className="h-4 w-4 text-green-500" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelEdit}>
+                                                            <X className="h-4 w-4 text-red-500" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <TableCell className="font-medium">{taskType.name}</TableCell>
+                                                <TableCell><span className="font-mono text-sm">₡{taskType.price.toLocaleString('es-CR')}</span></TableCell>
+                                                <TableCell className="text-right">
+                                                     <div className="flex items-center justify-end gap-2">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(taskType)}>
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(taskType.id)}>
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </>
+                                        )}
                                     </TableRow>
                                 ))}
                             </TableBody>

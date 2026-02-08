@@ -28,7 +28,7 @@ const packSchema = z.object({
   })).min(1, 'Debes incluir al menos un tipo de tarea.'),
 });
 
-type TaskType = { id: string; name: string; color: string; };
+type TaskType = { id: string; name: string; };
 type Pack = { id: string; name: string; price: number; taskTypeQuantities: { taskTypeId: string; quantity: number }[]; };
 
 export function PackManagement() {
@@ -92,8 +92,8 @@ export function PackManagement() {
                             )} />
                              <FormField control={form.control} name="price" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Precio Base (Mensual)</FormLabel>
-                                    <FormControl><Input type="number" placeholder="Ej: 500" {...field} /></FormControl>
+                                    <FormLabel>Precio Base (CRC Mensual)</FormLabel>
+                                    <FormControl><Input type="number" placeholder="Ej: 300000" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -148,7 +148,7 @@ export function PackManagement() {
                                 <CardHeader className="flex-row items-start justify-between p-4">
                                     <div>
                                         <CardTitle className="text-lg">{pack.name}</CardTitle>
-                                        <CardDescription className="text-primary font-bold text-lg">${pack.price}/mes</CardDescription>
+                                        <CardDescription className="text-primary font-bold text-lg">₡{pack.price.toLocaleString('es-CR')}/mes</CardDescription>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-4 pt-0">
