@@ -59,23 +59,22 @@ export default function BacklogPage() {
 
     return (
         <div className="space-y-8">
-            <div className="flex justify-between items-start">
-                <div>
-                    <h1 className="text-3xl font-bold font-headline">Backlog</h1>
-                    <p className="text-muted-foreground">Planifica y organiza el trabajo futuro de forma visual.</p>
-                </div>
+            <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                    <Button asChild variant="outline">
+                    <Button asChild variant="outline" size="icon" aria-label="Volver al Kanban">
                         <Link href="/kanban">
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Volver al Kanban
+                            <ArrowLeft className="h-5 w-5" />
                         </Link>
                     </Button>
-                    <Button>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nueva Tarea
-                    </Button>
+                    <div>
+                        <h1 className="text-3xl font-bold font-headline">Backlog</h1>
+                        <p className="text-muted-foreground">Planifica y organiza el trabajo futuro de forma visual.</p>
+                    </div>
                 </div>
+                <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nueva Tarea
+                </Button>
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8 items-start">

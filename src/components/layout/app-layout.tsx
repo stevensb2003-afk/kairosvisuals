@@ -53,7 +53,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         if (item.href === '/') return false;
         return pathname.startsWith(item.href);
     });
-    return currentNav ? currentNav.label : 'Kairos Visuals';
+    return currentNav ? currentNav.label : '';
   };
 
   return (
