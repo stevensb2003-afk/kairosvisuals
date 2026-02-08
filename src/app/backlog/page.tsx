@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, Plus, ArrowLeft, ClipboardCheck, Layers, Trash2 } from "lucide-react";
+import { GripVertical, Plus, ArrowLeft, ClipboardCheck, Layers, Trash2, Filter } from "lucide-react";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 
 
 const allInitialTasks = [
@@ -104,6 +106,20 @@ export default function BacklogPage() {
 
     const [selectedTask, setSelectedTask] = useState<any>(null);
     const [draggedItem, setDraggedItem] = useState<{ id: string; source: 'backlog' | 'sprint' } | null>(null);
+
+    const [clientFilter, setClientFilter] = useState("");
+    const [taskTypeFilter, setTaskTypeFilter] = useState("");
+    const [ticketTypeFilter, setTicketTypeFilter] = useState("all");
+
+    const filteredTasks = useMemo(() => {
+        return tasks.filter(task => {
+            const clientMatch = !clientFilter || task.client.toLowerCase().includes(clientFilter.toLowerCase());
+            const taskTypeMatch = !taskTypeFilter || (task.taskType && task.taskType.toLowerCase().includes(taskTypeFilter.toLowerCase()));
+            const ticketTypeMatch = ticketTypeFilter === 'all' || task.type === ticketTypeFilter;
+            return clientMatch && taskTypeMatch && ticketTypeMatch;
+        });
+    }, [tasks, clientFilter, taskTypeFilter, ticketTypeFilter]);
+
 
     const taskFormSchema = z.object({
       title: z.string().min(1, 'El título es requerido.'),
@@ -449,42 +465,93 @@ export default function BacklogPage() {
                 <div className="lg:col-span-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Cajón de Tareas</CardTitle>
-                            <CardDescription>Aquí están todas las tareas pendientes. Arrastra para añadirlas al sprint.</CardDescription>
+                           <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle>Cajón de Tareas</CardTitle>
+                                    <CardDescription>Aquí están todas las tareas pendientes. Arrastra para añadirlas al sprint.</CardDescription>
+                                </div>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                            <Filter className="mr-2 h-4 w-4" />
+                                            Filtrar
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80">
+                                        <div className="grid gap-4">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">Filtros</h4>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Refina tu búsqueda de tareas.
+                                                </p>
+                                            </div>
+                                            <div className="grid gap-4">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor="client-filter">Cliente</Label>
+                                                    <Input id="client-filter" placeholder="Ej: SynthWave Co." value={clientFilter} onChange={(e) => setClientFilter(e.target.value)} className="h-9" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor="task-type-filter">Tipo de Tarea</Label>
+                                                    <Input id="task-type-filter" placeholder="Ej: Diseño Web" value={taskTypeFilter} onChange={(e) => setTaskTypeFilter(e.target.value)} className="h-9" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label>Tipo de Ticket</Label>
+                                                    <Select onValueChange={setTicketTypeFilter} value={ticketTypeFilter}>
+                                                        <SelectTrigger className="h-9">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">Todos</SelectItem>
+                                                            <SelectItem value="task">Tarea</SelectItem>
+                                                            <SelectItem value="campaign">Campaña</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                           </div>
                         </CardHeader>
                         <CardContent 
                             className="space-y-3"
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, 'backlog')}
                         >
-                            {tasks.map(task => (
-                                <Card 
-                                    key={task.id} 
-                                    className={cn(
-                                        "p-3 flex items-start gap-3 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing",
-                                        draggedItem?.id === task.id && "opacity-30"
-                                    )}
-                                    onClick={() => setSelectedTask(task)}
-                                    draggable
-                                    onDragStart={(e) => handleDragStart(e, task, 'backlog')}
-                                    onDragEnd={handleDragEnd}
-                                >
-                                    <GripVertical className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
-                                    <div className="flex-1 overflow-hidden">
-                                        <div className="flex justify-between items-start gap-2">
-                                            <h3 className="font-semibold leading-tight">{task.title}</h3>
-                                            <Badge variant="secondary" className="font-mono text-xs shrink-0">{task.points} pts</Badge>
+                            {filteredTasks.length > 0 ? (
+                                filteredTasks.map(task => (
+                                    <Card 
+                                        key={task.id} 
+                                        className={cn(
+                                            "p-3 flex items-start gap-3 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing",
+                                            draggedItem?.id === task.id && "opacity-30"
+                                        )}
+                                        onClick={() => setSelectedTask(task)}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, task, 'backlog')}
+                                        onDragEnd={handleDragEnd}
+                                    >
+                                        <GripVertical className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
+                                        <div className="flex-1 overflow-hidden">
+                                            <div className="flex justify-between items-start gap-2">
+                                                <h3 className="font-semibold leading-tight">{task.title}</h3>
+                                                <Badge variant="secondary" className="font-mono text-xs shrink-0">{task.points} pts</Badge>
+                                            </div>
+                                            <p className="text-sm text-muted-foreground mt-1 truncate">{task.client} {task.type === 'task' && `• ${task.taskType}`}</p>
+                                            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                                {task.tag && <Badge variant="outline" className={cn("text-xs font-semibold", task.tag.className)}>{task.tag.text}</Badge>}
+                                                {task.type === 'campaign' && (
+                                                    <Badge variant="outline" className="bg-purple-600/10 text-purple-400 border-purple-600/20">Campaña</Badge>
+                                                )}
+                                            </div>
                                         </div>
-                                        <p className="text-sm text-muted-foreground mt-1 truncate">{task.client} {task.type === 'task' && `• ${task.taskType}`}</p>
-                                        <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                                            {task.tag && <Badge variant="outline" className={cn("text-xs font-semibold", task.tag.className)}>{task.tag.text}</Badge>}
-                                            {task.type === 'campaign' && (
-                                                <Badge variant="outline" className="bg-purple-600/10 text-purple-400 border-purple-600/20">Campaña</Badge>
-                                            )}
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
+                                    </Card>
+                                ))
+                            ) : (
+                                <div className="text-center py-10 text-muted-foreground">
+                                    <p>No se encontraron tareas con los filtros actuales.</p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
