@@ -88,6 +88,10 @@
         "price": {
           "type": "number",
           "description": "Individual price for this task type when it's not part of a pack."
+        },
+        "color": {
+          "type": "string",
+          "description": "Color code for the task type, in hex format."
         }
       },
       "required": [

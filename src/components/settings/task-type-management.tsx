@@ -18,12 +18,14 @@ import { Pencil, Trash2, Check, X } from 'lucide-react';
 const taskTypeSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   price: z.coerce.number().min(0, 'El precio debe ser un número no negativo.'),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'El color debe ser un código hexadecimal válido (ej: #RRGGBB)').optional().default('#888888'),
 });
 
 type TaskType = {
     id: string;
     name: string;
     price: number;
+    color?: string;
 };
 
 export function TaskTypeManagement() {
@@ -32,13 +34,14 @@ export function TaskTypeManagement() {
     const { data: taskTypes, isLoading } = useCollection<TaskType>(taskTypesCollection);
 
     const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-    const [editForm, setEditForm] = useState({ name: '', price: 0 });
+    const [editForm, setEditForm] = useState({ name: '', price: 0, color: '#888888' });
 
     const form = useForm<z.infer<typeof taskTypeSchema>>({
         resolver: zodResolver(taskTypeSchema),
         defaultValues: {
             name: '',
             price: 0,
+            color: '#888888',
         }
     });
 
@@ -51,7 +54,7 @@ export function TaskTypeManagement() {
 
     const handleEditClick = (taskType: TaskType) => {
         setEditingTaskId(taskType.id);
-        setEditForm({ name: taskType.name, price: taskType.price || 0 });
+        setEditForm({ name: taskType.name, price: taskType.price || 0, color: taskType.color || '#888888' });
     };
 
     const handleCancelEdit = () => {
@@ -98,6 +101,22 @@ export function TaskTypeManagement() {
                                     <FormMessage />
                                 </FormItem>
                             )} />
+                             <FormField
+                                control={form.control}
+                                name="color"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Color</FormLabel>
+                                        <FormControl>
+                                            <div className="flex items-center gap-2">
+                                                <Input type="color" {...field} className="w-12 h-10 p-1" />
+                                                <Input type="text" {...field} placeholder="#888888" className="w-28"/>
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                             <Button type="submit">Añadir Tipo de Tarea</Button>
                         </form>
                     </Form>
@@ -108,6 +127,7 @@ export function TaskTypeManagement() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>Color</TableHead>
                                     <TableHead>Nombre</TableHead>
                                     <TableHead>Precio</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
@@ -116,6 +136,7 @@ export function TaskTypeManagement() {
                             <TableBody>
                                 {isLoading && Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-5 w-5 rounded-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                                         <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
@@ -127,6 +148,14 @@ export function TaskTypeManagement() {
                                             <>
                                                 <TableCell>
                                                     <Input
+                                                        type="color"
+                                                        value={editForm.color}
+                                                        onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
+                                                        className="h-8 w-10 p-1"
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Input
                                                         value={editForm.name}
                                                         onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                                                         className="h-8"
@@ -135,7 +164,7 @@ export function TaskTypeManagement() {
                                                 <TableCell>
                                                     <Input
                                                         type="number"
-                                                        value={editForm.price || 0}
+                                                        value={editForm.price}
                                                         onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
                                                         className="h-8"
                                                     />
@@ -153,6 +182,9 @@ export function TaskTypeManagement() {
                                             </>
                                         ) : (
                                             <>
+                                                <TableCell>
+                                                    <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: taskType.color || '#888888' }} />
+                                                </TableCell>
                                                 <TableCell className="font-medium">{taskType.name}</TableCell>
                                                 <TableCell><span className="font-mono text-sm">₡{(taskType.price || 0).toLocaleString('es-CR')}</span></TableCell>
                                                 <TableCell className="text-right">
