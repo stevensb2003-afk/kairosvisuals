@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, Plus, ArrowLeft, ClipboardCheck, Layers, Trash2, Filter } from "lucide-react";
+import { GripVertical, Plus, ArrowLeft, ClipboardCheck, Layers, Trash2, Filter, CalendarIcon } from "lucide-react";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -17,72 +17,14 @@ import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { useUser, useAuth, initiateAnonymousSignIn, useFirestore } from '@/firebase';
+import { useUser, useAuth, initiateAnonymousSignIn, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Skeleton } from "@/components/ui/skeleton";
+import { collection, query, where, doc } from 'firebase/firestore';
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
-
-const allInitialTasks = [
-    {
-        id: "TSK-001",
-        title: "Diseño de Landing Page",
-        description: "Crear un diseño moderno y responsive para la nueva página de aterrizaje.",
-        tag: { text: "Diseño UI/UX", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-        points: 5,
-        type: 'task',
-        client: 'SynthWave Co.',
-        taskType: 'Diseño Web',
-        subtasks: [],
-    },
-    {
-        id: "TSK-002",
-        title: "Desarrollo API de Autenticación",
-        description: "Implementar endpoints para registro, login y logout usando JWT.",
-        tag: { text: "Backend", className: "bg-green-500/10 text-green-400 border-green-500/20" },
-        points: 8,
-        type: 'task',
-        client: 'SecureAuth',
-        taskType: 'Desarrollo API',
-        subtasks: [],
-    },
-    {
-        id: "TSK-003",
-        title: "Configuración de CI/CD",
-        description: "Crear un pipeline en GitHub Actions para despliegue automático.",
-        tag: { text: "DevOps", className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" },
-        points: 5,
-        type: 'task',
-        client: 'Internal',
-        taskType: 'Infraestructura',
-        subtasks: [],
-    },
-    {
-        id: "TSK-004",
-        title: "Creación de Componentes React",
-        description: "Desarrollar componentes reutilizables para el design system.",
-        tag: { text: "Frontend", className: "bg-purple-600/10 text-purple-400 border-purple-600/20" },
-        points: 3,
-        type: 'task',
-        client: 'Componentify',
-        taskType: 'Desarrollo UI',
-        subtasks: [],
-    },
-    {
-        id: "TSK-005",
-        title: "Investigación de Mercado",
-        description: "Analizar competidores y identificar oportunidades de mercado.",
-        tag: { text: "Estrategia", className: "bg-pink-500/10 text-pink-400 border-pink-500/20" },
-        points: 3,
-        type: 'task',
-        client: 'Visionary Inc.',
-        taskType: 'Investigación',
-        subtasks: [],
-    }
-];
-
-const initialSprintTaskIds = ["TSK-002", "TSK-004"];
-const backlogTasksData = allInitialTasks.filter(t => !initialSprintTaskIds.includes(t.id));
-const sprintTasksData = allInitialTasks.filter(t => initialSprintTaskIds.includes(t.id));
-
+const SPRINT_ID = "next-sprint";
 
 const subtaskTypes: Record<string, { text: string; className: string }> = {
     task: { text: 'Task', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' },
@@ -106,8 +48,15 @@ export default function BacklogPage() {
         }
     }, [isUserLoading, user, auth]);
 
-    const [tasks, setTasks] = useState(backlogTasksData);
-    const [sprintTasks, setSprintTasks] = useState(sprintTasksData);
+    const backlogTasksQuery = useMemoFirebase(() => 
+        firestore ? query(collection(firestore, 'tasks'), where('sprintId', '==', null)) : null,
+    [firestore]);
+    const { data: backlogTasks, isLoading: isLoadingBacklog } = useCollection<any>(backlogTasksQuery);
+
+    const sprintTasksQuery = useMemoFirebase(() =>
+        firestore ? query(collection(firestore, 'tasks'), where('sprintId', '==', SPRINT_ID)) : null,
+    [firestore]);
+    const { data: sprintTasks, isLoading: isLoadingSprint } = useCollection<any>(sprintTasksQuery);
     
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [step, setStep] = useState(1);
@@ -124,20 +73,22 @@ export default function BacklogPage() {
     const [ticketTypeFilter, setTicketTypeFilter] = useState("all");
 
     const filteredTasks = useMemo(() => {
-        return tasks.filter(task => {
-            const clientMatch = !clientFilter || task.client.toLowerCase().includes(clientFilter.toLowerCase());
-            const taskTypeMatch = !taskTypeFilter || (task.taskType && task.taskType.toLowerCase().includes(taskTypeFilter.toLowerCase()));
+        if (!backlogTasks) return [];
+        return backlogTasks.filter(task => {
+            const clientMatch = !clientFilter || (task.clientId && task.clientId.toLowerCase().includes(clientFilter.toLowerCase()));
+            const taskTypeMatch = !taskTypeFilter || (task.taskTypeId && task.taskTypeId.toLowerCase().includes(taskTypeFilter.toLowerCase()));
             const ticketTypeMatch = ticketTypeFilter === 'all' || task.type === ticketTypeFilter;
             return clientMatch && taskTypeMatch && ticketTypeMatch;
         });
-    }, [tasks, clientFilter, taskTypeFilter, ticketTypeFilter]);
+    }, [backlogTasks, clientFilter, taskTypeFilter, ticketTypeFilter]);
 
 
     const taskFormSchema = z.object({
-      title: z.string().min(1, 'El título es requerido.'),
+      name: z.string().min(1, 'El título es requerido.'),
       description: z.string().optional(),
-      client: z.string().min(1, 'El cliente es requerido.'),
-      taskType: z.string().optional(),
+      clientId: z.string().min(1, 'El cliente es requerido.'),
+      dueDate: z.date({ required_error: "La fecha de entrega es requerida." }),
+      taskTypeId: z.string().optional(),
       category: z.string().min(1, 'La categoría es requerida.'),
       points: z.coerce.number().min(0, 'Los puntos deben ser un número no negativo.'),
       subtasks: z.array(z.object({
@@ -146,10 +97,10 @@ export default function BacklogPage() {
       })).optional(),
     }).superRefine((data, ctx) => {
         if (selectedType === 'task') {
-            if (!data.taskType || data.taskType.trim().length === 0) {
+            if (!data.taskTypeId || data.taskTypeId.trim().length === 0) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
-                    path: ['taskType'],
+                    path: ['taskTypeId'],
                     message: "El tipo de tarea es requerido.",
                 });
             }
@@ -159,10 +110,10 @@ export default function BacklogPage() {
     const form = useForm<z.infer<typeof taskFormSchema>>({
         resolver: zodResolver(taskFormSchema),
         defaultValues: {
-            title: "",
+            name: "",
             description: "",
-            client: "",
-            taskType: "",
+            clientId: "",
+            taskTypeId: "",
             category: "",
             points: 0,
             subtasks: [],
@@ -200,32 +151,29 @@ export default function BacklogPage() {
     };
 
     function onSubmit(values: z.infer<typeof taskFormSchema>) {
-        if (!selectedType) return;
+        if (!firestore || !selectedType) return;
 
         const formattedSubtasks = values.subtasks?.map(sub => ({
             id: `SUB-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             title: sub.title,
             completed: false,
-            tag: subtaskTypes[sub.type as keyof typeof subtaskTypes]
+            type: sub.type
         })) || [];
         
         const newTask = {
-            id: `TSK-${Math.floor(Math.random() * 9000) + 1000}`,
-            title: values.title,
-            description: values.description,
-            tag: {
-                text: values.category,
-                className: "bg-gray-500/10 text-gray-400 border-gray-500/20"
-            },
-            points: values.points,
+            ...values,
             type: selectedType,
-            client: values.client,
-            taskType: values.taskType ?? '',
+            dueDate: values.dueDate.toISOString(),
             subtasks: formattedSubtasks,
+            status: 'pending',
+            sprintId: null,
+            userId: user?.uid ?? null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
         
-        // @ts-ignore
-        setTasks(prevTasks => [...prevTasks, newTask]);
+        const tasksCollection = collection(firestore, 'tasks');
+        addDocumentNonBlocking(tasksCollection, newTask);
         setIsCreateDialogOpen(false);
     }
 
@@ -244,23 +192,17 @@ export default function BacklogPage() {
         e.preventDefault();
         const { id, source } = JSON.parse(e.dataTransfer.getData('application/json'));
 
-        if (source === target) {
+        if (source === target || !firestore) {
             setDraggedItem(null);
             return;
         }
 
+        const taskDocRef = doc(firestore, 'tasks', id);
+
         if (source === 'backlog' && target === 'sprint') {
-            const taskToMove = tasks.find(t => t.id === id);
-            if (taskToMove) {
-                setTasks(tasks.filter(t => t.id !== id));
-                setSprintTasks(prev => [...prev, taskToMove]);
-            }
+            updateDocumentNonBlocking(taskDocRef, { sprintId: SPRINT_ID });
         } else if (source === 'sprint' && target === 'backlog') {
-            const taskToMove = sprintTasks.find(t => t.id === id);
-            if (taskToMove) {
-                setSprintTasks(sprintTasks.filter(t => t.id !== id));
-                setTasks(prev => [...prev, taskToMove]);
-            }
+            updateDocumentNonBlocking(taskDocRef, { sprintId: null });
         }
         setDraggedItem(null);
     };
@@ -269,9 +211,11 @@ export default function BacklogPage() {
         setDraggedItem(null);
     };
 
-    const totalPoints = sprintTasks.reduce((sum, task) => sum + task.points, 0);
+    const totalPoints = sprintTasks?.reduce((sum, task) => sum + task.points, 0) ?? 0;
 
-    if (isUserLoading || !user) {
+    const isLoading = isUserLoading || isLoadingBacklog || isLoadingSprint;
+
+    if (isLoading) {
         return (
              <div className="space-y-6">
                 <div className="flex justify-between items-center">
@@ -364,7 +308,7 @@ export default function BacklogPage() {
                                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4 max-h-[60vh] overflow-y-auto pr-2">
                                         <FormField
                                             control={form.control}
-                                            name="title"
+                                            name="name"
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Título</FormLabel>
@@ -390,7 +334,7 @@ export default function BacklogPage() {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="client"
+                                            name="clientId"
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Cliente</FormLabel>
@@ -404,7 +348,7 @@ export default function BacklogPage() {
                                         {selectedType === 'task' && (
                                             <FormField
                                                 control={form.control}
-                                                name="taskType"
+                                                name="taskTypeId"
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Tipo de Tarea</FormLabel>
@@ -414,8 +358,46 @@ export default function BacklogPage() {
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
-                                            />
                                         )}
+                                        <FormField
+                                            control={form.control}
+                                            name="dueDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-col">
+                                                    <FormLabel>Fecha de Entrega</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Button
+                                                                    variant={"outline"}
+                                                                    className={cn(
+                                                                        "w-[240px] pl-3 text-left font-normal",
+                                                                        !field.value && "text-muted-foreground"
+                                                                    )}
+                                                                >
+                                                                    {field.value ? (
+                                                                        format(field.value, "PPP", { locale: es })
+                                                                    ) : (
+                                                                        <span>Elige una fecha</span>
+                                                                    )}
+                                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                </Button>
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={field.value}
+                                                                onSelect={field.onChange}
+                                                                disabled={(date) => date < new Date("1900-01-01")}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
                                         <FormField
                                             control={form.control}
                                             name="category"
@@ -573,12 +555,12 @@ export default function BacklogPage() {
                                         <GripVertical className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
                                         <div className="flex-1 overflow-hidden">
                                             <div className="flex justify-between items-start gap-2">
-                                                <h3 className="font-semibold leading-tight">{task.title}</h3>
+                                                <h3 className="font-semibold leading-tight">{task.name}</h3>
                                                 <Badge variant="secondary" className="font-mono text-xs shrink-0">{task.points} pts</Badge>
                                             </div>
-                                            <p className="text-sm text-muted-foreground mt-1 truncate">{task.client} {task.type === 'task' && `• ${task.taskType}`}</p>
+                                            <p className="text-sm text-muted-foreground mt-1 truncate">{task.clientId} {task.type === 'task' && `• ${task.taskTypeId}`}</p>
                                             <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                                                {task.tag && <Badge variant="outline" className={cn("text-xs font-semibold", task.tag.className)}>{task.tag.text}</Badge>}
+                                                {task.category && <Badge variant="outline" >{task.category}</Badge>}
                                                 {task.type === 'campaign' && (
                                                     <Badge variant="outline" className="bg-purple-600/10 text-purple-400 border-purple-600/20">Campaña</Badge>
                                                 )}
@@ -607,7 +589,7 @@ export default function BacklogPage() {
                                 onDrop={(e) => handleDrop(e, 'sprint')}
                                 className="min-h-[200px] border-2 border-dashed rounded-lg p-4 space-y-2 bg-secondary/20"
                             >
-                               {sprintTasks.length > 0 ? (
+                               {sprintTasks && sprintTasks.length > 0 ? (
                                     sprintTasks.map(task => (
                                          <Card 
                                             key={task.id} 
@@ -620,7 +602,7 @@ export default function BacklogPage() {
                                             onDragEnd={handleDragEnd}
                                             onClick={() => setSelectedTask(task)}
                                          >
-                                            <span className="font-medium truncate pr-2">{task.title}</span>
+                                            <span className="font-medium truncate pr-2">{task.name}</span>
                                             <Badge variant="secondary" className="font-mono text-xs shrink-0">{task.points} pts</Badge>
                                         </Card>
                                     ))
@@ -643,8 +625,8 @@ export default function BacklogPage() {
                     {selectedTask && (
                         <>
                             <DialogHeader>
-                                <DialogTitle className="font-headline text-xl">{selectedTask.title}</DialogTitle>
-                                <DialogDescription>{selectedTask.id} • {selectedTask.client}</DialogDescription>
+                                <DialogTitle className="font-headline text-xl">{selectedTask.name}</DialogTitle>
+                                <DialogDescription>{selectedTask.id} • {selectedTask.clientId}</DialogDescription>
                             </DialogHeader>
                             <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto pr-4">
                                 {selectedTask.description && <p className="text-sm text-muted-foreground">{selectedTask.description}</p>}
@@ -653,12 +635,12 @@ export default function BacklogPage() {
                                     {selectedTask.type === 'task' ? (
                                         <div>
                                             <p className="text-muted-foreground font-semibold">Tipo de Tarea</p>
-                                            <p>{selectedTask.taskType}</p>
+                                            <p>{selectedTask.taskTypeId}</p>
                                         </div>
                                     ) : null}
                                     <div>
                                         <p className="text-muted-foreground font-semibold">Categoría</p>
-                                        <Badge variant="outline" className={cn("text-xs font-semibold", selectedTask.tag.className)}>{selectedTask.tag.text}</Badge>
+                                        <Badge variant="outline">{selectedTask.category}</Badge>
                                     </div>
                                     <div>
                                         <p className="text-muted-foreground font-semibold">Puntos</p>
@@ -672,7 +654,7 @@ export default function BacklogPage() {
                                         <div className="space-y-2">
                                             {selectedTask.subtasks.map((sub: any) => (
                                                 <div key={sub.id} className="flex items-center gap-3 rounded-md p-2 bg-secondary/50">
-                                                    <Badge variant="outline" className={cn("text-xs font-semibold", sub.tag.className)}>{sub.tag.text}</Badge>
+                                                    <Badge variant="outline" className={cn("text-xs font-semibold", subtaskTypes[sub.type]?.className)}>{subtaskTypes[sub.type]?.text}</Badge>
                                                     <span className="text-sm">{sub.title}</span>
                                                 </div>
                                             ))}
