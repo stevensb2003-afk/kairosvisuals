@@ -66,7 +66,7 @@ const initialKanbanData = {
           id: "KV-1033",
           type: 'task',
           title: "Podcast Ep 4 - Rough Cut",
-          description: null,
+          description: "First pass of the audio editing for the latest podcast episode.",
           icon: { id: "audio-icon", hint: "sound wave" },
           tag: { text: "AUDIO", className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" },
           comments: [],
@@ -86,7 +86,7 @@ const initialKanbanData = {
           id: "KV-1011",
           type: 'campaign',
           title: "Nike Campaign - Social Reel",
-          description: null,
+          description: "Editing a high-energy social media reel for the new Nike collection.",
           progress: 60,
           subtasks: [
               { id: 'SUB-01', title: 'Select footage', completed: true, tag: subtaskTypes.footage },
@@ -442,7 +442,7 @@ export default function KanbanPage() {
               <div className="flex justify-between items-center px-1">
                 <div className="flex items-center gap-2">
                   <h2 className="font-semibold font-headline">{col.title}</h2>
-                  <Badge variant="secondary" className="text-xs">{col.tasks.filter(t => !t.isCover).length}</Badge>
+                  <Badge variant="secondary" className="text-xs">{col.tasks.length}</Badge>
                 </div>
               </div>
               <div className="space-y-4">
@@ -452,34 +452,25 @@ export default function KanbanPage() {
                 <div key={task.id} 
                   onDragOver={handleDragOver}
                   onDrop={(e) => {
-                    if (task.isCover) return;
                     handleDrop(e, col.id, task.id)
                   }}
                 >
                   <Card 
-                    draggable={!task.isCover}
+                    draggable
                     onDragStart={(e) => handleDragStart(e, task, col.id)}
                     onDragEnd={handleDragEnd}
-                    onClick={() => !task.isCover && setSelectedTask(task)}
+                    onClick={() => setSelectedTask(task)}
                     className={cn(
-                      "bg-card", 
-                      task.isCover ? "p-0 overflow-hidden" : "cursor-grab active:cursor-grabbing",
+                      "bg-card cursor-grab active:cursor-grabbing",
                       draggedItem?.taskId === task.id && "opacity-30"
                     )}
                   >
-                    {task.isCover && task.image ? (
-                      <div className="relative aspect-video">
-                        <Image src={getImageUrl(task.image.id) || ''} alt={task.title} fill className="object-cover" data-ai-hint={task.image.hint} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                        <p className="absolute bottom-2 left-3 font-semibold text-sm text-white">{task.title}</p>
-                      </div>
-                    ) : (
                       <CardContent className="p-4 space-y-4">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-xs text-muted-foreground">{task.id} {task.client && `• ${task.client}`}</p>
                             <h3 className="font-semibold font-headline leading-tight">{task.title}</h3>
-                            {task.description && <p className="text-sm text-muted-foreground mt-1">{task.description}</p>}
+                            {task.description && <p className="text-sm text-muted-foreground mt-1 truncate">{task.description}</p>}
                           </div>
                           <div className="flex items-center">
                             {ActionIcon ? <ActionIcon className="w-5 h-5 text-muted-foreground shrink-0" /> : 
@@ -529,7 +520,6 @@ export default function KanbanPage() {
                           </div>
                         )}
                       </CardContent>
-                    )}
                   </Card>
                 </div>
                 )})}

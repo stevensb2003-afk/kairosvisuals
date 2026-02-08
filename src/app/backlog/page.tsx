@@ -13,54 +13,82 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 const initialTasks = [
     {
         id: "TSK-001",
         title: "Diseño de Landing Page",
-        category: "Diseño UI/UX",
-        categoryClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+        description: "Crear un diseño moderno y responsive para la nueva página de aterrizaje.",
+        tag: { text: "Diseño UI/UX", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
         points: 5,
         assignee: null,
         type: 'task',
+        client: 'SynthWave Co.',
+        taskType: 'Diseño Web',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        commentsCount: 0,
     },
     {
         id: "TSK-002",
         title: "Desarrollo API de Autenticación",
-        category: "Backend",
-        categoryClass: "bg-green-500/10 text-green-400 border-green-500/20",
+        description: "Implementar endpoints para registro, login y logout usando JWT.",
+        tag: { text: "Backend", className: "bg-green-500/10 text-green-400 border-green-500/20" },
         points: 8,
         assignee: { name: "Alex C.", avatar: "https://picsum.photos/seed/alex/40/40" },
         type: 'task',
+        client: 'SecureAuth',
+        taskType: 'Desarrollo API',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        commentsCount: 0,
     },
     {
         id: "TSK-003",
         title: "Configuración de CI/CD",
-        category: "DevOps",
-        categoryClass: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+        description: "Crear un pipeline en GitHub Actions para despliegue automático.",
+        tag: { text: "DevOps", className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" },
         points: 5,
         assignee: null,
         type: 'task',
+        client: 'Internal',
+        taskType: 'Infraestructura',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        commentsCount: 0,
     },
     {
         id: "TSK-004",
         title: "Creación de Componentes React",
-        category: "Frontend",
-        categoryClass: "bg-purple-600/10 text-purple-400 border-purple-600/20",
+        description: "Desarrollar componentes reutilizables para el design system.",
+        tag: { text: "Frontend", className: "bg-purple-600/10 text-purple-400 border-purple-600/20" },
         points: 3,
         assignee: { name: "Sarah J.", avatar: "https://picsum.photos/seed/sarah/40/40" },
         type: 'task',
+        client: 'Componentify',
+        taskType: 'Desarrollo UI',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        commentsCount: 0,
     },
     {
         id: "TSK-005",
         title: "Investigación de Mercado",
-        category: "Estrategia",
-        categoryClass: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+        description: "Analizar competidores y identificar oportunidades de mercado.",
+        tag: { text: "Estrategia", className: "bg-pink-500/10 text-pink-400 border-pink-500/20" },
         points: 3,
         assignee: null,
         type: 'task',
+        client: 'Visionary Inc.',
+        taskType: 'Investigación',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        commentsCount: 0,
     }
 ];
+
 
 const initialSprintTasks = [
     initialTasks[1],
@@ -69,6 +97,9 @@ const initialSprintTasks = [
 
 const taskFormSchema = z.object({
   title: z.string().min(1, 'El título es requerido.'),
+  description: z.string().optional(),
+  client: z.string().min(1, 'El cliente es requerido.'),
+  taskType: z.string().min(1, 'El tipo de tarea es requerido.'),
   category: z.string().min(1, 'La categoría es requerida.'),
   points: z.coerce.number().min(0, 'Los puntos deben ser un número no negativo.'),
 });
@@ -85,6 +116,9 @@ export default function BacklogPage() {
         resolver: zodResolver(taskFormSchema),
         defaultValues: {
             title: "",
+            description: "",
+            client: "",
+            taskType: "",
             category: "",
             points: 0,
         },
@@ -107,14 +141,23 @@ export default function BacklogPage() {
         const newTask = {
             id: `TSK-${Math.floor(Math.random() * 9000) + 1000}`,
             title: values.title,
-            category: values.category,
-            categoryClass: "bg-gray-500/10 text-gray-400 border-gray-500/20", // Default style
+            description: values.description,
+            tag: {
+                text: values.category,
+                className: "bg-gray-500/10 text-gray-400 border-gray-500/20" // Default style
+            },
             points: values.points,
             assignee: null,
             type: selectedType,
+            client: values.client,
+            taskType: values.taskType,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            comments: [],
+            commentsCount: 0,
             ...(selectedType === 'campaign' && { progress: 0, subtasks: [] })
         };
-
+        
         // @ts-ignore
         setTasks(prevTasks => [...prevTasks, newTask]);
         setIsDialogOpen(false);
@@ -149,7 +192,7 @@ export default function BacklogPage() {
                             Nueva Tarea
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-xl">
                         {step === 1 && (
                              <>
                                 <DialogHeader>
@@ -186,7 +229,7 @@ export default function BacklogPage() {
                                     <DialogDescription>Completa la información para crear el nuevo elemento.</DialogDescription>
                                 </DialogHeader>
                                 <Form {...form}>
-                                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4 max-h-[60vh] overflow-y-auto pr-2">
                                         <FormField
                                             control={form.control}
                                             name="title"
@@ -202,10 +245,49 @@ export default function BacklogPage() {
                                         />
                                         <FormField
                                             control={form.control}
+                                            name="description"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Descripción</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea placeholder="Añade detalles sobre la tarea..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="client"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Cliente</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Ej: Spring & Co." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="taskType"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Tipo de Tarea</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Ej: Motion Graphics" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
                                             name="category"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Categoría</FormLabel>
+                                                    <FormLabel>Categoría (Tag)</FormLabel>
                                                     <FormControl>
                                                         <Input placeholder="Ej: Diseño UI/UX" {...field} />
                                                     </FormControl>
@@ -248,15 +330,18 @@ export default function BacklogPage() {
                             {tasks.map(task => (
                                 <Card key={task.id} className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow cursor-grab">
                                     <GripVertical className="h-5 w-5 text-muted-foreground" />
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-start">
-                                            <h3 className="font-semibold">{task.title}</h3>
-                                            <Badge variant="secondary" className="font-mono text-xs">{task.points} pts</Badge>
+                                    <div className="flex-1 overflow-hidden">
+                                        <div className="flex justify-between items-start gap-2">
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold">{task.title}</h3>
+                                                {task.description && <p className="text-sm text-muted-foreground mt-1 truncate">{task.description}</p>}
+                                            </div>
+                                            <Badge variant="secondary" className="font-mono text-xs shrink-0">{task.points} pts</Badge>
                                         </div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <Badge variant="outline" className={task.categoryClass}>{task.category}</Badge>
+                                        <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                            {task.tag && <Badge variant="outline" className={cn("text-xs font-semibold", task.tag.className)}>{task.tag.text}</Badge>}
                                             {task.assignee && (
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <div className="flex items-center gap-2">
                                                     <Avatar className="h-5 w-5">
                                                         <AvatarImage src={task.assignee.avatar} alt={task.assignee.name} />
                                                         <AvatarFallback>{task.assignee.name.charAt(0)}</AvatarFallback>
