@@ -1,8 +1,22 @@
 "use client"
-import { Calendar } from "@/components/ui/calendar"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
+import dynamic from "next/dynamic"
+import { Skeleton } from "@/components/ui/skeleton"
+
+const Calendar = dynamic(
+  () => import('@/components/ui/calendar').then(mod => mod.Calendar),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-3">
+        <Skeleton className="h-[333px] w-full" />
+      </div>
+    ),
+  }
+);
 
 export default function CalendarPage() {
     const [date, setDate] = useState<Date | undefined>()
