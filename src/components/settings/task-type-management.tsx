@@ -51,7 +51,7 @@ export function TaskTypeManagement() {
 
     const handleEditClick = (taskType: TaskType) => {
         setEditingTaskId(taskType.id);
-        setEditForm({ name: taskType.name, price: taskType.price });
+        setEditForm({ name: taskType.name, price: taskType.price || 0 });
     };
 
     const handleCancelEdit = () => {
@@ -135,7 +135,7 @@ export function TaskTypeManagement() {
                                                 <TableCell>
                                                     <Input
                                                         type="number"
-                                                        value={editForm.price}
+                                                        value={editForm.price || 0}
                                                         onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
                                                         className="h-8"
                                                     />
@@ -154,7 +154,7 @@ export function TaskTypeManagement() {
                                         ) : (
                                             <>
                                                 <TableCell className="font-medium">{taskType.name}</TableCell>
-                                                <TableCell><span className="font-mono text-sm">₡{taskType.price.toLocaleString('es-CR')}</span></TableCell>
+                                                <TableCell><span className="font-mono text-sm">₡{(taskType.price || 0).toLocaleString('es-CR')}</span></TableCell>
                                                 <TableCell className="text-right">
                                                      <div className="flex items-center justify-end gap-2">
                                                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(taskType)}>
