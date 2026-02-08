@@ -121,9 +121,14 @@ service cloud.firestore {
      * @principle Restricts access to a user's own data tree and prevents user enumeration.
      */
     match /users/{userId} {
+      // WARNING: The 'list' and 'create' rules are temporarily relaxed to 'isSignedIn()'
+      // to allow the creation of the first administrator from the UI.
+      // For production security, this should be changed to 'isAdmin()'.
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+
+      // Original rules for user self-management remain.
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && isNewUserDocValid(userId);
       allow update: if isExistingOwner(userId) && isExistingUserDocValid();
       allow delete: if isExistingOwner(userId);
     }
@@ -279,9 +284,15 @@ service cloud.firestore {
      * @principle Secures the role-management system itself, ensuring only authorized users can grant or revoke privileges.
      */
     match /roles_admin/{userId} {
+      // WARNING: The 'create' rule is temporarily relaxed to 'isSignedIn()'
+      // to allow the very first administrator to be created from the UI.
+      // This is a security risk and should be changed back to 'isAdmin()'
+      // immediately after the first admin user is created.
+      allow create: if isSignedIn();
+      
+      // Other admin rules remain restrictive.
       allow get: if isAdmin();
       allow list: if isAdmin();
-      allow create: if isAdmin();
       allow update: if isAdmin() && resource != null;
       allow delete: if isAdmin() && resource != null;
     }

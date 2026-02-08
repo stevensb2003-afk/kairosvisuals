@@ -40,7 +40,17 @@ export function UserManagement() {
     function onSubmit(values: z.infer<typeof userSchema>) {
         if (!firestore) return;
         const newDocRef = doc(collection(firestore, 'users'));
+        
+        // This is a non-blocking call
         setDocumentNonBlocking(newDocRef, { ...values, id: newDocRef.id }, { merge: true });
+
+        // If the user is an admin master, also create a document in the roles_admin collection
+        if (values.role === 'Admin Master') {
+            const adminRoleRef = doc(firestore, 'roles_admin', newDocRef.id);
+            // The document can be empty, its existence is what grants the role.
+            setDocumentNonBlocking(adminRoleRef, { created: new Date().toISOString() }, { merge: true });
+        }
+
         form.reset();
     }
 
@@ -134,5 +144,3 @@ export function UserManagement() {
         </Card>
     )
 }
-
-    
