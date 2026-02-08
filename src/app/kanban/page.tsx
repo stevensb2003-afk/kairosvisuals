@@ -84,11 +84,11 @@ const initialKanbanData = {
           description: null,
           progress: 60,
           subtasks: [
-              { id: 'SUB-01', title: 'Select footage', completed: true },
-              { id: 'SUB-02', title: 'First edit', completed: true },
-              { id: 'SUB-03', title: 'Add graphics', completed: true },
-              { id: 'SUB-04', title: 'Sound mixing', completed: false },
-              { id: 'SUB-05', title: 'Client review version', completed: false },
+              { id: 'SUB-01', title: 'Select footage', completed: true, tag: { text: 'Footage', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' } },
+              { id: 'SUB-02', title: 'First edit (Reel)', completed: true, tag: { text: 'Reel', className: 'bg-blue-500/10 text-blue-400 border-blue-500/20' } },
+              { id: 'SUB-03', title: 'Add graphics', completed: true, tag: { text: 'Graphics', className: 'bg-purple-600/10 text-purple-400 border-purple-600/20' } },
+              { id: 'SUB-04', title: 'Sound mixing', completed: false, tag: { text: 'Audio', className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' } },
+              { id: 'SUB-05', title: 'Client review version', completed: false, tag: { text: 'Export', className: 'bg-green-500/10 text-green-400 border-green-500/20' } },
           ],
           editor: { id: "editor-nike", name: "Nike Editor" },
           tag: { text: "EDITING", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
@@ -232,6 +232,41 @@ export default function KanbanPage() {
     setNewComment("");
   };
 
+  const handleSubtaskToggle = (subtaskId: string, completed: boolean) => {
+    if (!selectedTask || selectedTask.type !== 'campaign') return;
+
+    setBoardData(prevData => {
+        const newColumns = prevData.columns.map(column => {
+            const taskIndex = column.tasks.findIndex(t => t.id === selectedTask.id);
+            if (taskIndex > -1) {
+                const updatedTasks = [...column.tasks];
+                const campaignTask = updatedTasks[taskIndex];
+
+                const updatedSubtasks = campaignTask.subtasks?.map((sub: any) => 
+                    sub.id === subtaskId ? { ...sub, completed } : sub
+                ) || [];
+                
+                const completedCount = updatedSubtasks.filter((s: any) => s.completed).length;
+                const newProgress = Math.round((completedCount / updatedSubtasks.length) * 100);
+
+                const updatedTask = {
+                    ...campaignTask,
+                    subtasks: updatedSubtasks,
+                    progress: newProgress,
+                    updatedAt: new Date().toISOString(),
+                };
+                updatedTasks[taskIndex] = updatedTask;
+                
+                setSelectedTask(updatedTask);
+
+                return { ...column, tasks: updatedTasks };
+            }
+            return column;
+        });
+        return { ...prevData, columns: newColumns };
+    });
+  };
+
   const { sprint, users } = boardData;
 
   return (
@@ -292,7 +327,7 @@ export default function KanbanPage() {
                 </Button>
               </div>
               <div className="space-y-4">
-              {col.tasks.map((task) => {
+              {col.tasks.map((task: any) => {
                 const ActionIcon = task.actionIcon;
                 return (
                 <div key={task.id} 
@@ -416,17 +451,30 @@ export default function KanbanPage() {
                         
                         {selectedTask.type === 'campaign' && selectedTask.subtasks && (
                             <div className="space-y-4">
-                                <h4 className="font-semibold text-foreground">Sub-tareas</h4>
+                                <div className="flex justify-between items-center">
+                                    <h4 className="font-semibold text-foreground">Sub-tareas</h4>
+                                    <span className="text-sm text-muted-foreground">{selectedTask.progress}% completado</span>
+                                </div>
+                                <Progress value={selectedTask.progress} className="h-2" />
                                 <div className="space-y-2">
                                     {selectedTask.subtasks.map((subtask: any) => (
-                                        <div key={subtask.id} className="flex items-center gap-3">
-                                            <Checkbox id={`subtask-${subtask.id}`} checked={subtask.completed} disabled />
-                                            <label
-                                                htmlFor={`subtask-${subtask.id}`}
-                                                className={cn("text-sm", subtask.completed && "line-through text-muted-foreground")}
-                                            >
-                                                {subtask.title}
-                                            </label>
+                                        <div key={subtask.id} className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-secondary/50">
+                                            <div className="flex items-center gap-3">
+                                                <Checkbox 
+                                                    id={`subtask-${subtask.id}`} 
+                                                    checked={subtask.completed} 
+                                                    onCheckedChange={(checked) => handleSubtaskToggle(subtask.id, !!checked)}
+                                                />
+                                                <label
+                                                    htmlFor={`subtask-${subtask.id}`}
+                                                    className={cn("text-sm cursor-pointer", subtask.completed && "line-through text-muted-foreground")}
+                                                >
+                                                    {subtask.title}
+                                                </label>
+                                            </div>
+                                            {subtask.tag && (
+                                                <Badge variant="outline" className={cn("text-xs font-semibold", subtask.tag.className)}>{subtask.tag.text}</Badge>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
