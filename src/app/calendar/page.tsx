@@ -1,11 +1,15 @@
 "use client"
 import { Calendar } from "@/components/ui/calendar"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 
 export default function CalendarPage() {
-    const [date, setDate] = useState<Date | undefined>(new Date())
+    const [date, setDate] = useState<Date | undefined>()
+
+    useEffect(() => {
+        setDate(new Date());
+    }, []);
 
     return (
         <div className="space-y-8">
