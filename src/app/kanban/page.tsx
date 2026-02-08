@@ -172,29 +172,29 @@ export default function KanbanPage() {
     }
     
     setBoardData(currentBoardData => {
-      const newBoardData = {
-        ...currentBoardData,
-        columns: currentBoardData.columns.map(c => ({ ...c, tasks: [...c.tasks] })),
-      };
-
-      const sourceColIndex = newBoardData.columns.findIndex(c => c.id === sourceColId);
-      const targetColIndex = newBoardData.columns.findIndex(c => c.id === targetColId);
-
-      if (sourceColIndex === -1 || targetColIndex === -1) return currentBoardData;
-      
-      const sourceCol = newBoardData.columns[sourceColIndex];
-      const taskIndex = sourceCol.tasks.findIndex(t => t.id === taskId);
-      
-      if (taskIndex === -1) return currentBoardData;
-      
-      const [taskToMove] = sourceCol.tasks.splice(taskIndex, 1);
-      
-      const targetCol = newBoardData.columns[targetColIndex];
-      const dropIndex = targetTaskId ? targetCol.tasks.findIndex(t => t.id === targetTaskId) : targetCol.tasks.length;
-      targetCol.tasks.splice(dropIndex, 0, taskToMove);
-
-      return newBoardData;
-    });
+        const newBoardData = {
+          ...currentBoardData,
+          columns: currentBoardData.columns.map(c => ({ ...c, tasks: [...c.tasks] })),
+        };
+  
+        const sourceColIndex = newBoardData.columns.findIndex(c => c.id === sourceColId);
+        const targetColIndex = newBoardData.columns.findIndex(c => c.id === targetColId);
+  
+        if (sourceColIndex === -1 || targetColIndex === -1) return currentBoardData;
+        
+        const sourceCol = newBoardData.columns[sourceColIndex];
+        const taskIndex = sourceCol.tasks.findIndex(t => t.id === taskId);
+        
+        if (taskIndex === -1) return currentBoardData;
+        
+        const [taskToMove] = sourceCol.tasks.splice(taskIndex, 1);
+        
+        const targetCol = newBoardData.columns[targetColIndex];
+        const dropIndex = targetTaskId ? targetCol.tasks.findIndex(t => t.id === targetTaskId) : targetCol.tasks.length;
+        targetCol.tasks.splice(dropIndex, 0, taskToMove);
+  
+        return newBoardData;
+      });
 
 
     setDraggedItem(null);
@@ -530,14 +530,14 @@ export default function KanbanPage() {
       </div>
 
       <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
             {selectedTask && (
                 <>
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">{selectedTask.title}</DialogTitle>
                         {selectedTask.tag && <DialogDescription>{selectedTask.id} • <span className={cn("font-semibold", selectedTask.tag.className)}>{selectedTask.tag.text}</span></DialogDescription>}
                     </DialogHeader>
-                    <div className="py-4 space-y-6">
+                    <div className="flex-1 py-4 space-y-6 overflow-y-auto pr-4">
 
                         <div className="grid grid-cols-2 gap-4 text-sm border-b pb-4">
                             <div>
@@ -634,7 +634,7 @@ export default function KanbanPage() {
                         
                         <div className="space-y-4">
                             <h4 className="font-semibold text-foreground">Comentarios</h4>
-                            <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                            <div className="space-y-4 pr-2">
                                 {selectedTask.comments?.map((comment: any, index: number) => (
                                     <div key={index} className="flex gap-3">
                                         <Avatar className="h-8 w-8">
