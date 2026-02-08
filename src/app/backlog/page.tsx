@@ -1,12 +1,20 @@
+'use client';
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, Plus, ArrowLeft } from "lucide-react";
+import { GripVertical, Plus, ArrowLeft, ClipboardCheck, Layers } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
-const tasks = [
+const initialTasks = [
     {
         id: "TSK-001",
         title: "Diseño de Landing Page",
@@ -14,6 +22,7 @@ const tasks = [
         categoryClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
         points: 5,
         assignee: null,
+        type: 'task',
     },
     {
         id: "TSK-002",
@@ -22,6 +31,7 @@ const tasks = [
         categoryClass: "bg-green-500/10 text-green-400 border-green-500/20",
         points: 8,
         assignee: { name: "Alex C.", avatar: "https://picsum.photos/seed/alex/40/40" },
+        type: 'task',
     },
     {
         id: "TSK-003",
@@ -30,6 +40,7 @@ const tasks = [
         categoryClass: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
         points: 5,
         assignee: null,
+        type: 'task',
     },
     {
         id: "TSK-004",
@@ -38,6 +49,7 @@ const tasks = [
         categoryClass: "bg-purple-600/10 text-purple-400 border-purple-600/20",
         points: 3,
         assignee: { name: "Sarah J.", avatar: "https://picsum.photos/seed/sarah/40/40" },
+        type: 'task',
     },
     {
         id: "TSK-005",
@@ -46,15 +58,69 @@ const tasks = [
         categoryClass: "bg-pink-500/10 text-pink-400 border-pink-500/20",
         points: 3,
         assignee: null,
+        type: 'task',
     }
 ];
 
-const sprintTasks = [
-    tasks[1],
-    tasks[3],
+const initialSprintTasks = [
+    initialTasks[1],
+    initialTasks[3],
 ];
 
+const taskFormSchema = z.object({
+  title: z.string().min(1, 'El título es requerido.'),
+  category: z.string().min(1, 'La categoría es requerida.'),
+  points: z.coerce.number().min(0, 'Los puntos deben ser un número no negativo.'),
+});
+
 export default function BacklogPage() {
+    const [tasks, setTasks] = useState(initialTasks);
+    const [sprintTasks, setSprintTasks] = useState(initialSprintTasks);
+    
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [step, setStep] = useState(1);
+    const [selectedType, setSelectedType] = useState<'task' | 'campaign' | null>(null);
+
+    const form = useForm<z.infer<typeof taskFormSchema>>({
+        resolver: zodResolver(taskFormSchema),
+        defaultValues: {
+            title: "",
+            category: "",
+            points: 0,
+        },
+    });
+
+    const handleTypeSelect = (type: 'task' | 'campaign') => {
+        setSelectedType(type);
+        setStep(2);
+    };
+    
+    const handleDialogReset = () => {
+        setStep(1);
+        setSelectedType(null);
+        form.reset();
+    };
+
+    function onSubmit(values: z.infer<typeof taskFormSchema>) {
+        if (!selectedType) return;
+
+        const newTask = {
+            id: `TSK-${Math.floor(Math.random() * 9000) + 1000}`,
+            title: values.title,
+            category: values.category,
+            categoryClass: "bg-gray-500/10 text-gray-400 border-gray-500/20", // Default style
+            points: values.points,
+            assignee: null,
+            type: selectedType,
+            ...(selectedType === 'campaign' && { progress: 0, subtasks: [] })
+        };
+
+        // @ts-ignore
+        setTasks(prevTasks => [...prevTasks, newTask]);
+        setIsDialogOpen(false);
+    }
+
+
     const totalPoints = sprintTasks.reduce((sum, task) => sum + task.points, 0);
 
     return (
@@ -71,10 +137,104 @@ export default function BacklogPage() {
                         <p className="text-muted-foreground">Planifica y organiza el trabajo futuro de forma visual.</p>
                     </div>
                 </div>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nueva Tarea
-                </Button>
+                 <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+                    setIsDialogOpen(isOpen);
+                    if (!isOpen) {
+                        handleDialogReset();
+                    }
+                }}>
+                    <DialogTrigger asChild>
+                        <Button>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Nueva Tarea
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        {step === 1 && (
+                             <>
+                                <DialogHeader>
+                                    <DialogTitle>Crear Nuevo Elemento</DialogTitle>
+                                    <DialogDescription>¿Qué te gustaría crear?</DialogDescription>
+                                </DialogHeader>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                                    <Card className="cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => handleTypeSelect('task')}>
+                                        <CardHeader className="items-center text-center">
+                                            <ClipboardCheck className="h-10 w-10 mb-2 text-primary"/>
+                                            <CardTitle className="font-headline text-lg">Tarea</CardTitle>
+                                            <CardDescription>Una tarea individual y específica.</CardDescription>
+                                        </CardHeader>
+                                    </Card>
+                                    <Card className="cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => handleTypeSelect('campaign')}>
+                                        <CardHeader className="items-center text-center">
+                                            <Layers className="h-10 w-10 mb-2 text-primary"/>
+                                            <CardTitle className="font-headline text-lg">Campaña</CardTitle>
+                                            <CardDescription>Un proyecto grande con subtareas.</CardDescription>
+                                        </CardHeader>
+                                    </Card>
+                                </div>
+                            </>
+                        )}
+                        {step === 2 && selectedType && (
+                            <>
+                                <DialogHeader>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setStep(1)}>
+                                            <ArrowLeft className="h-4 w-4" />
+                                        </Button>
+                                        <DialogTitle>Detalles de la {selectedType === 'task' ? 'Tarea' : 'Campaña'}</DialogTitle>
+                                    </div>
+                                    <DialogDescription>Completa la información para crear el nuevo elemento.</DialogDescription>
+                                </DialogHeader>
+                                <Form {...form}>
+                                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="title"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Título</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Ej: Diseño de la nueva landing" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="category"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Categoría</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Ej: Diseño UI/UX" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="points"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Puntos de Esfuerzo</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" min="0" placeholder="Ej: 5" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <div className="flex justify-end pt-2">
+                                            <Button type="submit">Crear Elemento</Button>
+                                        </div>
+                                    </form>
+                                </Form>
+                            </>
+                        )}
+                    </DialogContent>
+                </Dialog>
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8 items-start">
@@ -103,6 +263,9 @@ export default function BacklogPage() {
                                                     </Avatar>
                                                     <span>{task.assignee.name}</span>
                                                 </div>
+                                            )}
+                                            {task.type === 'campaign' && (
+                                                <Badge variant="outline" className="bg-purple-600/10 text-purple-400 border-purple-600/20">Campaña</Badge>
                                             )}
                                         </div>
                                     </div>
