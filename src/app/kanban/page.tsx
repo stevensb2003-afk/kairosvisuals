@@ -11,7 +11,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
 import { Clock, Filter, MessageSquare, MoreHorizontal, Palette, Search, Trash2 } from "lucide-react";
 import Image from "next/image";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from 'date-fns';
@@ -162,9 +162,21 @@ export default function KanbanPage() {
   const [newComment, setNewComment] = useState("");
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [newSubtaskType, setNewSubtaskType] = useState(Object.keys(subtaskTypes)[0]);
+  
   const [renamingColumn, setRenamingColumn] = useState<any>(null);
   const [newColumnName, setNewColumnName] = useState("");
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   
+  useEffect(() => {
+    if (!isRenameDialogOpen) {
+      const timer = setTimeout(() => {
+        setRenamingColumn(null);
+        setNewColumnName("");
+      }, 200); // Delay to allow animation
+      return () => clearTimeout(timer);
+    }
+  }, [isRenameDialogOpen]);
+
   const [draggedItem, setDraggedItem] = useState<{ taskId: string } | null>(null);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, task: any, sourceColId: string) => {
@@ -401,9 +413,11 @@ export default function KanbanPage() {
     });
   };
 
-  const handleRenameColumn = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newColumnName.trim() || !renamingColumn) return;
+  const handleRenameColumn = () => {
+    if (!newColumnName.trim() || !renamingColumn) {
+      setIsRenameDialogOpen(false);
+      return;
+    }
 
     setBoardData(prevData => {
         const newColumns = prevData.columns.map(column => 
@@ -411,9 +425,8 @@ export default function KanbanPage() {
         );
         return { ...prevData, columns: newColumns };
     });
-
-    setRenamingColumn(null);
-    setNewColumnName("");
+    
+    setIsRenameDialogOpen(false);
   };
 
   const { sprint, users } = boardData;
@@ -481,6 +494,7 @@ export default function KanbanPage() {
                         <DropdownMenuItem onClick={() => {
                             setRenamingColumn(col);
                             setNewColumnName(col.title);
+                            setIsRenameDialogOpen(true);
                         }}>
                         Renombrar
                         </DropdownMenuItem>
@@ -589,7 +603,7 @@ export default function KanbanPage() {
                         <DialogTitle className="font-headline text-2xl">{selectedTask.title}</DialogTitle>
                         {selectedTask.tag && <DialogDescription>{selectedTask.id} • <span className={cn("font-semibold", selectedTask.tag.className)}>{selectedTask.tag.text}</span></DialogDescription>}
                     </DialogHeader>
-                    <div className="flex-1 py-4 space-y-6 overflow-y-auto pr-4">
+                    <div className="flex-1 py-4 space-y-6 overflow-y-auto pr-4 -mr-2">
 
                         <div className="grid grid-cols-2 gap-4 text-sm border-b pb-4">
                             <div>
@@ -719,12 +733,7 @@ export default function KanbanPage() {
         </DialogContent>
       </Dialog>
 
-       <AlertDialog open={!!renamingColumn} onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          setRenamingColumn(null);
-          setNewColumnName("");
-        }
-      }}>
+       <AlertDialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Renombrar columna</AlertDialogTitle>
@@ -732,20 +741,26 @@ export default function KanbanPage() {
               Introduce el nuevo nombre para la columna "{renamingColumn?.title}".
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <form id="rename-column-form" onSubmit={handleRenameColumn}>
-            <Input
-              value={newColumnName}
-              onChange={(e) => setNewColumnName(e.target.value)}
-              className="mt-4"
-              autoFocus
-            />
-          </form>
+          <Input
+            value={newColumnName}
+            onChange={(e) => setNewColumnName(e.target.value)}
+            className="mt-4"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleRenameColumn();
+              }
+            }}
+          />
           <AlertDialogFooter className="mt-4">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction type="submit" form="rename-column-form">Guardar</AlertDialogAction>
+            <AlertDialogAction onClick={handleRenameColumn}>Guardar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
   );
 }
+
+    
