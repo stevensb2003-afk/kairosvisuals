@@ -18,7 +18,17 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 const subtaskTypes: Record<string, { text: string; className: string }> = {
@@ -152,6 +162,8 @@ export default function KanbanPage() {
   const [newComment, setNewComment] = useState("");
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [newSubtaskType, setNewSubtaskType] = useState(Object.keys(subtaskTypes)[0]);
+  const [renamingColumn, setRenamingColumn] = useState<any>(null);
+  const [newColumnName, setNewColumnName] = useState("");
   
   const [draggedItem, setDraggedItem] = useState<{ taskId: string } | null>(null);
 
@@ -386,6 +398,21 @@ export default function KanbanPage() {
     });
   };
 
+  const handleRenameColumn = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newColumnName.trim() || !renamingColumn) return;
+
+    setBoardData(prevData => {
+        const newColumns = prevData.columns.map(column => 
+            column.id === renamingColumn.id ? { ...column, title: newColumnName.trim() } : column
+        );
+        return { ...prevData, columns: newColumns };
+    });
+
+    setRenamingColumn(null);
+    setNewColumnName("");
+  };
+
   const { sprint, users } = boardData;
 
   return (
@@ -441,9 +468,21 @@ export default function KanbanPage() {
                   <h2 className="font-semibold font-headline">{col.title}</h2>
                   <Badge variant="secondary" className="text-xs">{col.tasks.filter(t => !t.isCover).length}</Badge>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => {
+                            setRenamingColumn(col);
+                            setNewColumnName(col.title);
+                        }}>
+                        Renombrar
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="space-y-4">
               {col.tasks.map((task: any) => {
@@ -676,6 +715,35 @@ export default function KanbanPage() {
             )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!renamingColumn} onOpenChange={() => { setRenamingColumn(null); setNewColumnName(""); }}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Renombrar columna</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Introduce el nuevo nombre para la columna "{renamingColumn?.title}".
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <form onSubmit={handleRenameColumn}>
+                <Input
+                    value={newColumnName}
+                    onChange={(e) => setNewColumnName(e.target.value)}
+                    className="mt-2"
+                    autoFocus
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleRenameColumn(e);
+                        }
+                    }}
+                />
+                <AlertDialogFooter className="mt-4">
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction type="submit">Guardar</AlertDialogAction>
+                </AlertDialogFooter>
+            </form>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
