@@ -4,17 +4,19 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, Plus, ArrowLeft, ClipboardCheck, Layers } from "lucide-react";
+import { GripVertical, Plus, ArrowLeft, ClipboardCheck, Layers, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 const initialTasks = [
     {
@@ -95,6 +97,17 @@ const initialSprintTasks = [
     initialTasks[3],
 ];
 
+const subtaskTypes: Record<string, { text: string; className: string }> = {
+    task: { text: 'Task', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' },
+    footage: { text: 'Footage', className: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' },
+    reel: { text: 'Reel', className: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+    graphics: { text: 'Graphics', className: 'bg-purple-600/10 text-purple-400 border-purple-600/20' },
+    audio: { text: 'Audio', className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
+    export: { text: 'Export', className: 'bg-green-500/10 text-green-400 border-green-500/20' },
+    post: { text: 'Post', className: 'bg-pink-500/10 text-pink-400 border-pink-500/20' },
+    image: { text: 'Image', className: 'bg-teal-500/10 text-teal-400 border-teal-500/20' },
+};
+
 const taskFormSchema = z.object({
   title: z.string().min(1, 'El título es requerido.'),
   description: z.string().optional(),
@@ -102,6 +115,10 @@ const taskFormSchema = z.object({
   taskType: z.string().min(1, 'El tipo de tarea es requerido.'),
   category: z.string().min(1, 'La categoría es requerida.'),
   points: z.coerce.number().min(0, 'Los puntos deben ser un número no negativo.'),
+  subtasks: z.array(z.object({
+    title: z.string(),
+    type: z.string(),
+  })).optional(),
 });
 
 export default function BacklogPage() {
@@ -112,6 +129,9 @@ export default function BacklogPage() {
     const [step, setStep] = useState(1);
     const [selectedType, setSelectedType] = useState<'task' | 'campaign' | null>(null);
 
+    const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+    const [newSubtaskType, setNewSubtaskType] = useState(Object.keys(subtaskTypes)[0]);
+
     const form = useForm<z.infer<typeof taskFormSchema>>({
         resolver: zodResolver(taskFormSchema),
         defaultValues: {
@@ -121,7 +141,13 @@ export default function BacklogPage() {
             taskType: "",
             category: "",
             points: 0,
+            subtasks: [],
         },
+    });
+    
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: "subtasks",
     });
 
     const handleTypeSelect = (type: 'task' | 'campaign') => {
@@ -133,10 +159,38 @@ export default function BacklogPage() {
         setStep(1);
         setSelectedType(null);
         form.reset();
+        setNewSubtaskTitle("");
+        setNewSubtaskType(Object.keys(subtaskTypes)[0]);
+    };
+
+    const handleSubtaskAdd = () => {
+        if (!newSubtaskTitle.trim() || !subtaskTypes[newSubtaskType]) return;
+
+        append({
+            title: newSubtaskTitle.trim(),
+            type: newSubtaskType
+        });
+
+        setNewSubtaskTitle("");
+        setNewSubtaskType(Object.keys(subtaskTypes)[0]);
     };
 
     function onSubmit(values: z.infer<typeof taskFormSchema>) {
         if (!selectedType) return;
+
+        const formattedSubtasks = values.subtasks?.map(sub => ({
+            id: `SUB-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            title: sub.title,
+            completed: false,
+            tag: subtaskTypes[sub.type as keyof typeof subtaskTypes]
+        })) || [];
+
+        const progress = selectedType === 'campaign' ? (
+            formattedSubtasks.length > 0 ? 
+            Math.round((formattedSubtasks.filter(s => s.completed).length / formattedSubtasks.length) * 100)
+            : 0
+        ) : undefined;
+
 
         const newTask = {
             id: `TSK-${Math.floor(Math.random() * 9000) + 1000}`,
@@ -144,7 +198,7 @@ export default function BacklogPage() {
             description: values.description,
             tag: {
                 text: values.category,
-                className: "bg-gray-500/10 text-gray-400 border-gray-500/20" // Default style
+                className: "bg-gray-500/10 text-gray-400 border-gray-500/20"
             },
             points: values.points,
             assignee: null,
@@ -155,7 +209,10 @@ export default function BacklogPage() {
             updatedAt: new Date().toISOString(),
             comments: [],
             commentsCount: 0,
-            ...(selectedType === 'campaign' && { progress: 0, subtasks: [] })
+            ...(selectedType === 'campaign' && { 
+                progress: progress, 
+                subtasks: formattedSubtasks 
+            })
         };
         
         // @ts-ignore
@@ -237,7 +294,7 @@ export default function BacklogPage() {
                                                 <FormItem>
                                                     <FormLabel>Título</FormLabel>
                                                     <FormControl>
-                                                        <Input placeholder="Ej: Diseño de la nueva landing" {...field} />
+                                                        <Input placeholder={`Ej: ${selectedType === 'task' ? 'Diseño de la nueva landing' : 'Campaña de Verano 2024'}`} {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -308,6 +365,53 @@ export default function BacklogPage() {
                                                 </FormItem>
                                             )}
                                         />
+                                        
+                                        {selectedType === 'campaign' && (
+                                            <div className="space-y-4 rounded-md border p-4">
+                                                <h4 className="font-semibold text-foreground">Sub-tareas de la Campaña</h4>
+                                                <div className="space-y-2">
+                                                    {fields.map((field, index) => (
+                                                        <div key={field.id} className="group flex items-center justify-between gap-3 rounded-md p-2 hover:bg-secondary/50">
+                                                            <div className="flex items-center gap-3">
+                                                                <Badge variant="outline" className={cn("text-xs font-semibold", subtaskTypes[field.type]?.className)}>{subtaskTypes[field.type]?.text}</Badge>
+                                                                <span className="text-sm">{field.title}</span>
+                                                            </div>
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" onClick={() => remove(index)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                                <span className="sr-only">Eliminar subtarea</span>
+                                                            </Button>
+                                                        </div>
+                                                    ))}
+                                                    {fields.length === 0 && (
+                                                        <p className="text-sm text-muted-foreground text-center py-2">No hay sub-tareas añadidas.</p>
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-2 pt-2">
+                                                    <Input
+                                                        placeholder="Añadir nueva sub-tarea..."
+                                                        value={newSubtaskTitle}
+                                                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                                        className="h-9 flex-grow"
+                                                    />
+                                                    <Select value={newSubtaskType} onValueChange={setNewSubtaskType}>
+                                                        <SelectTrigger className="w-[120px] h-9 shrink-0">
+                                                            <SelectValue placeholder="Tipo" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {Object.entries(subtaskTypes).map(([key, { text, className }]) => (
+                                                                <SelectItem key={key} value={key}>
+                                                                    <Badge variant="outline" className={cn("text-xs font-semibold border-none shadow-none", className)}>{text}</Badge>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <Button type="button" size="sm" disabled={!newSubtaskTitle.trim()} onClick={handleSubtaskAdd}>
+                                                        Añadir
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div className="flex justify-end pt-2">
                                             <Button type="submit">Crear Elemento</Button>
                                         </div>
