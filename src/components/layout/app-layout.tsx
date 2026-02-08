@@ -46,15 +46,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const getPageTitle = () => {
     if (pathname === '/') return 'Control Tower';
-    if (pathname.startsWith(settingsNav.href)) {
-      return settingsNav.label;
-    }
     const currentNav = navItems.find(item => {
         if (item.href === '/') return false;
         return pathname.startsWith(item.href);
     });
     return currentNav ? currentNav.label : '';
   };
+
+  const pageTitle = getPageTitle();
 
   return (
     <SidebarProvider>
@@ -115,21 +114,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-20 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6 md:px-8">
-            <SidebarTrigger className="md:hidden" />
-            <div className="flex-1">
-                <h1 className="text-2xl font-bold font-headline">
-                    {getPageTitle()}
-                </h1>
-                {pathname === '/' && <p className="text-sm text-muted-foreground">Overview of current production metrics and critical paths.</p>}
-            </div>
-            {pathname === '/' && (
-                <div className="hidden md:flex items-center gap-2">
-                    <Button variant="outline"><RefreshCw className="mr-2"/> Refresh Data</Button>
-                    <Button><Plus className="mr-2"/> New Project</Button>
-                </div>
-            )}
-        </header>
+        {pageTitle ? (
+          <header className="sticky top-0 z-10 flex h-20 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6 md:px-8">
+              <SidebarTrigger className="md:hidden" />
+              <div className="flex-1">
+                  <h1 className="text-2xl font-bold font-headline">
+                      {pageTitle}
+                  </h1>
+                  {pathname === '/' && <p className="text-sm text-muted-foreground">Overview of current production metrics and critical paths.</p>}
+              </div>
+              {pathname === '/' && (
+                  <div className="hidden md:flex items-center gap-2">
+                      <Button variant="outline"><RefreshCw className="mr-2"/> Refresh Data</Button>
+                      <Button><Plus className="mr-2"/> New Project</Button>
+                  </div>
+              )}
+          </header>
+        ) : null}
         <main className="flex-1 p-4 sm:p-6 md:p-8">
             {children}
         </main>
