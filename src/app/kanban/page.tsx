@@ -499,61 +499,60 @@ export default function KanbanPage() {
                       draggedItem?.taskId === task.id && "opacity-30"
                     )}
                   >
-                      <CardContent className="p-4 space-y-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="text-xs text-muted-foreground">{task.id} {task.client && `• ${task.client}`}</p>
-                            <h3 className="font-semibold font-headline leading-tight">{task.title}</h3>
-                            {task.description && <p className="text-sm text-muted-foreground mt-1 truncate">{task.description}</p>}
-                          </div>
-                          <div className="flex items-center">
-                            {ActionIcon ? <ActionIcon className="w-5 h-5 text-muted-foreground shrink-0" /> : 
-                            task.commentsCount > 0 ? (
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <MessageSquare className="h-4 w-4" />
-                                <span className="text-xs">{task.commentsCount}</span>
-                              </div>
-                            ) : null}
-                          </div>
+                    <CardContent className="p-3 space-y-2">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1 overflow-hidden">
+                          <p className="text-xs text-muted-foreground truncate">{task.id} {task.client && `• ${task.client}`}</p>
+                          <h3 className="font-semibold font-headline leading-tight truncate">{task.title}</h3>
                         </div>
-
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              {task.icon && (
-                                <div className="p-1.5 bg-secondary rounded-full flex items-center justify-center">
-                                  <Image src={getImageUrl(task.icon.id) || ''} alt="" width={16} height={16} data-ai-hint={task.icon.hint} />
-                                </div>
-                              )}
-                              {task.editor && (
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={getImageUrl(task.editor.id)} alt={task.editor.name} />
-                                  <AvatarFallback>{task.editor.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                              )}
-                              {task.tag && (
-                                <Badge variant="outline" className={cn("text-xs font-semibold", task.tag.className)}>
-                                  {task.tag.text}
-                                </Badge>
-                              )}
+                        <div className="flex items-center shrink-0">
+                          {ActionIcon ? <ActionIcon className="w-5 h-5 text-muted-foreground" /> : 
+                          task.commentsCount > 0 ? (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <MessageSquare className="h-4 w-4" />
+                              <span className="text-xs">{task.commentsCount}</span>
                             </div>
-
-                            {task.deadline && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                <span>{task.deadline}</span>
-                              </div>
-                            )}
+                          ) : null}
                         </div>
-                        {task.type === 'campaign' && task.progress !== undefined && (
-                          <div className="space-y-1">
-                            <div className="flex justify-between items-center text-xs text-muted-foreground">
-                              <span>Progress</span>
-                              <span>{task.progress}%</span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center gap-2">
+                          {task.icon && (
+                            <div className="p-1.5 bg-secondary rounded-full flex items-center justify-center">
+                              <Image src={getImageUrl(task.icon.id) || ''} alt="" width={16} height={16} data-ai-hint={task.icon.hint} />
                             </div>
-                            <Progress value={task.progress} className="h-1" />
+                          )}
+                          {task.editor && (
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={getImageUrl(task.editor.id)} alt={task.editor.name} />
+                              <AvatarFallback>{task.editor.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                          )}
+                          {task.tag && (
+                            <Badge variant="outline" className={cn("text-xs font-semibold", task.tag.className)}>
+                              {task.tag.text}
+                            </Badge>
+                          )}
+                        </div>
+                        {task.deadline && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            <span>{task.deadline}</span>
                           </div>
                         )}
-                      </CardContent>
+                      </div>
+                      
+                      {task.type === 'campaign' && task.progress !== undefined && (
+                        <div className="space-y-1 pt-1">
+                          <div className="flex justify-between items-center text-xs text-muted-foreground">
+                            <span>Progress</span>
+                            <span className="font-semibold">{task.progress}%</span>
+                          </div>
+                          <Progress value={task.progress} className="h-1.5" />
+                        </div>
+                      )}
+                    </CardContent>
                   </Card>
                 </div>
                 )})}
