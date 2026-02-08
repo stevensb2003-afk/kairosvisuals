@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useCollection, useFirestore, updateDocumentNonBlocking, useUser } from "@/firebase";
-import { collection, doc, query, where, orderBy } from "firebase/firestore";
+import { collection, doc, query, where } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
@@ -44,17 +44,16 @@ export default function KanbanPage() {
   const { user, isUserLoading } = useUser();
 
   const tasksQuery = useMemo(() => 
-      (firestore && !isUserLoading)
+      (firestore && !isUserLoading && user)
           ? query(
               collection(firestore, 'tasks'), 
-              where('sprintId', '==', KANBAN_SPRINT_ID),
-              orderBy('updatedAt', 'desc')
+              where('sprintId', '==', KANBAN_SPRINT_ID)
             ) 
           : null,
-  [firestore, isUserLoading]);
+  [firestore, isUserLoading, user]);
   const { data: tasks, isLoading: isLoadingTasks } = useCollection<any>(tasksQuery);
 
-  const usersQuery = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'users') : null, [firestore, isUserLoading]);
+  const usersQuery = useMemo(() => (firestore && !isUserLoading && user) ? collection(firestore, 'users') : null, [firestore, isUserLoading, user]);
   const { data: usersData } = useCollection<any>(usersQuery);
 
   const boardData = useMemo(() => {
@@ -246,7 +245,6 @@ export default function KanbanPage() {
     
     // This part would need a more complex implementation if column IDs were dynamic
     // For now, it just updates the title in the local state.
-    // To make it persistent, one might store column configurations in Firestore.
     // setBoardData(prevData => ...)
     
     setIsRenameDialogOpen(false);
