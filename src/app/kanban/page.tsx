@@ -14,6 +14,9 @@ import Image from "next/image";
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
 
 const initialKanbanData = {
   sprint: {
@@ -39,6 +42,10 @@ const initialKanbanData = {
           tag: { text: "MOTION", className: "bg-purple-600/10 text-purple-400 border-purple-600/20" },
           comments: [{ user: 'Sarah J.', avatarId: 'sarah-j', text: 'Can we get a preview by EOD?' }],
           commentsCount: 1,
+          client: 'Spring & Co.',
+          taskType: 'Motion Graphics',
+          createdAt: new Date('2024-08-01T10:00:00Z').toISOString(),
+          updatedAt: new Date('2024-08-02T14:30:00Z').toISOString(),
         },
         {
           id: "KV-1033",
@@ -48,6 +55,10 @@ const initialKanbanData = {
           tag: { text: "AUDIO", className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" },
           comments: [],
           commentsCount: 0,
+          client: 'TechScapes',
+          taskType: 'Audio Editing',
+          createdAt: new Date('2024-08-01T11:00:00Z').toISOString(),
+          updatedAt: new Date('2024-08-01T11:00:00Z').toISOString(),
         },
       ],
     },
@@ -72,7 +83,11 @@ const initialKanbanData = {
           tag: { text: "EDITING", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
           deadline: "2d",
           commentsCount: 1,
-          comments: [{ user: 'Alex Chen', avatarId: 'alex-chen', text: 'The client wants to see a version with a different song.' }]
+          comments: [{ user: 'Alex Chen', avatarId: 'alex-chen', text: 'The client wants to see a version with a different song.' }],
+          client: 'Nike Inc.',
+          taskType: 'Video Editing',
+          createdAt: new Date('2024-07-28T09:00:00Z').toISOString(),
+          updatedAt: new Date('2024-08-02T18:00:00Z').toISOString(),
         },
       ],
     },
@@ -89,11 +104,16 @@ const initialKanbanData = {
           actionIcon: Palette,
           comments: [],
           commentsCount: 0,
+          client: 'Spotify',
+          taskType: 'Color Grading',
+          createdAt: new Date('2024-07-25T15:00:00Z').toISOString(),
+          updatedAt: new Date('2024-08-01T17:45:00Z').toISOString(),
         },
       ],
     },
   ],
 };
+
 
 
 const getImageUrl = (id: string) => PlaceHolderImages.find(img => img.id === id)?.imageUrl;
@@ -121,39 +141,40 @@ export default function KanbanPage() {
     e.stopPropagation();
     const draggedData = JSON.parse(e.dataTransfer.getData('application/json'));
     if (!draggedData) return;
-    
+
     const { taskId, sourceColId } = draggedData;
 
+    if (sourceColId === targetColId && !targetTaskId) {
+      const sourceCol = boardData.columns.find(c => c.id === sourceColId);
+      if (sourceCol && sourceCol.tasks.findIndex(t => t.id === taskId) === sourceCol.tasks.length - 1) {
+        setDraggedItem(null);
+        return;
+      }
+    }
+
     setBoardData(prevData => {
-        const sourceCol = prevData.columns.find(c => c.id === sourceColId);
-        if (!sourceCol) return prevData;
-        const taskToMove = sourceCol.tasks.find(t => t.id === taskId);
-        if (!taskToMove) return prevData;
+      let taskToMove: any;
+      const newColumns = prevData.columns.map(col => {
+        if (col.id === sourceColId) {
+          taskToMove = col.tasks.find(t => t.id === taskId);
+          return { ...col, tasks: col.tasks.filter(t => t.id !== taskId) };
+        }
+        return col;
+      });
 
-        // Create new column data by first removing the task
-        const columnsWithRemoval = prevData.columns.map(c => {
-            if(c.id === sourceColId) {
-                return {...c, tasks: c.tasks.filter(t => t.id !== taskId)}
-            }
-            return c;
-        });
+      if (!taskToMove) return prevData;
 
-        // Then add the task to the target column
-        const columnsWithAddition = columnsWithRemoval.map(c => {
-            if (c.id === targetColId) {
-                const newTasks = [...c.tasks];
-                const dropIndex = targetTaskId ? newTasks.findIndex(t => t.id === targetTaskId) : newTasks.length;
-                if (dropIndex === -1) {
-                    newTasks.push(taskToMove);
-                } else {
-                    newTasks.splice(dropIndex, 0, taskToMove);
-                }
-                return {...c, tasks: newTasks};
-            }
-            return c;
-        });
+      const finalColumns = newColumns.map(col => {
+        if (col.id === targetColId) {
+          const newTasks = [...col.tasks];
+          const dropIndex = targetTaskId ? newTasks.findIndex(t => t.id === targetTaskId) : newTasks.length;
+          newTasks.splice(dropIndex, 0, taskToMove);
+          return { ...col, tasks: newTasks };
+        }
+        return col;
+      });
 
-        return {...prevData, columns: columnsWithAddition};
+      return { ...prevData, columns: finalColumns };
     });
 
     setDraggedItem(null);
@@ -173,25 +194,25 @@ export default function KanbanPage() {
       text: newComment.trim(),
     };
 
-    const updatedTask = {
-        ...selectedTask,
-        comments: [...(selectedTask.comments || []), newCommentObj],
-        commentsCount: (selectedTask.comments?.length || 0) + 1
-    };
-
-    setSelectedTask(updatedTask);
-
     setBoardData(prevData => {
-      const newColumns = prevData.columns.map(col => {
-        const taskIndex = col.tasks.findIndex(t => t.id === selectedTask.id);
-        if (taskIndex !== -1) {
-          const newTasks = [...col.tasks];
-          newTasks[taskIndex] = updatedTask;
-          return { ...col, tasks: newTasks };
-        }
-        return col;
-      });
-      return { ...prevData, columns: newColumns };
+        const newColumns = prevData.columns.map(column => {
+            const taskIndex = column.tasks.findIndex(t => t.id === selectedTask.id);
+            if (taskIndex > -1) {
+                const updatedTasks = [...column.tasks];
+                const task = updatedTasks[taskIndex];
+                const updatedTask = {
+                    ...task,
+                    comments: [...(task.comments || []), newCommentObj],
+                    commentsCount: (task.comments?.length || 0) + 1,
+                    updatedAt: new Date().toISOString(),
+                };
+                updatedTasks[taskIndex] = updatedTask;
+                setSelectedTask(updatedTask);
+                return { ...column, tasks: updatedTasks };
+            }
+            return column;
+        });
+        return { ...prevData, columns: newColumns };
     });
 
     setNewComment("");
@@ -262,7 +283,10 @@ export default function KanbanPage() {
                 return (
                 <div key={task.id} 
                   onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, col.id, task.id)}
+                  onDrop={(e) => {
+                    if (task.isCover) return;
+                    handleDrop(e, col.id, task.id)
+                  }}
                 >
                   <Card 
                     draggable={!task.isCover}
@@ -285,7 +309,7 @@ export default function KanbanPage() {
                       <CardContent className="p-4 space-y-4">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-xs text-muted-foreground">{task.id}</p>
+                            <p className="text-xs text-muted-foreground">{task.id} {task.client && `• ${task.client}`}</p>
                             <h3 className="font-semibold font-headline leading-tight">{task.title}</h3>
                             {task.description && <p className="text-sm text-muted-foreground mt-1">{task.description}</p>}
                           </div>
@@ -356,6 +380,26 @@ export default function KanbanPage() {
                         {selectedTask.tag && <DialogDescription>{selectedTask.id} • <span className={cn("font-semibold", selectedTask.tag.className)}>{selectedTask.tag.text}</span></DialogDescription>}
                     </DialogHeader>
                     <div className="py-4 space-y-6">
+
+                        <div className="grid grid-cols-2 gap-4 text-sm border-b pb-4">
+                            <div>
+                                <p className="text-muted-foreground font-semibold">Cliente</p>
+                                <p>{selectedTask.client}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground font-semibold">Tipo de Tarea</p>
+                                <p>{selectedTask.taskType}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground font-semibold">Fecha de Creación</p>
+                                <p>{selectedTask.createdAt ? format(new Date(selectedTask.createdAt), "dd MMM, yyyy", { locale: es }) : 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground font-semibold">Última Actualización</p>
+                                <p>{selectedTask.updatedAt ? format(new Date(selectedTask.updatedAt), "dd MMM, yyyy 'a las' HH:mm", { locale: es }) : 'N/A'}</p>
+                            </div>
+                        </div>
+
                         {selectedTask.description && <p className="text-muted-foreground">{selectedTask.description}</p>}
                         
                         <div className="space-y-4">
