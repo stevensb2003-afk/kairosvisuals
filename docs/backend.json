@@ -118,6 +118,10 @@
           "type": "string",
           "description": "Name or description of the task."
         },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the task."
+        },
         "dueDate": {
           "type": "string",
           "description": "Due date for the task.",
@@ -126,15 +130,45 @@
         "status": {
           "type": "string",
           "description": "Current status of the task (e.g., Pending, In Progress, Completed)."
+        },
+        "sprintId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Reference to Sprint. If null, the task is in the backlog."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["task", "campaign"]
+        },
+        "points": {
+          "type": "number"
+        },
+        "category": {
+          "type": "string"
+        },
+        "subtasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "completed": { "type": "boolean" },
+              "type": { "type": "string" }
+            },
+            "required": ["id", "title", "completed", "type"]
+          }
         }
       },
       "required": [
         "id",
-        "taskTypeId",
         "clientId",
         "name",
         "dueDate",
-        "status"
+        "status",
+        "type"
       ]
     },
     "Quotation": {

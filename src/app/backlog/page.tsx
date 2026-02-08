@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
+import { useUser, useAuth, initiateAnonymousSignIn, useFirestore } from '@/firebase';
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 const allInitialTasks = [
@@ -94,6 +96,16 @@ const subtaskTypes: Record<string, { text: string; className: string }> = {
 };
 
 export default function BacklogPage() {
+    const { user, isUserLoading } = useUser();
+    const auth = useAuth();
+    const firestore = useFirestore();
+
+    useEffect(() => {
+        if (!isUserLoading && !user && auth) {
+            initiateAnonymousSignIn(auth);
+        }
+    }, [isUserLoading, user, auth]);
+
     const [tasks, setTasks] = useState(backlogTasksData);
     const [sprintTasks, setSprintTasks] = useState(sprintTasksData);
     
@@ -258,6 +270,33 @@ export default function BacklogPage() {
     };
 
     const totalPoints = sprintTasks.reduce((sum, task) => sum + task.points, 0);
+
+    if (isUserLoading || !user) {
+        return (
+             <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="h-10 w-10" />
+                        <div>
+                            <Skeleton className="h-8 w-48 mb-2" />
+                            <Skeleton className="h-5 w-80" />
+                        </div>
+                    </div>
+                    <Skeleton className="h-10 w-32" />
+                </div>
+                 <div className="grid lg:grid-cols-3 gap-6 items-start">
+                    <div className="lg:col-span-2 space-y-4">
+                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-32 w-full" />
+                    </div>
+                    <div className="lg:col-span-1">
+                        <Skeleton className="h-64 w-full" />
+                    </div>
+                 </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
