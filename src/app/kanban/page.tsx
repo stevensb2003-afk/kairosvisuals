@@ -128,6 +128,16 @@ const initialKanbanData = {
         },
       ],
     },
+    {
+      id: "client-approved",
+      title: "Aprobado por cliente",
+      tasks: [],
+    },
+    {
+      id: "completed",
+      title: "Completado",
+      tasks: [],
+    },
   ],
 };
 
@@ -418,7 +428,7 @@ export default function KanbanPage() {
           <Button variant="outline" size="sm"><Filter className="w-4 h-4 mr-2" /> Filter</Button>
         </div>
 
-        <main className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+        <main className="flex-1 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 items-start">
           {boardData.columns.map((col) => (
             <div 
               key={col.id} 
