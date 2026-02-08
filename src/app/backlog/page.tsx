@@ -358,6 +358,7 @@ export default function BacklogPage() {
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
+                                            />
                                         )}
                                         <FormField
                                             control={form.control}
