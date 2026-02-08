@@ -716,7 +716,12 @@ export default function KanbanPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!renamingColumn} onOpenChange={() => { setRenamingColumn(null); setNewColumnName(""); }}>
+      <AlertDialog open={!!renamingColumn} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setRenamingColumn(null);
+          setNewColumnName("");
+        }
+      }}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Renombrar columna</AlertDialogTitle>
@@ -724,24 +729,18 @@ export default function KanbanPage() {
                     Introduce el nuevo nombre para la columna "{renamingColumn?.title}".
                 </AlertDialogDescription>
             </AlertDialogHeader>
-            <form onSubmit={handleRenameColumn}>
+            <form id="rename-column-form" onSubmit={handleRenameColumn}>
                 <Input
                     value={newColumnName}
                     onChange={(e) => setNewColumnName(e.target.value)}
                     className="mt-2"
                     autoFocus
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleRenameColumn(e);
-                        }
-                    }}
                 />
-                <AlertDialogFooter className="mt-4">
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction type="submit">Guardar</AlertDialogAction>
-                </AlertDialogFooter>
             </form>
+            <AlertDialogFooter className="mt-4">
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction type="submit" form="rename-column-form">Guardar</AlertDialogAction>
+            </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
