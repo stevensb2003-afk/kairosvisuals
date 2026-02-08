@@ -15,18 +15,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const taskTypeSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
+  price: z.coerce.number().min(0, 'El precio debe ser un número no negativo.'),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Debe ser un color hexadecimal válido (ej: #RRGGBB).'),
 });
 
 export function TaskTypeManagement() {
     const firestore = useFirestore();
     const taskTypesCollection = useMemoFirebase(() => firestore ? collection(firestore, 'task_types') : null, [firestore]);
-    const { data: taskTypes, isLoading } = useCollection<{name: string, color: string}>(taskTypesCollection);
+    const { data: taskTypes, isLoading } = useCollection<{name: string, color: string, price: number}>(taskTypesCollection);
 
     const form = useForm<z.infer<typeof taskTypeSchema>>({
         resolver: zodResolver(taskTypeSchema),
         defaultValues: {
             name: '',
+            price: 0,
             color: '#6A29EA',
         }
     });
@@ -42,7 +44,7 @@ export function TaskTypeManagement() {
         <Card>
             <CardHeader>
                 <CardTitle>Tipos de Tarea</CardTitle>
-                <CardDescription>Define los tipos de tareas y asígnales un color para una mejor organización visual.</CardDescription>
+                <CardDescription>Define los tipos de tareas, asígnales un precio individual y un color para una mejor organización.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-10 md:grid-cols-2">
                 <div className="space-y-4">
@@ -53,6 +55,13 @@ export function TaskTypeManagement() {
                                 <FormItem>
                                     <FormLabel>Nombre del Task</FormLabel>
                                     <FormControl><Input placeholder="Ej: Reel" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            <FormField control={form.control} name="price" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Precio Individual</FormLabel>
+                                    <FormControl><Input type="number" min="0" placeholder="Ej: 150" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
@@ -78,6 +87,7 @@ export function TaskTypeManagement() {
                                 <TableRow>
                                     <TableHead>Muestra</TableHead>
                                     <TableHead>Nombre</TableHead>
+                                    <TableHead>Precio</TableHead>
                                     <TableHead>Color (Hex)</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -86,6 +96,7 @@ export function TaskTypeManagement() {
                                     <TableRow key={i}>
                                         <TableCell><Skeleton className="h-5 w-5 rounded-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                                     </TableRow>
                                 ))}
@@ -93,6 +104,7 @@ export function TaskTypeManagement() {
                                     <TableRow key={taskType.id}>
                                         <TableCell><div className="h-5 w-5 rounded-full" style={{ backgroundColor: taskType.color }} /></TableCell>
                                         <TableCell className="font-medium">{taskType.name}</TableCell>
+                                        <TableCell><span className="font-mono text-sm">${taskType.price}</span></TableCell>
                                         <TableCell><span className="font-mono text-sm">{taskType.color}</span></TableCell>
                                     </TableRow>
                                 ))}
@@ -107,5 +119,3 @@ export function TaskTypeManagement() {
         </Card>
     );
 }
-
-    
