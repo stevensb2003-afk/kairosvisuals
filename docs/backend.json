@@ -120,6 +120,10 @@
           "items": {
             "type": "object",
             "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the package tier (e.g., 'Basic', 'Pro')."
+              },
               "units": {
                 "type": "number"
               },
@@ -128,6 +132,7 @@
               }
             },
             "required": [
+              "name",
               "units",
               "price"
             ]

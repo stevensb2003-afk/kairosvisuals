@@ -50,6 +50,7 @@ const packageSchema = baseSchema.extend({
     pricingModel: z.literal('package'),
     packages: z.array(
         z.object({
+            name: z.string().min(1, "El nombre del paquete es requerido."),
             units: z.coerce.number().min(1, "Las unidades deben ser al menos 1."),
             price: z.coerce.number().min(0, "El precio no puede ser negativo."),
         })
@@ -84,7 +85,7 @@ type TaskType = {
     unitPrice: number;
 } | {
     pricingModel: 'package';
-    packages: { units: number; price: number; }[];
+    packages: { name: string; units: number; price: number; }[];
 });
 
 export function TaskTypeManagement() {
@@ -131,8 +132,10 @@ export function TaskTypeManagement() {
         name: "packages"
     });
 
+    const [newPackageName, setNewPackageName] = useState('');
     const [newPackageUnits, setNewPackageUnits] = useState(1);
     const [newPackagePrice, setNewPackagePrice] = useState(0);
+    const [editPackageName, setEditPackageName] = useState('');
     const [editPackageUnits, setEditPackageUnits] = useState(1);
     const [editPackagePrice, setEditPackagePrice] = useState(0);
 
@@ -145,15 +148,17 @@ export function TaskTypeManagement() {
     const editComplexityTiersValues = editForm.watch('complexityTiers');
 
     function handleAddPackage() {
-        if (newPackageUnits <= 0 || newPackagePrice < 0) return;
-        appendPackage({ units: newPackageUnits, price: newPackagePrice });
+        if (!newPackageName.trim() || newPackageUnits <= 0 || newPackagePrice < 0) return;
+        appendPackage({ name: newPackageName.trim(), units: newPackageUnits, price: newPackagePrice });
+        setNewPackageName('');
         setNewPackageUnits(1);
         setNewPackagePrice(0);
     }
     
     function handleEditAddPackage() {
-        if (editPackageUnits <= 0 || editPackagePrice < 0) return;
-        appendEditPackage({ units: editPackageUnits, price: editPackagePrice });
+        if (!editPackageName.trim() || editPackageUnits <= 0 || editPackagePrice < 0) return;
+        appendEditPackage({ name: editPackageName.trim(), units: editPackageUnits, price: editPackagePrice });
+        setEditPackageName('');
         setEditPackageUnits(1);
         setEditPackagePrice(0);
     }
@@ -281,33 +286,39 @@ export function TaskTypeManagement() {
 
                                 {pricingModel === 'package' && (
                                     <div className="space-y-2">
-                                    <FormLabel>Configuración de Paquetes</FormLabel>
-                                    <div className="p-3 border rounded-md space-y-3">
-                                        {packageFields.map((field, index) => (
-                                            <div key={field.id} className="flex items-center justify-between">
-                                                <p className="text-sm">{field.units} unidades por ₡{field.price.toLocaleString('es-CR')}</p>
-                                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removePackage(index)}>
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                        <FormLabel>Configuración de Paquetes</FormLabel>
+                                        <div className="p-3 border rounded-md space-y-3">
+                                            {packageFields.map((field, index) => (
+                                                <div key={field.id} className="flex items-center justify-between">
+                                                    <p className="text-sm">
+                                                        <span className="font-medium">{field.name}</span>: {field.units} unidades por ₡{field.price.toLocaleString('es-CR')}
+                                                    </p>
+                                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removePackage(index)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                            {packageFields.length > 0 && <Separator />}
+                                            <div className="flex items-end gap-2">
+                                                <div className="flex-1">
+                                                    <Label className="text-xs text-muted-foreground">Nombre del Paquete</Label>
+                                                    <Input value={newPackageName} onChange={(e) => setNewPackageName(e.target.value)} className="h-9" placeholder="Ej: Básico" />
+                                                </div>
+                                                <div className="w-20">
+                                                    <Label className="text-xs text-muted-foreground">Unidades</Label>
+                                                    <Input type="number" value={newPackageUnits} onChange={e => setNewPackageUnits(parseInt(e.target.value, 10))} className="h-9" min="1" />
+                                                </div>
+                                                <div className="w-24">
+                                                    <Label className="text-xs text-muted-foreground">Precio (CRC)</Label>
+                                                    <Input type="number" value={newPackagePrice} onChange={e => setNewPackagePrice(parseInt(e.target.value, 10))} className="h-9" min="0" />
+                                                </div>
+                                                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleAddPackage} disabled={!newPackageName.trim() || newPackageUnits <= 0 || newPackagePrice < 0}>
+                                                    <Plus className="h-4 w-4" />
                                                 </Button>
                                             </div>
-                                        ))}
-                                        {packageFields.length > 0 && <Separator />}
-                                        <div className="flex items-end gap-2">
-                                            <div className="flex-1">
-                                                <Label className="text-xs text-muted-foreground">Unidades</Label>
-                                                <Input type="number" value={newPackageUnits} onChange={e => setNewPackageUnits(parseInt(e.target.value, 10))} className="h-9" min="1" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <Label className="text-xs text-muted-foreground">Precio (CRC)</Label>
-                                                <Input type="number" value={newPackagePrice} onChange={e => setNewPackagePrice(parseInt(e.target.value, 10))} className="h-9" min="0" />
-                                            </div>
-                                            <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={handleAddPackage} disabled={newPackageUnits <= 0 || newPackagePrice < 0}>
-                                                <Plus className="h-4 w-4" />
-                                            </Button>
                                         </div>
+                                        <FormMessage>{form.formState.errors.packages?.message || form.formState.errors.packages?.root?.message}</FormMessage>
                                     </div>
-                                    <FormMessage>{form.formState.errors.packages?.message || form.formState.errors.packages?.root?.message}</FormMessage>
-                                </div>
                                 )}
 
                                 <FormField
@@ -415,7 +426,7 @@ export function TaskTypeManagement() {
                                             <TableCell className="text-xs">
                                                 {taskType.pricingModel === 'fixed' && `₡${taskType.price.toLocaleString('es-CR')}`}
                                                 {taskType.pricingModel === 'scalable' && `Base: ₡${taskType.basePrice.toLocaleString('es-CR')}`}
-                                                {taskType.pricingModel === 'package' && `${taskType.packages.length} paquetes`}
+                                                {taskType.pricingModel === 'package' && `${taskType.packages.length} paquete(s)`}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingTaskType(taskType)}>
@@ -526,7 +537,9 @@ export function TaskTypeManagement() {
                                     <div className="p-3 border rounded-md space-y-3">
                                         {editPackageFields.map((field, index) => (
                                             <div key={field.id} className="flex items-center justify-between">
-                                                <p className="text-sm">{field.units} unidades por ₡{field.price.toLocaleString('es-CR')}</p>
+                                                <p className="text-sm">
+                                                    <span className="font-medium">{field.name}</span>: {field.units} unidades por ₡{field.price.toLocaleString('es-CR')}
+                                                </p>
                                                 <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeEditPackage(index)}>
                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                 </Button>
@@ -535,14 +548,18 @@ export function TaskTypeManagement() {
                                         {editPackageFields.length > 0 && <Separator />}
                                         <div className="flex items-end gap-2">
                                             <div className="flex-1">
+                                                <Label className="text-xs text-muted-foreground">Nombre del Paquete</Label>
+                                                <Input value={editPackageName} onChange={(e) => setEditPackageName(e.target.value)} className="h-9" placeholder="Ej: Básico" />
+                                            </div>
+                                            <div className="w-20">
                                                 <Label className="text-xs text-muted-foreground">Unidades</Label>
                                                 <Input type="number" value={editPackageUnits} onChange={e => setEditPackageUnits(parseInt(e.target.value, 10))} className="h-9" min="1" />
                                             </div>
-                                            <div className="flex-1">
+                                            <div className="w-24">
                                                 <Label className="text-xs text-muted-foreground">Precio (CRC)</Label>
                                                 <Input type="number" value={editPackagePrice} onChange={e => setEditPackagePrice(parseInt(e.target.value, 10))} className="h-9" min="0" />
                                             </div>
-                                            <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={handleEditAddPackage} disabled={editPackageUnits <= 0 || editPackagePrice < 0}>
+                                            <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleEditAddPackage} disabled={!editPackageName.trim() || editPackageUnits <= 0 || editPackagePrice < 0}>
                                                 <Plus className="h-4 w-4" />
                                             </Button>
                                         </div>
