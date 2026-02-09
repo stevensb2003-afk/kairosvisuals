@@ -75,7 +75,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "TaskType",
       "type": "object",
-      "description": "Represents a type of task (e.g., Reel, Post, Video Cinematográfico).",
+      "description": "Represents a type of task (e.g., Reel, Post, Landing Page). Can have a fixed price or a variable price based on complexity.",
       "properties": {
         "id": {
           "type": "string",
@@ -85,19 +85,62 @@
           "type": "string",
           "description": "Name of the task type."
         },
-        "price": {
-          "type": "number",
-          "description": "Individual price for this task type when it's not part of a pack."
-        },
         "color": {
           "type": "string",
           "description": "Color code for the task type, in hex format."
+        },
+        "pricingModel": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "variable"
+          ],
+          "description": "The pricing model for the task: 'fixed' or 'variable'."
+        },
+        "price": {
+          "type": "number",
+          "description": "Individual price for this task type if pricingModel is 'fixed'."
+        },
+        "basePrice": {
+          "type": "number",
+          "description": "Base price for variable tasks. Covers a set number of pages."
+        },
+        "includedPages": {
+          "type": "number",
+          "description": "Number of pages included in the base price for variable tasks."
+        },
+        "additionalPageCost": {
+          "type": "number",
+          "description": "Cost for each additional page beyond the included amount for variable tasks."
+        },
+        "complexityTiers": {
+          "type": "array",
+          "description": "Surcharges per page based on complexity level for variable tasks.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "level": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              },
+              "surcharge": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "level",
+              "name",
+              "surcharge"
+            ]
+          }
         }
       },
       "required": [
         "id",
         "name",
-        "price"
+        "pricingModel"
       ]
     },
     "Task": {
@@ -148,7 +191,10 @@
         },
         "type": {
           "type": "string",
-          "enum": ["task", "campaign"]
+          "enum": [
+            "task",
+            "campaign"
+          ]
         },
         "points": {
           "type": "number"
@@ -161,12 +207,25 @@
           "items": {
             "type": "object",
             "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" },
-              "completed": { "type": "boolean" },
-              "type": { "type": "string" }
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "completed": {
+                "type": "boolean"
+              },
+              "type": {
+                "type": "string"
+              }
             },
-            "required": ["id", "title", "completed", "type"]
+            "required": [
+              "id",
+              "title",
+              "completed",
+              "type"
+            ]
           }
         }
       },

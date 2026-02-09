@@ -14,19 +14,60 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useMemo } from 'react';
 import { Pencil, Trash2, Check, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Label } from '../ui/label';
+import { Separator } from '../ui/separator';
+import { Badge } from '../ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
-const taskTypeSchema = z.object({
+
+const baseSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
-  price: z.coerce.number().min(0, 'El precio debe ser un número no negativo.'),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'El color debe ser un código hexadecimal válido (ej: #RRGGBB)').optional().default('#888888'),
 });
+
+const fixedSchema = baseSchema.extend({
+  pricingModel: z.literal('fixed'),
+  price: z.coerce.number().min(0, 'El precio debe ser un número no negativo.'),
+});
+
+const variableSchema = baseSchema.extend({
+  pricingModel: z.literal('variable'),
+  basePrice: z.coerce.number().min(0, 'El precio base es requerido.'),
+  includedPages: z.coerce.number().min(0, 'Las páginas incluidas son requeridas.'),
+  additionalPageCost: z.coerce.number().min(0, 'El costo por página adicional es requerido.'),
+  complexityTiers: z.array(
+    z.object({
+      level: z.number(),
+      name: z.string(),
+      surcharge: z.coerce.number().min(0, 'El recargo no puede ser negativo.'),
+    })
+  ).length(4, 'Debes definir los 4 niveles de complejidad.'),
+});
+
+const taskTypeSchema = z.discriminatedUnion('pricingModel', [fixedSchema, variableSchema]);
+
+
+type ComplexityTier = {
+    level: number;
+    name: string;
+    surcharge: number;
+};
 
 type TaskType = {
     id: string;
     name: string;
-    price: number;
     color?: string;
-};
+} & ({
+    pricingModel: 'fixed';
+    price: number;
+} | {
+    pricingModel: 'variable';
+    basePrice: number;
+    includedPages: number;
+    additionalPageCost: number;
+    complexityTiers: ComplexityTier[];
+});
 
 export function TaskTypeManagement() {
     const firestore = useFirestore();
@@ -41,19 +82,29 @@ export function TaskTypeManagement() {
         resolver: zodResolver(taskTypeSchema),
         defaultValues: {
             name: '',
-            price: 0,
             color: '#888888',
-        }
+            pricingModel: 'fixed',
+            price: 0,
+        },
     });
+
+    const pricingModel = form.watch('pricingModel');
+    const complexityTiersValues = form.watch('complexityTiers');
 
     function onSubmit(values: z.infer<typeof taskTypeSchema>) {
         if (!firestore) return;
         const newDocRef = doc(collection(firestore, 'task_types'));
         setDocumentNonBlocking(newDocRef, { ...values, id: newDocRef.id }, { merge: true });
-        form.reset();
+        form.reset({
+            name: '',
+            color: '#888888',
+            pricingModel: 'fixed',
+            price: 0,
+        });
     }
 
     const handleEditClick = (taskType: TaskType) => {
+        if (taskType.pricingModel === 'variable') return;
         setEditingTaskId(taskType.id);
         setEditForm({ name: taskType.name, price: taskType.price || 0, color: taskType.color || '#888888' });
     };
@@ -81,7 +132,7 @@ export function TaskTypeManagement() {
         <Card>
             <CardHeader>
                 <CardTitle>Tipos de Tarea</CardTitle>
-                <CardDescription>Define los tipos de tareas y asígnales un precio individual para trabajos puntuales.</CardDescription>
+                <CardDescription>Define los tipos de tareas y asígnales un precio fijo o variable para trabajos puntuales.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-10 md:grid-cols-2">
                 <div className="space-y-4">
@@ -91,17 +142,99 @@ export function TaskTypeManagement() {
                             <FormField control={form.control} name="name" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Nombre del Task</FormLabel>
-                                    <FormControl><Input placeholder="Ej: Reel" {...field} /></FormControl>
+                                    <FormControl><Input placeholder="Ej: Landing Page" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
-                            <FormField control={form.control} name="price" render={({ field }) => (
+                            
+                             <FormField control={form.control} name="pricingModel" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Precio Individual (CRC)</FormLabel>
-                                    <FormControl><Input type="number" min="0" placeholder="Ej: 85000" {...field} /></FormControl>
+                                    <FormLabel>Modelo de Precios</FormLabel>
+                                    <Select 
+                                        onValueChange={(value) => {
+                                            const newModel = value as 'fixed' | 'variable';
+                                            field.onChange(newModel);
+                                            if (newModel === 'variable') {
+                                                form.setValue('basePrice', 25000);
+                                                form.setValue('includedPages', 4);
+                                                form.setValue('additionalPageCost', 4000);
+                                                form.setValue('complexityTiers', [
+                                                    { level: 0, name: 'Básico', surcharge: 0 },
+                                                    { level: 1, name: 'Bajo', surcharge: 500 },
+                                                    { level: 2, name: 'Medio', surcharge: 1500 },
+                                                    { level: 3, name: 'Alto', surcharge: 2000 },
+                                                ]);
+                                            } else {
+                                                form.setValue('price', 0);
+                                            }
+                                        }} 
+                                        defaultValue={field.value}
+                                    >
+                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="fixed">Fijo</SelectItem>
+                                            <SelectItem value="variable">Variable</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )} />
+
+                            {pricingModel === 'fixed' && (
+                                 <FormField control={form.control} name="price" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Precio Individual (CRC)</FormLabel>
+                                        <FormControl><Input type="number" min="0" placeholder="Ej: 85000" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            )}
+
+                           {pricingModel === 'variable' && (
+                                <div className='space-y-4 rounded-md border p-4'>
+                                    <FormField control={form.control} name="basePrice" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Precio Base (CRC)</FormLabel>
+                                            <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <FormField control={form.control} name="includedPages" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Páginas Incluidas</FormLabel>
+                                            <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                     <FormField control={form.control} name="additionalPageCost" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Costo Página Adicional (CRC)</FormLabel>
+                                            <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                    <Separator />
+                                    <Label>Recargos por Complejidad (por página)</Label>
+                                    {complexityTiersValues?.map((tier, index) => (
+                                        <FormField key={tier.level} control={form.control} name={`complexityTiers.${index}.surcharge`} render={({ field }) => (
+                                            <FormItem>
+                                                <div className="flex items-center justify-between">
+                                                    <FormLabel>{tier.name}</FormLabel>
+                                                    <FormControl>
+                                                        <div className='flex items-center gap-2'>
+                                                            <span>+ ₡</span>
+                                                            <Input type="number" min="0" className="w-32 h-8" {...field} />
+                                                        </div>
+                                                    </FormControl>
+                                                </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    ))}
+                                </div>
+                           )}
+
+
                              <FormField
                                 control={form.control}
                                 name="color"
@@ -187,12 +320,36 @@ export function TaskTypeManagement() {
                                                     <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: taskType.color || '#888888' }} />
                                                 </TableCell>
                                                 <TableCell className="font-medium">{taskType.name}</TableCell>
-                                                <TableCell><span className="font-mono text-sm">₡{(taskType.price || 0).toLocaleString('es-CR')}</span></TableCell>
+                                                <TableCell>
+                                                    {taskType.pricingModel === 'fixed' ? (
+                                                        <span className="font-mono text-sm">₡{(taskType.price || 0).toLocaleString('es-CR')}</span>
+                                                    ) : (
+                                                        <Badge variant="outline">Variable</Badge>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                      <div className="flex items-center justify-end gap-2">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(taskType)}>
-                                                            <Pencil className="h-4 w-4" />
-                                                        </Button>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                {/* Wrapper div for Tooltip to correctly handle disabled state */}
+                                                                <div>
+                                                                    <Button 
+                                                                        variant="ghost" 
+                                                                        size="icon" 
+                                                                        className="h-8 w-8" 
+                                                                        onClick={() => handleEditClick(taskType)} 
+                                                                        disabled={taskType.pricingModel === 'variable'}
+                                                                    >
+                                                                        <Pencil className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            {taskType.pricingModel === 'variable' && (
+                                                                <TooltipContent>
+                                                                    <p>La edición de precios variables no está disponible aquí.</p>
+                                                                </TooltipContent>
+                                                            )}
+                                                        </Tooltip>
                                                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(taskType.id)}>
                                                             <Trash2 className="h-4 w-4 text-destructive" />
                                                         </Button>
