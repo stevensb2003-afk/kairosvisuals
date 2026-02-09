@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,18 +18,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Badge } from '../ui/badge';
+import { Switch } from '../ui/switch';
 
 
 const baseSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'El color debe ser un código hexadecimal válido (ej: #RRGGBB)').optional().default('#888888'),
+  useComplexityMatrix: z.boolean().default(false),
   complexityTiers: z.array(
     z.object({
       level: z.number(),
       name: z.string(),
       surcharge: z.coerce.number().min(0, 'El recargo no puede ser negativo.'),
     })
-  ).length(4, 'Debes definir los 4 niveles de complejidad.'),
+  ).optional(),
 });
 
 const fixedSchema = baseSchema.extend({
@@ -54,13 +56,24 @@ const packageSchema = baseSchema.extend({
     ).min(1, "Debes añadir al menos un paquete."),
 });
 
-const taskTypeSchema = z.discriminatedUnion('pricingModel', [fixedSchema, scalableSchema, packageSchema]);
+const taskTypeSchema = z.discriminatedUnion('pricingModel', [fixedSchema, scalableSchema, packageSchema]).superRefine((data, ctx) => {
+    if (data.useComplexityMatrix) {
+        if (!data.complexityTiers || data.complexityTiers.length !== 4) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['complexityTiers'],
+                message: 'Debes definir los 4 niveles de complejidad.',
+            });
+        }
+    }
+});
 
 type TaskType = {
     id: string;
     name: string;
     color?: string;
-    complexityTiers: { level: number; name: string; surcharge: number; }[];
+    useComplexityMatrix?: boolean;
+    complexityTiers?: { level: number; name: string; surcharge: number; }[];
 } & ({
     pricingModel: 'fixed';
     price: number;
@@ -87,6 +100,7 @@ export function TaskTypeManagement() {
             color: '#888888',
             pricingModel: 'fixed',
             price: 0,
+            useComplexityMatrix: false,
             complexityTiers: [
                 { level: 0, name: 'Estándar', surcharge: 0 },
                 { level: 1, name: 'Bajo', surcharge: 500 },
@@ -105,6 +119,7 @@ export function TaskTypeManagement() {
     const [newPackagePrice, setNewPackagePrice] = useState(0);
 
     const pricingModel = form.watch('pricingModel');
+    const useComplexityMatrix = form.watch('useComplexityMatrix');
     const complexityTiersValues = form.watch('complexityTiers');
 
     function handleAddPackage() {
@@ -117,7 +132,13 @@ export function TaskTypeManagement() {
     function onSubmit(values: z.infer<typeof taskTypeSchema>) {
         if (!firestore) return;
         const newDocRef = doc(collection(firestore, 'task_types'));
-        setDocumentNonBlocking(newDocRef, { ...values, id: newDocRef.id }, { merge: true });
+
+        const dataToSave = { ...values, id: newDocRef.id };
+        if (!dataToSave.useComplexityMatrix) {
+            delete (dataToSave as any).complexityTiers;
+        }
+
+        setDocumentNonBlocking(newDocRef, dataToSave, { merge: true });
         form.reset();
     }
 
@@ -247,25 +268,53 @@ export function TaskTypeManagement() {
                             </div>
                             )}
 
-                            <div className='space-y-4 rounded-md border p-4'>
-                                <Label>Matriz de Complejidad (Recargo por unidad)</Label>
-                                {complexityTiersValues?.map((tier, index) => (
-                                    <FormField key={tier.level} control={form.control} name={`complexityTiers.${index}.surcharge`} render={({ field }) => (
-                                        <FormItem>
-                                            <div className="flex items-center justify-between">
-                                                <FormLabel className='font-normal'>{tier.name}</FormLabel>
-                                                <FormControl>
-                                                    <div className='flex items-center gap-2'>
-                                                        <span>+ ₡</span>
-                                                        <Input type="number" min="0" className="w-32 h-8" {...field} />
-                                                    </div>
-                                                </FormControl>
-                                            </div>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                ))}
-                            </div>
+                             <FormField
+                                control={form.control}
+                                name="useComplexityMatrix"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>
+                                                Usar Matriz de Complejidad
+                                            </FormLabel>
+                                            <FormDescription>
+                                                Añadir recargos por unidad basados en complejidad.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+
+                            {useComplexityMatrix && (
+                                <div className='space-y-4 rounded-md border p-4'>
+                                    <Label>Matriz de Complejidad (Recargo por unidad)</Label>
+                                    {complexityTiersValues?.map((tier, index) => (
+                                        <FormField key={tier.level} control={form.control} name={`complexityTiers.${index}.surcharge`} render={({ field }) => (
+                                            <FormItem>
+                                                <div className="flex items-center justify-between">
+                                                    <FormLabel className='font-normal'>{tier.name}</FormLabel>
+                                                    <FormControl>
+                                                        <div className='flex items-center gap-2'>
+                                                            <span>+ ₡</span>
+                                                            <Input type="number" min="0" className="w-32 h-8" {...field} />
+                                                        </div>
+                                                    </FormControl>
+                                                </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    ))}
+                                    {form.formState.errors.complexityTiers && (
+                                        <p className="text-sm font-medium text-destructive">{form.formState.errors.complexityTiers.message}</p>
+                                    )}
+                                </div>
+                            )}
 
 
                              <FormField
@@ -314,7 +363,8 @@ export function TaskTypeManagement() {
                                         <TableCell className="font-medium">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-3 h-3 rounded-full border" style={{ backgroundColor: taskType.color || '#888888' }} />
-                                                {taskType.name}
+                                                <span>{taskType.name}</span>
+                                                {taskType.useComplexityMatrix && <Badge variant="outline">Complejidad</Badge>}
                                             </div>
                                         </TableCell>
                                         <TableCell>

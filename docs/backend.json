@@ -133,6 +133,11 @@
             ]
           }
         },
+        "useComplexityMatrix": {
+          "type": "boolean",
+          "description": "Indicates if a complexity matrix is used for pricing.",
+          "default": false
+        },
         "complexityTiers": {
           "type": "array",
           "description": "Surcharges per unit based on complexity level. Applies to scalable and package modes.",
@@ -160,8 +165,7 @@
       "required": [
         "id",
         "name",
-        "pricingModel",
-        "complexityTiers"
+        "pricingModel"
       ]
     },
     "Task": {
