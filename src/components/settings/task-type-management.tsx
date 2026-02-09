@@ -19,10 +19,9 @@ import { Separator } from '../ui/separator';
 import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const baseSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
@@ -166,7 +165,7 @@ export function TaskTypeManagement() {
         setEditPackagePrice(0);
     }
 
-    function onSubmit(values: z.infer<typeof taskTypeSchema>) {
+    async function onSubmit(values: z.infer<typeof taskTypeSchema>) {
         if (!firestore) return;
         const newDocRef = doc(collection(firestore, 'task_types'));
 
@@ -175,20 +174,15 @@ export function TaskTypeManagement() {
             delete (dataToSave as any).complexityTiers;
         }
 
-        setDoc(newDocRef, dataToSave, { merge: true }).catch(error => {
-            errorEmitter.emit(
-                'permission-error',
-                new FirestorePermissionError({
-                    path: newDocRef.path,
-                    operation: 'create',
-                    requestResourceData: dataToSave,
-                })
-            );
-        });
-        form.reset();
+        try {
+            await setDoc(newDocRef, dataToSave, { merge: true });
+            form.reset();
+        } catch (error) {
+            console.error("Error creating document: ", error);
+        }
     }
     
-    function onEditSubmit(values: z.infer<typeof taskTypeSchema>) {
+    async function onEditSubmit(values: z.infer<typeof taskTypeSchema>) {
         if (!firestore || !editingTaskType) return;
         const docRef = doc(firestore, 'task_types', editingTaskType.id);
 
@@ -197,37 +191,28 @@ export function TaskTypeManagement() {
             delete (dataToSave as any).complexityTiers;
         }
 
-        setDoc(docRef, dataToSave, { merge: true }).catch(error => {
-             errorEmitter.emit(
-                'permission-error',
-                new FirestorePermissionError({
-                    path: docRef.path,
-                    operation: 'update',
-                    requestResourceData: dataToSave,
-                })
-            );
-        });
-        setEditingTaskType(null);
+        try {
+            await setDoc(docRef, dataToSave, { merge: true });
+            setEditingTaskType(null);
+        } catch (error) {
+            console.error("Error updating document: ", error);
+        }
     }
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (!firestore) return;
         if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de tarea?')) {
-            const docRef = doc(firestore, 'task_types', id);
-            deleteDoc(docRef).catch(error => {
-                errorEmitter.emit(
-                    'permission-error',
-                    new FirestorePermissionError({
-                      path: docRef.path,
-                      operation: 'delete',
-                    })
-                );
-            });
+            try {
+                await deleteDoc(doc(firestore, 'task_types', id));
+            } catch (error) {
+                console.error("Error deleting document: ", error);
+            }
         }
     };
 
     return (
         <FirebaseClientProvider>
+            <FirebaseErrorListener />
             <Card>
                 <CardHeader>
                     <CardTitle>Tipos de Tarea</CardTitle>
@@ -446,7 +431,6 @@ export function TaskTypeManagement() {
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-3 h-3 rounded-full border" style={{ backgroundColor: taskType.color || '#888888' }} />
                                                     <span>{taskType.name}</span>
-                                                    {taskType.useComplexityMatrix && <Badge variant="outline">Complejidad</Badge>}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
@@ -462,10 +446,27 @@ export function TaskTypeManagement() {
                                                         <span>
                                                             {`Adicional: ₡${taskType.unitPrice.toLocaleString('es-CR')}/u`}
                                                         </span>
-                                                        {taskType.useComplexityMatrix && (
-                                                            <span className="text-primary/90 font-medium mt-0.5">
-                                                                + Recargos por complejidad
-                                                            </span>
+                                                        {taskType.useComplexityMatrix && taskType.complexityTiers && (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <span className="text-primary/90 font-medium mt-0.5 cursor-help underline decoration-dashed">
+                                                                        + Recargos por complejidad
+                                                                    </span>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="p-3">
+                                                                    <div className="space-y-2">
+                                                                        <p className="font-semibold text-foreground">Recargos por Complejidad</p>
+                                                                        <div className="space-y-1">
+                                                                            {taskType.complexityTiers.map(tier => (
+                                                                                <div key={tier.level} className="flex justify-between items-center gap-4 text-xs">
+                                                                                    <span className="text-muted-foreground">{tier.name}</span>
+                                                                                    <span className="font-mono font-semibold">+₡{tier.surcharge.toLocaleString('es-CR')}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                </TooltipContent>
+                                                            </Tooltip>
                                                         )}
                                                     </div>
                                                 )}
