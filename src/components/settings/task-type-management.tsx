@@ -1,7 +1,7 @@
 'use client';
 
-import { useCollection, useFirestore, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -19,6 +19,8 @@ import { Separator } from '../ui/separator';
 import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 
 const baseSchema = z.object({
@@ -193,7 +195,15 @@ export function TaskTypeManagement() {
         if (!firestore) return;
         if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de tarea?')) {
             const docRef = doc(firestore, 'task_types', id);
-            deleteDocumentNonBlocking(docRef);
+            deleteDoc(docRef).catch(error => {
+                errorEmitter.emit(
+                    'permission-error',
+                    new FirestorePermissionError({
+                      path: docRef.path,
+                      operation: 'delete',
+                    })
+                );
+            });
         }
     };
 
@@ -204,8 +214,8 @@ export function TaskTypeManagement() {
                     <CardTitle>Tipos de Tarea</CardTitle>
                     <CardDescription>Define los tipos de tareas y asígnales un precio fijo o variable para trabajos puntuales.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
-                    <div className="space-y-4 lg:col-span-2">
+                <CardContent className="grid gap-10 md:grid-cols-5">
+                    <div className="space-y-4 md:col-span-2">
                         <h3 className="font-semibold">Añadir Nuevo Tipo de Tarea</h3>
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -390,7 +400,7 @@ export function TaskTypeManagement() {
                             </form>
                         </Form>
                     </div>
-                    <div className="space-y-4 lg:col-span-3">
+                    <div className="space-y-4 md:col-span-3">
                         <h3 className="font-semibold">Tipos de Tarea Actuales</h3>
                         <div className="rounded-md border">
                             <Table>
