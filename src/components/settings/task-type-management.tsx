@@ -21,7 +21,9 @@ import { Switch } from '../ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
 
 const baseSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
@@ -95,7 +97,11 @@ export function TaskTypeManagement() {
     const { isUserLoading } = useUser();
     const taskTypesCollection = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'task_types') : null, [firestore, isUserLoading]);
     const { data: taskTypes, isLoading } = useCollection<TaskType>(taskTypesCollection);
+    
     const [editingTaskType, setEditingTaskType] = useState<TaskType | null>(null);
+    const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+    const [taskTypeToDelete, setTaskTypeToDelete] = useState<string | null>(null);
+
 
     const form = useForm<z.infer<typeof taskTypeSchema>>({
         resolver: zodResolver(taskTypeSchema),
@@ -199,14 +205,20 @@ export function TaskTypeManagement() {
         }
     }
 
-    const handleDelete = async (id: string) => {
-        if (!firestore) return;
-        if (window.confirm('¿Estás seguro de que deseas eliminar este tipo de tarea?')) {
-            try {
-                await deleteDoc(doc(firestore, 'task_types', id));
-            } catch (error) {
-                console.error("Error deleting document: ", error);
-            }
+    const handleDeleteClick = (id: string) => {
+        setTaskTypeToDelete(id);
+        setDeleteAlertOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!firestore || !taskTypeToDelete) return;
+        try {
+            await deleteDoc(doc(firestore, 'task_types', taskTypeToDelete));
+        } catch (error) {
+            console.error("Error deleting document: ", error);
+        } finally {
+            setDeleteAlertOpen(false);
+            setTaskTypeToDelete(null);
         }
     };
 
@@ -406,96 +418,98 @@ export function TaskTypeManagement() {
                     </div>
                     <div className="space-y-4 md:col-span-3">
                         <h3 className="font-semibold">Tipos de Tarea Actuales</h3>
-                        <div className="rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Servicio</TableHead>
-                                        <TableHead>Modelo</TableHead>
-                                        <TableHead>Detalles de Precio</TableHead>
-                                        <TableHead className="text-right">Acciones</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {(isLoading || isUserLoading) && Array.from({ length: 3 }).map((_, i) => (
-                                        <TableRow key={i}>
-                                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                            <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                        <TooltipProvider>
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Servicio</TableHead>
+                                            <TableHead>Modelo</TableHead>
+                                            <TableHead>Detalles de Precio</TableHead>
+                                            <TableHead className="text-right">Acciones</TableHead>
                                         </TableRow>
-                                    ))}
-                                    {taskTypes && taskTypes.map(taskType => (
-                                        <TableRow key={taskType.id}>
-                                            <TableCell className="font-medium">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-3 h-3 rounded-full border" style={{ backgroundColor: taskType.color || '#888888' }} />
-                                                    <span>{taskType.name}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className='capitalize'>{taskType.pricingModel}</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-xs">
-                                                {taskType.pricingModel === 'fixed' && `₡${taskType.price.toLocaleString('es-CR')}`}
-                                                {taskType.pricingModel === 'scalable' && (
-                                                    <div className="flex flex-col">
-                                                        <span>
-                                                            {`Base: ₡${taskType.basePrice.toLocaleString('es-CR')} (incl. ${taskType.includedUnits}u)`}
-                                                        </span>
-                                                        <span>
-                                                            {`Adicional: ₡${taskType.unitPrice.toLocaleString('es-CR')}/u`}
-                                                        </span>
-                                                        {taskType.useComplexityMatrix && taskType.complexityTiers && (
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <span className="text-primary/90 font-medium mt-0.5 cursor-help underline decoration-dashed">
-                                                                        + Recargos por complejidad
-                                                                    </span>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent className="p-3">
-                                                                    <div className="space-y-2">
-                                                                        <p className="font-semibold text-foreground">Recargos por Complejidad</p>
-                                                                        <div className="space-y-1">
-                                                                            {taskType.complexityTiers.map(tier => (
-                                                                                <div key={tier.level} className="flex justify-between items-center gap-4 text-xs">
-                                                                                    <span className="text-muted-foreground">{tier.name}</span>
-                                                                                    <span className="font-mono font-semibold">+₡{tier.surcharge.toLocaleString('es-CR')}</span>
-                                                                                </div>
-                                                                            ))}
+                                    </TableHeader>
+                                    <TableBody>
+                                        {(isLoading || isUserLoading) && Array.from({ length: 3 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                                <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {taskTypes && taskTypes.map(taskType => (
+                                            <TableRow key={taskType.id}>
+                                                <TableCell className="font-medium">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-3 h-3 rounded-full border" style={{ backgroundColor: taskType.color || '#888888' }} />
+                                                        <span>{taskType.name}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className='capitalize'>{taskType.pricingModel}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-xs">
+                                                    {taskType.pricingModel === 'fixed' && `₡${taskType.price.toLocaleString('es-CR')}`}
+                                                    {taskType.pricingModel === 'scalable' && (
+                                                        <div className="flex flex-col">
+                                                            <span>
+                                                                {`Base: ₡${taskType.basePrice.toLocaleString('es-CR')} (incl. ${taskType.includedUnits}u)`}
+                                                            </span>
+                                                            <span>
+                                                                {`Adicional: ₡${taskType.unitPrice.toLocaleString('es-CR')}/u`}
+                                                            </span>
+                                                            {taskType.useComplexityMatrix && taskType.complexityTiers && (
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <span className="text-primary/90 font-medium mt-0.5 cursor-help underline decoration-dashed">
+                                                                            + Recargos por complejidad
+                                                                        </span>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent className="p-3">
+                                                                        <div className="space-y-2">
+                                                                            <p className="font-semibold text-foreground">Recargos por Complejidad</p>
+                                                                            <div className="space-y-1">
+                                                                                {taskType.complexityTiers.map(tier => (
+                                                                                    <div key={tier.level} className="flex justify-between items-center gap-4 text-xs">
+                                                                                        <span className="text-muted-foreground">{tier.name}</span>
+                                                                                        <span className="font-mono font-semibold">+₡{tier.surcharge.toLocaleString('es-CR')}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                {taskType.pricingModel === 'package' && (
-                                                    <div className="flex flex-col gap-1.5 items-start">
-                                                        {taskType.packages.map((pkg, index) => (
-                                                            <Badge key={index} variant="secondary" className="font-normal whitespace-nowrap text-left justify-start">
-                                                                {pkg.name}: {pkg.units}u por ₡{pkg.price.toLocaleString('es-CR')}
-                                                            </Badge>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingTaskType(taskType)}>
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(taskType.id)}>
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                            {taskTypes?.length === 0 && !(isLoading || isUserLoading) && (
-                                <p className="p-4 text-center text-sm text-muted-foreground">No hay tipos de tarea.</p>
-                            )}
-                        </div>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {taskType.pricingModel === 'package' && (
+                                                        <div className="flex flex-col gap-1.5 items-start">
+                                                            {taskType.packages.map((pkg, index) => (
+                                                                <Badge key={index} variant="secondary" className="font-normal whitespace-nowrap text-left justify-start">
+                                                                    {pkg.name}: {pkg.units}u por ₡{pkg.price.toLocaleString('es-CR')}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingTaskType(taskType)}>
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteClick(taskType.id)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                                {taskTypes?.length === 0 && !(isLoading || isUserLoading) && (
+                                    <p className="p-4 text-center text-sm text-muted-foreground">No hay tipos de tarea.</p>
+                                )}
+                            </div>
+                        </TooltipProvider>
                     </div>
                 </CardContent>
             </Card>
@@ -703,6 +717,25 @@ export function TaskTypeManagement() {
                     </div>
                 </DialogContent>
             </Dialog>
+            <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente el tipo de tarea y podría afectar a tareas existentes.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setTaskTypeToDelete(null)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Sí, eliminar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </FirebaseClientProvider>
     );
 }
