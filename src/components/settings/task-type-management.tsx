@@ -1,6 +1,7 @@
 'use client';
 
-import { useCollection, useFirestore, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -306,11 +307,11 @@ export function TaskTypeManagement() {
                                                 </div>
                                                 <div className="w-20">
                                                     <Label className="text-xs text-muted-foreground">Unidades</Label>
-                                                    <Input type="number" value={newPackageUnits} onChange={e => setNewPackageUnits(Number(e.target.value) || 0)} className="h-9" min="1" />
+                                                    <Input type="number" value={newPackageUnits} onChange={e => setNewPackageUnits(Number(e.target.value))} className="h-9" min="1" />
                                                 </div>
                                                 <div className="w-24">
                                                     <Label className="text-xs text-muted-foreground">Precio (CRC)</Label>
-                                                    <Input type="number" value={newPackagePrice} onChange={e => setNewPackagePrice(Number(e.target.value) || 0)} className="h-9" min="0" />
+                                                    <Input type="number" value={newPackagePrice} onChange={e => setNewPackagePrice(Number(e.target.value))} className="h-9" min="0" />
                                                 </div>
                                                 <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleAddPackage} disabled={!newPackageName.trim() || newPackageUnits <= 0 || newPackagePrice < 0}>
                                                     <Plus className="h-4 w-4" />
