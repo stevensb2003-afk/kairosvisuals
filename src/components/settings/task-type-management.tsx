@@ -1,7 +1,7 @@
 'use client';
 
-import { useCollection, useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser } from '@/firebase';
+import { collection, doc, deleteDoc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -174,7 +174,16 @@ export function TaskTypeManagement() {
             delete (dataToSave as any).complexityTiers;
         }
 
-        setDocumentNonBlocking(newDocRef, dataToSave, { merge: true });
+        setDoc(newDocRef, dataToSave, { merge: true }).catch(error => {
+            errorEmitter.emit(
+                'permission-error',
+                new FirestorePermissionError({
+                    path: newDocRef.path,
+                    operation: 'create',
+                    requestResourceData: dataToSave,
+                })
+            );
+        });
         form.reset();
     }
     
@@ -187,7 +196,16 @@ export function TaskTypeManagement() {
             delete (dataToSave as any).complexityTiers;
         }
 
-        setDocumentNonBlocking(docRef, dataToSave, { merge: true });
+        setDoc(docRef, dataToSave, { merge: true }).catch(error => {
+             errorEmitter.emit(
+                'permission-error',
+                new FirestorePermissionError({
+                    path: docRef.path,
+                    operation: 'update',
+                    requestResourceData: dataToSave,
+                })
+            );
+        });
         setEditingTaskType(null);
     }
 
@@ -316,11 +334,11 @@ export function TaskTypeManagement() {
                                                 </div>
                                                 <div className="w-20">
                                                     <Label className="text-xs text-muted-foreground">Unidades</Label>
-                                                    <Input type="number" value={newPackageUnits} onChange={e => setNewPackageUnits(Number(e.target.value))} className="h-9" min="1" />
+                                                    <Input type="number" value={newPackageUnits} onChange={e => setNewPackageUnits(Number(e.target.value) || 0)} className="h-9" min="1" />
                                                 </div>
                                                 <div className="w-24">
                                                     <Label className="text-xs text-muted-foreground">Precio (CRC)</Label>
-                                                    <Input type="number" value={newPackagePrice} onChange={e => setNewPackagePrice(Number(e.target.value))} className="h-9" min="0" />
+                                                    <Input type="number" value={newPackagePrice} onChange={e => setNewPackagePrice(Number(e.target.value) || 0)} className="h-9" min="0" />
                                                 </div>
                                                 <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleAddPackage} disabled={!newPackageName.trim() || newPackageUnits <= 0 || newPackagePrice < 0}>
                                                     <Plus className="h-4 w-4" />
