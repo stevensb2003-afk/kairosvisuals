@@ -568,7 +568,17 @@ export function TaskTypeManagement() {
                                             <FormControl>
                                                 <Switch
                                                     checked={field.value}
-                                                    onCheckedChange={field.onChange}
+                                                    onCheckedChange={(checked) => {
+                                                        field.onChange(checked);
+                                                        if (checked && (!editForm.getValues('complexityTiers') || editForm.getValues('complexityTiers')?.length === 0)) {
+                                                            editForm.setValue('complexityTiers', [
+                                                                { level: 0, name: 'Estándar', surcharge: 0 },
+                                                                { level: 1, name: 'Bajo', surcharge: 500 },
+                                                                { level: 2, name: 'Medio', surcharge: 1500 },
+                                                                { level: 3, name: 'Alto', surcharge: 2000 },
+                                                            ]);
+                                                        }
+                                                    }}
                                                 />
                                             </FormControl>
                                         </FormItem>
