@@ -21,7 +21,8 @@ import { Switch } from '../ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-
+import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 const baseSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
@@ -226,7 +227,7 @@ export function TaskTypeManagement() {
     };
 
     return (
-        <>
+        <FirebaseClientProvider>
             <Card>
                 <CardHeader>
                     <CardTitle>Tipos de Tarea</CardTitle>
@@ -453,7 +454,21 @@ export function TaskTypeManagement() {
                                             </TableCell>
                                             <TableCell className="text-xs">
                                                 {taskType.pricingModel === 'fixed' && `₡${taskType.price.toLocaleString('es-CR')}`}
-                                                {taskType.pricingModel === 'scalable' && `Base: ₡${taskType.basePrice.toLocaleString('es-CR')}`}
+                                                {taskType.pricingModel === 'scalable' && (
+                                                    <div className="flex flex-col">
+                                                        <span>
+                                                            {`Base: ₡${taskType.basePrice.toLocaleString('es-CR')} (incl. ${taskType.includedUnits}u)`}
+                                                        </span>
+                                                        <span>
+                                                            {`Adicional: ₡${taskType.unitPrice.toLocaleString('es-CR')}/u`}
+                                                        </span>
+                                                        {taskType.useComplexityMatrix && (
+                                                            <span className="text-primary/90 font-medium mt-0.5">
+                                                                + Recargos por complejidad
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 {taskType.pricingModel === 'package' && (
                                                     <div className="flex flex-col gap-1.5 items-start">
                                                         {taskType.packages.map((pkg, index) => (
@@ -687,6 +702,6 @@ export function TaskTypeManagement() {
                     </div>
                 </DialogContent>
             </Dialog>
-        </>
+        </FirebaseClientProvider>
     );
 }
