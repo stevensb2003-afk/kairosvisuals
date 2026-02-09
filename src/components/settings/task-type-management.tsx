@@ -5,37 +5,24 @@ import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useMemo } from 'react';
-import { Pencil, Trash2, Check, X } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Badge } from '../ui/badge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 
 const baseSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'El color debe ser un código hexadecimal válido (ej: #RRGGBB)').optional().default('#888888'),
-});
-
-const fixedSchema = baseSchema.extend({
-  pricingModel: z.literal('fixed'),
-  price: z.coerce.number().min(0, 'El precio debe ser un número no negativo.'),
-});
-
-const variableSchema = baseSchema.extend({
-  pricingModel: z.literal('variable'),
-  basePrice: z.coerce.number().min(0, 'El precio base es requerido.'),
-  includedPages: z.coerce.number().min(0, 'Las páginas incluidas son requeridas.'),
-  additionalPageCost: z.coerce.number().min(0, 'El costo por página adicional es requerido.'),
   complexityTiers: z.array(
     z.object({
       level: z.number(),
@@ -45,28 +32,46 @@ const variableSchema = baseSchema.extend({
   ).length(4, 'Debes definir los 4 niveles de complejidad.'),
 });
 
-const taskTypeSchema = z.discriminatedUnion('pricingModel', [fixedSchema, variableSchema]);
+const fixedSchema = baseSchema.extend({
+  pricingModel: z.literal('fixed'),
+  price: z.coerce.number().min(0, 'El precio es requerido.'),
+});
 
+const scalableSchema = baseSchema.extend({
+  pricingModel: z.literal('scalable'),
+  basePrice: z.coerce.number().min(0, 'El precio base es requerido.'),
+  includedUnits: z.coerce.number().min(0, 'Las unidades incluidas son requeridas.'),
+  unitPrice: z.coerce.number().min(0, 'El precio por unidad adicional es requerido.'),
+});
 
-type ComplexityTier = {
-    level: number;
-    name: string;
-    surcharge: number;
-};
+const packageSchema = baseSchema.extend({
+    pricingModel: z.literal('package'),
+    packages: z.array(
+        z.object({
+            units: z.coerce.number().min(1, "Las unidades deben ser al menos 1."),
+            price: z.coerce.number().min(0, "El precio no puede ser negativo."),
+        })
+    ).min(1, "Debes añadir al menos un paquete."),
+});
+
+const taskTypeSchema = z.discriminatedUnion('pricingModel', [fixedSchema, scalableSchema, packageSchema]);
 
 type TaskType = {
     id: string;
     name: string;
     color?: string;
+    complexityTiers: { level: number; name: string; surcharge: number; }[];
 } & ({
     pricingModel: 'fixed';
     price: number;
 } | {
-    pricingModel: 'variable';
+    pricingModel: 'scalable';
     basePrice: number;
-    includedPages: number;
-    additionalPageCost: number;
-    complexityTiers: ComplexityTier[];
+    includedUnits: number;
+    unitPrice: number;
+} | {
+    pricingModel: 'package';
+    packages: { units: number; price: number; }[];
 });
 
 export function TaskTypeManagement() {
@@ -75,9 +80,6 @@ export function TaskTypeManagement() {
     const taskTypesCollection = useMemo(() => (firestore && !isUserLoading) ? collection(firestore, 'task_types') : null, [firestore, isUserLoading]);
     const { data: taskTypes, isLoading } = useCollection<TaskType>(taskTypesCollection);
 
-    const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-    const [editForm, setEditForm] = useState({ name: '', price: 0, color: '#888888' });
-
     const form = useForm<z.infer<typeof taskTypeSchema>>({
         resolver: zodResolver(taskTypeSchema),
         defaultValues: {
@@ -85,40 +87,39 @@ export function TaskTypeManagement() {
             color: '#888888',
             pricingModel: 'fixed',
             price: 0,
+            complexityTiers: [
+                { level: 0, name: 'Estándar', surcharge: 0 },
+                { level: 1, name: 'Bajo', surcharge: 500 },
+                { level: 2, name: 'Medio', surcharge: 1500 },
+                { level: 3, name: 'Alto', surcharge: 2000 },
+            ],
         },
     });
 
+    const { fields: packageFields, append: appendPackage, remove: removePackage } = useFieldArray({
+        control: form.control,
+        name: "packages"
+    });
+
+    const [newPackageUnits, setNewPackageUnits] = useState(1);
+    const [newPackagePrice, setNewPackagePrice] = useState(0);
+
     const pricingModel = form.watch('pricingModel');
     const complexityTiersValues = form.watch('complexityTiers');
+
+    function handleAddPackage() {
+        if (newPackageUnits <= 0 || newPackagePrice < 0) return;
+        appendPackage({ units: newPackageUnits, price: newPackagePrice });
+        setNewPackageUnits(1);
+        setNewPackagePrice(0);
+    }
 
     function onSubmit(values: z.infer<typeof taskTypeSchema>) {
         if (!firestore) return;
         const newDocRef = doc(collection(firestore, 'task_types'));
         setDocumentNonBlocking(newDocRef, { ...values, id: newDocRef.id }, { merge: true });
-        form.reset({
-            name: '',
-            color: '#888888',
-            pricingModel: 'fixed',
-            price: 0,
-        });
+        form.reset();
     }
-
-    const handleEditClick = (taskType: TaskType) => {
-        if (taskType.pricingModel === 'variable') return;
-        setEditingTaskId(taskType.id);
-        setEditForm({ name: taskType.name, price: taskType.price || 0, color: taskType.color || '#888888' });
-    };
-
-    const handleCancelEdit = () => {
-        setEditingTaskId(null);
-    };
-
-    const handleSaveEdit = (id: string) => {
-        if (!firestore) return;
-        const docRef = doc(firestore, 'task_types', id);
-        updateDocumentNonBlocking(docRef, editForm);
-        setEditingTaskId(null);
-    };
 
     const handleDelete = (id: string) => {
         if (!firestore) return;
@@ -141,7 +142,7 @@ export function TaskTypeManagement() {
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <FormField control={form.control} name="name" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Nombre del Task</FormLabel>
+                                    <FormLabel>Nombre del Servicio</FormLabel>
                                     <FormControl><Input placeholder="Ej: Landing Page" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -152,28 +153,27 @@ export function TaskTypeManagement() {
                                     <FormLabel>Modelo de Precios</FormLabel>
                                     <Select 
                                         onValueChange={(value) => {
-                                            const newModel = value as 'fixed' | 'variable';
+                                            const newModel = value as 'fixed' | 'scalable' | 'package';
                                             field.onChange(newModel);
-                                            if (newModel === 'variable') {
-                                                form.setValue('basePrice', 25000);
-                                                form.setValue('includedPages', 4);
-                                                form.setValue('additionalPageCost', 4000);
-                                                form.setValue('complexityTiers', [
-                                                    { level: 0, name: 'Básico', surcharge: 0 },
-                                                    { level: 1, name: 'Bajo', surcharge: 500 },
-                                                    { level: 2, name: 'Medio', surcharge: 1500 },
-                                                    { level: 3, name: 'Alto', surcharge: 2000 },
-                                                ]);
-                                            } else {
+                                            
+                                            // Reset other models' fields
+                                            if (newModel === 'fixed') {
                                                 form.setValue('price', 0);
+                                            } else if (newModel === 'scalable') {
+                                                form.setValue('basePrice', 25000);
+                                                form.setValue('includedUnits', 4);
+                                                form.setValue('unitPrice', 4000);
+                                            } else if (newModel === 'package') {
+                                                form.setValue('packages', []);
                                             }
                                         }} 
                                         defaultValue={field.value}
                                     >
                                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                         <SelectContent>
-                                            <SelectItem value="fixed">Fijo</SelectItem>
-                                            <SelectItem value="variable">Variable</SelectItem>
+                                            <SelectItem value="fixed">Fijo (Único)</SelectItem>
+                                            <SelectItem value="scalable">Escalable (Lineal)</SelectItem>
+                                            <SelectItem value="package">Paquetes (Tiers)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -183,14 +183,14 @@ export function TaskTypeManagement() {
                             {pricingModel === 'fixed' && (
                                  <FormField control={form.control} name="price" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Precio Individual (CRC)</FormLabel>
-                                        <FormControl><Input type="number" min="0" placeholder="Ej: 85000" {...field} /></FormControl>
+                                        <FormLabel>Precio Fijo (CRC)</FormLabel>
+                                        <FormControl><Input type="number" min="0" placeholder="Ej: 40000" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )} />
                             )}
 
-                           {pricingModel === 'variable' && (
+                           {pricingModel === 'scalable' && (
                                 <div className='space-y-4 rounded-md border p-4'>
                                     <FormField control={form.control} name="basePrice" render={({ field }) => (
                                         <FormItem>
@@ -199,40 +199,73 @@ export function TaskTypeManagement() {
                                             <FormMessage />
                                         </FormItem>
                                     )} />
-                                    <FormField control={form.control} name="includedPages" render={({ field }) => (
+                                    <FormField control={form.control} name="includedUnits" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Páginas Incluidas</FormLabel>
+                                            <FormLabel>Unidades Incluidas</FormLabel>
                                             <FormControl><Input type="number" min="0" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
-                                     <FormField control={form.control} name="additionalPageCost" render={({ field }) => (
+                                     <FormField control={form.control} name="unitPrice" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Costo Página Adicional (CRC)</FormLabel>
+                                            <FormLabel>Precio por Unidad Adicional (CRC)</FormLabel>
                                             <FormControl><Input type="number" min="0" {...field} /></FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
-                                    <Separator />
-                                    <Label>Recargos por Complejidad (por página)</Label>
-                                    {complexityTiersValues?.map((tier, index) => (
-                                        <FormField key={tier.level} control={form.control} name={`complexityTiers.${index}.surcharge`} render={({ field }) => (
-                                            <FormItem>
-                                                <div className="flex items-center justify-between">
-                                                    <FormLabel>{tier.name}</FormLabel>
-                                                    <FormControl>
-                                                        <div className='flex items-center gap-2'>
-                                                            <span>+ ₡</span>
-                                                            <Input type="number" min="0" className="w-32 h-8" {...field} />
-                                                        </div>
-                                                    </FormControl>
-                                                </div>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )} />
-                                    ))}
                                 </div>
                            )}
+
+                            {pricingModel === 'package' && (
+                                <div className="space-y-2">
+                                <FormLabel>Configuración de Paquetes</FormLabel>
+                                <div className="p-3 border rounded-md space-y-3">
+                                    {packageFields.map((field, index) => (
+                                        <div key={field.id} className="flex items-center justify-between">
+                                            <p className="text-sm">{field.units} unidades por ₡{field.price.toLocaleString('es-CR')}</p>
+                                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removePackage(index)}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                     {packageFields.length > 0 && <Separator />}
+                                     <div className="flex items-end gap-2">
+                                        <div className="flex-1">
+                                            <Label className="text-xs text-muted-foreground">Unidades</Label>
+                                            <Input type="number" value={newPackageUnits} onChange={e => setNewPackageUnits(parseInt(e.target.value, 10))} className="h-9" min="1" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <Label className="text-xs text-muted-foreground">Precio (CRC)</Label>
+                                            <Input type="number" value={newPackagePrice} onChange={e => setNewPackagePrice(parseInt(e.target.value, 10))} className="h-9" min="0" />
+                                        </div>
+                                        <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={handleAddPackage} disabled={newPackageUnits <= 0 || newPackagePrice < 0}>
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <FormMessage>{form.formState.errors.packages?.message || form.formState.errors.packages?.root?.message}</FormMessage>
+                            </div>
+                            )}
+
+                            <div className='space-y-4 rounded-md border p-4'>
+                                <Label>Matriz de Complejidad (Recargo por unidad)</Label>
+                                {complexityTiersValues?.map((tier, index) => (
+                                    <FormField key={tier.level} control={form.control} name={`complexityTiers.${index}.surcharge`} render={({ field }) => (
+                                        <FormItem>
+                                            <div className="flex items-center justify-between">
+                                                <FormLabel className='font-normal'>{tier.name}</FormLabel>
+                                                <FormControl>
+                                                    <div className='flex items-center gap-2'>
+                                                        <span>+ ₡</span>
+                                                        <Input type="number" min="0" className="w-32 h-8" {...field} />
+                                                    </div>
+                                                </FormControl>
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                ))}
+                            </div>
 
 
                              <FormField
@@ -261,102 +294,42 @@ export function TaskTypeManagement() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Color</TableHead>
-                                    <TableHead>Nombre</TableHead>
-                                    <TableHead>Precio</TableHead>
+                                    <TableHead>Servicio</TableHead>
+                                    <TableHead>Modelo</TableHead>
+                                    <TableHead>Detalles de Precio</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {(isLoading || isUserLoading) && Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell><Skeleton className="h-5 w-5 rounded-full" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                                        <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                                     </TableRow>
                                 ))}
                                 {taskTypes && taskTypes.map(taskType => (
                                     <TableRow key={taskType.id}>
-                                        {editingTaskId === taskType.id ? (
-                                            <>
-                                                <TableCell>
-                                                    <Input
-                                                        type="color"
-                                                        value={editForm.color}
-                                                        onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
-                                                        className="h-8 w-10 p-1"
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Input
-                                                        value={editForm.name}
-                                                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                                        className="h-8"
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Input
-                                                        type="number"
-                                                        value={editForm.price}
-                                                        onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
-                                                        className="h-8"
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSaveEdit(taskType.id)}>
-                                                            <Check className="h-4 w-4 text-green-500" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancelEdit}>
-                                                            <X className="h-4 w-4 text-red-500" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <TableCell>
-                                                    <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: taskType.color || '#888888' }} />
-                                                </TableCell>
-                                                <TableCell className="font-medium">{taskType.name}</TableCell>
-                                                <TableCell>
-                                                    {taskType.pricingModel === 'fixed' ? (
-                                                        <span className="font-mono text-sm">₡{(taskType.price || 0).toLocaleString('es-CR')}</span>
-                                                    ) : (
-                                                        <Badge variant="outline">Variable</Badge>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                     <div className="flex items-center justify-end gap-2">
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                {/* Wrapper div for Tooltip to correctly handle disabled state */}
-                                                                <div>
-                                                                    <Button 
-                                                                        variant="ghost" 
-                                                                        size="icon" 
-                                                                        className="h-8 w-8" 
-                                                                        onClick={() => handleEditClick(taskType)} 
-                                                                        disabled={taskType.pricingModel === 'variable'}
-                                                                    >
-                                                                        <Pencil className="h-4 w-4" />
-                                                                    </Button>
-                                                                </div>
-                                                            </TooltipTrigger>
-                                                            {taskType.pricingModel === 'variable' && (
-                                                                <TooltipContent>
-                                                                    <p>La edición de precios variables no está disponible aquí.</p>
-                                                                </TooltipContent>
-                                                            )}
-                                                        </Tooltip>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(taskType.id)}>
-                                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </>
-                                        )}
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full border" style={{ backgroundColor: taskType.color || '#888888' }} />
+                                                {taskType.name}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className='capitalize'>{taskType.pricingModel}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-xs">
+                                            {taskType.pricingModel === 'fixed' && `₡${taskType.price.toLocaleString('es-CR')}`}
+                                            {taskType.pricingModel === 'scalable' && `Base: ₡${taskType.basePrice.toLocaleString('es-CR')}`}
+                                            {taskType.pricingModel === 'package' && `${taskType.packages.length} paquetes`}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(taskType.id)}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
