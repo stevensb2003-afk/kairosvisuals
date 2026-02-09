@@ -1,7 +1,6 @@
 'use client';
 
-import { useCollection, useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useCollection, useFirestore, useUser, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -205,7 +204,7 @@ export function TaskTypeManagement() {
                     <CardTitle>Tipos de Tarea</CardTitle>
                     <CardDescription>Define los tipos de tareas y asígnales un precio fijo o variable para trabajos puntuales.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-10 md:grid-cols-1 lg:grid-cols-5">
+                <CardContent className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
                     <div className="space-y-4 lg:col-span-2">
                         <h3 className="font-semibold">Añadir Nuevo Tipo de Tarea</h3>
                         <Form {...form}>
