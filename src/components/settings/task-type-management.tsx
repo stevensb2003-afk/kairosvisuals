@@ -204,8 +204,8 @@ export function TaskTypeManagement() {
                     <CardTitle>Tipos de Tarea</CardTitle>
                     <CardDescription>Define los tipos de tareas y asígnales un precio fijo o variable para trabajos puntuales.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-10 md:grid-cols-2">
-                    <div className="space-y-4">
+                <CardContent className="grid gap-10 md:grid-cols-1 lg:grid-cols-5">
+                    <div className="space-y-4 lg:col-span-2">
                         <h3 className="font-semibold">Añadir Nuevo Tipo de Tarea</h3>
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -306,11 +306,11 @@ export function TaskTypeManagement() {
                                                 </div>
                                                 <div className="w-20">
                                                     <Label className="text-xs text-muted-foreground">Unidades</Label>
-                                                    <Input type="number" value={newPackageUnits} onChange={e => setNewPackageUnits(Number(e.target.value))} className="h-9" min="1" />
+                                                    <Input type="number" value={newPackageUnits} onChange={e => setNewPackageUnits(Number(e.target.value) || 0)} className="h-9" min="1" />
                                                 </div>
                                                 <div className="w-24">
                                                     <Label className="text-xs text-muted-foreground">Precio (CRC)</Label>
-                                                    <Input type="number" value={newPackagePrice} onChange={e => setNewPackagePrice(Number(e.target.value))} className="h-9" min="0" />
+                                                    <Input type="number" value={newPackagePrice} onChange={e => setNewPackagePrice(Number(e.target.value) || 0)} className="h-9" min="0" />
                                                 </div>
                                                 <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleAddPackage} disabled={!newPackageName.trim() || newPackageUnits <= 0 || newPackagePrice < 0}>
                                                     <Plus className="h-4 w-4" />
@@ -390,7 +390,7 @@ export function TaskTypeManagement() {
                             </form>
                         </Form>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-4 lg:col-span-3">
                         <h3 className="font-semibold">Tipos de Tarea Actuales</h3>
                         <div className="rounded-md border">
                             <Table>
@@ -561,11 +561,11 @@ export function TaskTypeManagement() {
                                             </div>
                                             <div className="w-20">
                                                 <Label className="text-xs text-muted-foreground">Unidades</Label>
-                                                <Input type="number" value={editPackageUnits} onChange={e => setEditPackageUnits(Number(e.target.value))} className="h-9" min="1" />
+                                                <Input type="number" value={editPackageUnits} onChange={e => setEditPackageUnits(Number(e.target.value) || 0)} className="h-9" min="1" />
                                             </div>
                                             <div className="w-24">
                                                 <Label className="text-xs text-muted-foreground">Precio (CRC)</Label>
-                                                <Input type="number" value={editPackagePrice} onChange={e => setEditPackagePrice(Number(e.target.value))} className="h-9" min="0" />
+                                                <Input type="number" value={editPackagePrice} onChange={e => setEditPackagePrice(Number(e.target.value) || 0)} className="h-9" min="0" />
                                             </div>
                                             <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleEditAddPackage} disabled={!editPackageName.trim() || editPackageUnits <= 0 || editPackagePrice < 0}>
                                                 <Plus className="h-4 w-4" />
@@ -662,5 +662,3 @@ export function TaskTypeManagement() {
         </>
     );
 }
-
-    
