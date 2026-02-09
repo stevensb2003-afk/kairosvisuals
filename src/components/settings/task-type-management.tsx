@@ -426,7 +426,15 @@ export function TaskTypeManagement() {
                                             <TableCell className="text-xs">
                                                 {taskType.pricingModel === 'fixed' && `₡${taskType.price.toLocaleString('es-CR')}`}
                                                 {taskType.pricingModel === 'scalable' && `Base: ₡${taskType.basePrice.toLocaleString('es-CR')}`}
-                                                {taskType.pricingModel === 'package' && `${taskType.packages.length} paquete(s)`}
+                                                {taskType.pricingModel === 'package' && (
+                                                    <div className="flex flex-col gap-1.5 items-start">
+                                                        {taskType.packages.map((pkg, index) => (
+                                                            <Badge key={index} variant="secondary" className="font-normal whitespace-nowrap text-left justify-start">
+                                                                {pkg.name}: {pkg.units}u por ₡{pkg.price.toLocaleString('es-CR')}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingTaskType(taskType)}>
@@ -654,3 +662,5 @@ export function TaskTypeManagement() {
         </>
     );
 }
+
+    
