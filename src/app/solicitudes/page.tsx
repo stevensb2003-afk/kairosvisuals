@@ -236,7 +236,8 @@ export default function SolicitudesPage() {
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       const pdfBlob = pdf.output('blob');
-      const fileName = `Cotizacion_${quotation.id}.pdf`;
+      const qNum = quotation.quotationNumber || quotation.id;
+      const fileName = `Cotización_${qNum}.pdf`;
 
       if (navigator.share && navigator.canShare) {
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });

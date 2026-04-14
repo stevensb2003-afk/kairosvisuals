@@ -705,7 +705,7 @@ export default function ClientProfilePage() {
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Cotizacion_${previewQuotation.quotationNumber || previewQuotation.id}.pdf`);
+      pdf.save(`Cotización_${previewQuotation.quotationNumber || previewQuotation.id}.pdf`);
       toast({ title: "Descarga exitosa", description: "El PDF se ha generado correctamente." });
     } catch (error) {
       console.error("PDF Error:", error);

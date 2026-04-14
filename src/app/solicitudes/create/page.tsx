@@ -95,6 +95,7 @@ export default function CreateQuotationPage() {
   const [currentStatus, setCurrentStatus] = useState<string>('draft');
   const [parentId, setParentId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [quotationNumber, setQuotationNumber] = useState<string | null>(null);
 
   // Client Selection Logic
   const [selectedClientId, setSelectedClientId] = useState<string | null>(clientId);
@@ -271,6 +272,7 @@ export default function CreateQuotationPage() {
             setCurrentVersion(qData.version || 1);
             setCurrentStatus(qData.status || 'draft');
             setParentId(qData.parentId || null);
+            setQuotationNumber(qData.quotationNumber || null);
           }
         }
       } catch (e) {
@@ -675,14 +677,14 @@ export default function CreateQuotationPage() {
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       const pdfBlob = pdf.output('blob');
-      const invoiceNum = quotationId || 'Borrador';
-      const fileName = `Cotizacion_${invoiceNum}.pdf`;
+      const qNum = quotationNumber || 'Borrador';
+      const fileName = `Cotización_${qNum}.pdf`;
 
       if (navigator.share && navigator.canShare) {
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
-            title: `Cotización ${invoiceNum}`,
+            title: `Cotización ${qNum}`,
             text: `Adjunto envío la cotización`,
             files: [file]
           });
