@@ -4,9 +4,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { 
+import {
   ArrowLeft, Plus, Trash2, Save, FileText, Loader2, Info, Search, UserPlus,
-  Calendar as CalendarIcon, CalendarX, X, Printer, Download, Package, Layers, Share 
+  Calendar as CalendarIcon, CalendarX, X, Printer, Download, Package, Layers, Share
 } from "lucide-react";
 import { useFirestore, useUser } from '@/firebase';
 import { collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, query, where, runTransaction } from 'firebase/firestore';
@@ -288,26 +288,26 @@ export default function CreateQuotationPage() {
   // Auto-load existing plan items when selecting "Update Plan"
   useEffect(() => {
     if (isPlanUpdate && items.length === 0 && clientData?.hasActivePlan && clientData.activePlan?.services) {
-       const planItems = clientData.activePlan.services;
-       
-       const newItems: QuoteItem[] = planItems.map((pItem: any) => {
-         const svc = services.find((s: any) => s.id === pItem.serviceId);
-         return {
-           id: crypto.randomUUID(),
-           serviceId: pItem.serviceId || 'custom',
-           description: pItem.description || svc?.name || 'Servicio del plan actual',
-           serviceName: svc?.name || '',
-           quantity: pItem.quantity || 1,
-           unitPrice: pItem.unitPrice || 0,
-           discount: pItem.discount || 0,
-           discountValue: pItem.discountValue || 0,
-           discountType: pItem.discountType || 'amount',
-           ivaType: svc?.ivaType || 'none',
-           ivaRate: svc?.ivaRate || 0,
-         };
-       });
-       setItems(newItems);
-       toast({ title: "Plan Actual Cargado", description: "Se han recuperado los ítems del plan existente para que los actualices." });
+      const planItems = clientData.activePlan.services;
+
+      const newItems: QuoteItem[] = planItems.map((pItem: any) => {
+        const svc = services.find((s: any) => s.id === pItem.serviceId);
+        return {
+          id: crypto.randomUUID(),
+          serviceId: pItem.serviceId || 'custom',
+          description: pItem.description || svc?.name || 'Servicio del plan actual',
+          serviceName: svc?.name || '',
+          quantity: pItem.quantity || 1,
+          unitPrice: pItem.unitPrice || 0,
+          discount: pItem.discount || 0,
+          discountValue: pItem.discountValue || 0,
+          discountType: pItem.discountType || 'amount',
+          ivaType: svc?.ivaType || 'none',
+          ivaRate: svc?.ivaRate || 0,
+        };
+      });
+      setItems(newItems);
+      toast({ title: "Plan Actual Cargado", description: "Se han recuperado los ítems del plan existente para que los actualices." });
     }
   }, [isPlanUpdate, clientData, services, items.length, toast]);
 
@@ -625,14 +625,14 @@ export default function CreateQuotationPage() {
         if (action === 'publish' && parentId) {
           await updateDoc(doc(firestore, 'clients', selectedClientId, 'quotations', parentId), { status: 'superseded' });
         }
-        
+
         // Ensure even drafts keep their quotationNumber if they already have one
         // If it's a draft without a number (legacy or first save), we could assign one now
         // But usually we assign it on first save.
-        
+
         const draftDoc = await getDoc(doc(firestore, 'clients', selectedClientId, 'quotations', quotationId));
         let qNumber = draftDoc.data()?.quotationNumber;
-        
+
         if (!qNumber) {
           qNumber = await getNextSequenceNumber(firestore, 'quotation');
         }
@@ -684,7 +684,7 @@ export default function CreateQuotationPage() {
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
-            title: `Cotización ${qNum}`,
+            title: `Cotizacion ${qNum}`,
             text: `Adjunto envío la cotización`,
             files: [file]
           });
@@ -1100,8 +1100,8 @@ export default function CreateQuotationPage() {
                     <Info className="w-4 h-4" /> Este cliente ya tiene un plan activo.
                   </p>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="w-4 h-4 rounded border-amber-500/50 bg-transparent text-amber-500 focus:ring-amber-500"
                       checked={isPlanUpdate}
                       onChange={(e) => setIsPlanUpdate(e.target.checked)}
@@ -1123,7 +1123,7 @@ export default function CreateQuotationPage() {
               <Label className={contractType === 'recurring' ? "text-primary font-bold" : ""}>
                 {contractType === 'recurring' ? 'Fecha de Inicio del Ciclo' : 'Fecha del Servicio'} {contractType === 'recurring' && "*"}
               </Label>
-              
+
               {contractType === 'recurring' ? (
                 <>
                   <Select
@@ -1468,21 +1468,21 @@ export default function CreateQuotationPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-full h-9 w-9" 
-                  onClick={() => exportAndShareQuotation('carta')} 
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-full h-9 w-9"
+                  onClick={() => exportAndShareQuotation('carta')}
                   disabled={isExporting}
                   title="Exportar Carta"
                 >
                   {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share className="w-4 h-4" />}
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-full h-9 w-9" 
-                  onClick={() => exportAndShareQuotation('pos')} 
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-full h-9 w-9"
+                  onClick={() => exportAndShareQuotation('pos')}
                   disabled={isExporting}
                   title="Exportar POS"
                 >
@@ -1491,10 +1491,10 @@ export default function CreateQuotationPage() {
                 <Button size="sm" onClick={() => handleAction('publish')} disabled={isSaving}>
                   Publicar
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-white/40 hover:text-white hover:bg-white/10 rounded-full h-8 w-8" 
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white/40 hover:text-white hover:bg-white/10 rounded-full h-8 w-8"
                   onClick={() => setShowPreview(false)}
                 >
                   <X className="w-4 h-4" />
@@ -1504,7 +1504,7 @@ export default function CreateQuotationPage() {
 
             <div className="flex-1 overflow-auto bg-slate-900/50 p-8 border-y border-white/5 shadow-inner scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent flex justify-center">
               <div id="print-area-carta-quotation">
-                <CartaTemplate 
+                <CartaTemplate
                   invoice={{
                     title: details.title,
                     issueDate: new Date().toISOString(),
@@ -1527,7 +1527,7 @@ export default function CreateQuotationPage() {
 
             {/* Hidden POS for export */}
             <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0 }} id="print-area-pos-quotation">
-              <POSTemplate 
+              <POSTemplate
                 invoice={{
                   invoiceNumber: quotationId || 'Borrador',
                   issueDate: new Date().toISOString(),
