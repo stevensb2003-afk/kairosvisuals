@@ -18,7 +18,7 @@
     }
   },
   "apphosting": {
-    "backendId": "kairos-visuals",
+    "backendId": "kairosvisuals",
     "rootDir": "./"
   }
 }
