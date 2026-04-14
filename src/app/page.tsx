@@ -148,8 +148,11 @@ export default function Home() {
            <Button size="sm" variant="ghost" className="rounded-xl flex-1 md:flex-none justify-start md:justify-center px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2" onClick={() => router.push('/requests')}>
              <Inbox className="w-4 h-4 text-amber-500" /> Leads
            </Button>
+           <Button size="sm" variant="ghost" className="rounded-xl flex-1 md:flex-none justify-start md:justify-center px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2" onClick={() => router.push('/solicitudes/create')}>
+             <FileText className="w-4 h-4 text-orange-500" /> Cotizar
+           </Button>
            <Button size="sm" variant="ghost" className="rounded-xl flex-1 md:flex-none justify-start md:justify-center px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2" onClick={() => router.push('/invoicing')}>
-             <Receipt className="w-4 h-4 text-emerald-500" /> Finanzas
+             <Receipt className="w-4 h-4 text-emerald-500" /> Facturación
            </Button>
            
            <div className="w-[1px] h-8 bg-border hidden md:block mx-1"></div>

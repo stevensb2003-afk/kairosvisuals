@@ -1,12 +1,79 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Wallet, Receipt, CreditCard, Laptop, PiggyBank, ArrowRight, TrendingUp } from 'lucide-react';
+import { useFirestore } from '@/firebase';
+import { query, collection, onSnapshot, where } from 'firebase/firestore';
+import type { Expense, SavingsGoal } from '@/lib/types';
+import { startOfMonth, endOfMonth, isWithinInterval, differenceInDays } from 'date-fns';
 
 export default function FinanceDashboardPage() {
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Expense[]>([]);
+  const [assets, setAssets] = useState<Expense[]>([]);
+  const [savings, setSavings] = useState<SavingsGoal[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const firestore = useFirestore();
+
+  useEffect(() => {
+    if (!firestore) return;
+
+    // Listeners para Gastos y Suscripciones (viven en la misma colección)
+    const qExpenses = query(collection(firestore, 'expenses'));
+    const unsubExpenses = onSnapshot(qExpenses, (snapshot) => {
+      const allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
+      
+      // Separar según tipo
+      setExpenses(allExpenses.filter(e => ['operativo', 'legal', 'otro', 'reparticion_socios'].includes(e.expenseType)));
+      setSubscriptions(allExpenses.filter(e => e.expenseType === 'subscripcion'));
+      setAssets(allExpenses.filter(e => e.expenseType === 'activo'));
+    });
+
+    // Listener para Ahorros
+    const qSavings = query(collection(firestore, 'savings_goals'));
+    const unsubSavings = onSnapshot(qSavings, (snapshot) => {
+      setSavings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavingsGoal)));
+      setLoading(false);
+    });
+
+    return () => {
+      unsubExpenses();
+      unsubSavings();
+    };
+  }, [firestore]);
+
+  // Cálculos de Métricas
+  const now = new Date();
+  const monthStart = startOfMonth(now);
+  const monthEnd = endOfMonth(now);
+
+  const monthlyExpensesTotal = expenses
+    .filter(e => e.date && isWithinInterval(new Date(e.date), { start: monthStart, end: monthEnd }))
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const monthlySubscriptionsTotal = subscriptions.reduce((acc, current) => {
+    let monthlyEquiv = current.amount;
+    if (current.periodicity === 'annual') monthlyEquiv = current.amount / 12;
+    if (current.periodicity === 'quarterly') monthlyEquiv = current.amount / 3;
+    if (current.periodicity === 'semiannual') monthlyEquiv = current.amount / 6;
+    return acc + monthlyEquiv;
+  }, 0);
+
+  const calculateCurrentAssetValue = (amount: number, date: string) => {
+    const acquisitionDate = new Date(date);
+    const daysElapsed = differenceInDays(now, acquisitionDate);
+    const yearsElapsed = daysElapsed / 365.25;
+    const depreciationRate = 0.20; // 20% anual
+    return amount * Math.max(0, 1 - (yearsElapsed * depreciationRate));
+  };
+
+  const assetsTotalValue = assets.reduce((sum, a) => sum + calculateCurrentAssetValue(a.amount, a.date), 0);
+  const totalSavings = savings.reduce((sum, s) => sum + s.currentAmount, 0);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-2">
@@ -19,7 +86,7 @@ export default function FinanceDashboardPage() {
         </p>
       </div>
 
-      {/* Resumen General (Métricas ficticias para el inicio) */}
+      {/* Resumen General */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-card to-card/50 border-border/50 shadow-sm">
           <CardHeader className="pb-2">
@@ -28,7 +95,9 @@ export default function FinanceDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">---</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : `₡${monthlyExpensesTotal.toLocaleString('es-CR')}`}
+            </div>
             <p className="text-xs text-muted-foreground mt-1 text-emerald-500 font-medium flex items-center gap-1">
               <TrendingUp className="w-3 h-3" /> Dentro del presupuesto
             </p>
@@ -42,7 +111,9 @@ export default function FinanceDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">---</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : `₡${Math.round(monthlySubscriptionsTotal).toLocaleString('es-CR')}`}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
               Pagos programados
             </p>
@@ -56,7 +127,9 @@ export default function FinanceDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">---</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : `₡${Math.round(assetsTotalValue).toLocaleString('es-CR')}`}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
               Equipos de la empresa
             </p>
@@ -70,7 +143,9 @@ export default function FinanceDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">---</div>
+            <div className="text-2xl font-bold text-primary">
+              {loading ? "..." : `₡${totalSavings.toLocaleString('es-CR')}`}
+            </div>
             <p className="text-xs text-primary/80 mt-1">
               Ahorro acumulado
             </p>

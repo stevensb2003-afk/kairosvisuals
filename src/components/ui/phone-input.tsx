@@ -30,6 +30,9 @@ type PhoneInputProps = Omit<
 > &
   Omit<RPNI.Props<typeof RPNI.default>, "onChange"> & {
     onChange?: (value: RPNI.Value) => void
+    defaultCountry?: RPNI.Country
+    country?: RPNI.Country
+    international?: boolean
   }
 
 const PhoneInput: React.ForwardRefExoticComponent<PhoneInputProps> =
@@ -45,6 +48,9 @@ const PhoneInput: React.ForwardRefExoticComponent<PhoneInputProps> =
           international={false}
           onChange={(value) => onChange?.(value || ("" as RPNI.Value))}
           {...props}
+          // Si no hay país seleccionado y el componente no es internacional,
+          // pasamos readOnly al input para bloquear el teclado móvil.
+          readOnly={!props.defaultCountry && !props.country && !props.international}
         />
       )
     }

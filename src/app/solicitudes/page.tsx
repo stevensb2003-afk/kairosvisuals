@@ -237,13 +237,13 @@ export default function SolicitudesPage() {
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       const pdfBlob = pdf.output('blob');
       const qNum = quotation.quotationNumber || quotation.id;
-      const fileName = `Cotización_${qNum}.pdf`;
+      const fileName = `Cotizacion_${qNum}.pdf`;
 
       if (navigator.share && navigator.canShare) {
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
-            title: `Cotización ${quotation.title}`,
+            title: `Cotizacion ${quotation.title}`,
             text: `Adjunto envío la cotización`,
             files: [file]
           });

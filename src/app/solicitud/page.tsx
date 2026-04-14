@@ -26,7 +26,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PhoneInput } from '@/components/ui/phone-input';
-import { formatPhoneNumberIntl } from 'react-phone-number-input';
+import { formatPhoneNumberIntl, type Country } from 'react-phone-number-input';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, Instagram, Facebook, Music2, Linkedin, Twitter, Youtube, Link as LinkIcon, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -135,6 +135,8 @@ export default function SolicitudPage() {
 
   const [emailError, setEmailError] = useState('');
   const [newSocial, setNewSocial] = useState({ platform: 'instagram', handle: '' });
+  const [showPhoneWarning, setShowPhoneWarning] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<Country | undefined>('CR');
 
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -261,7 +263,7 @@ export default function SolicitudPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col lg:flex-row relative selection:bg-primary/20 lg:h-screen lg:overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground flex flex-col lg:flex-row relative selection:bg-primary/20 lg:h-screen lg:overflow-x-hidden">
       {/* Background decoration */}
       <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/5 to-transparent pointer-events-none" />
       <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-primary/10 blur-[150px] pointer-events-none" />
@@ -319,9 +321,8 @@ export default function SolicitudPage() {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative z-10 lg:h-full lg:overflow-hidden">
-        <div className="flex-1 p-4 sm:p-6 lg:p-12 pb-28 md:pb-32 lg:pb-12 flex flex-col lg:overflow-hidden bg-muted/5">
+      <div className="flex-1 flex flex-col relative z-10 lg:h-full lg:overflow-y-auto overflow-x-hidden">
+        <div className="flex-1 p-4 sm:p-6 lg:p-12 pb-28 md:pb-32 lg:pb-12 flex flex-col lg:min-h-min bg-muted/5">
           <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col lg:pb-6 lg:overflow-hidden">
 
             {/* Top Progress bar removed */}
@@ -329,8 +330,8 @@ export default function SolicitudPage() {
             <div className="space-y-6 lg:space-y-10 min-h-[500px] flex-1">
               {/* STEP 1: PERFIL */}
               {currentStep === 1 && (
-                <Card className="animate-in fade-in zoom-in-95 duration-500 ease-out border-primary/10 shadow-xl lg:shadow-2xl lg:max-h-[calc(100vh-250px)] flex flex-col lg:overflow-hidden my-auto">
-                  <CardContent className="p-5 sm:p-8 md:p-12 space-y-8 overflow-y-visible lg:overflow-y-auto custom-scrollbar flex-1 lg:pr-6">
+                <Card className="animate-in fade-in zoom-in-95 duration-500 ease-out border-primary/10 shadow-xl lg:shadow-2xl lg:max-h-[calc(100vh-180px)] flex flex-col my-auto">
+                  <CardContent className="p-5 sm:p-8 md:p-12 space-y-8 overflow-y-auto custom-scrollbar flex-1 lg:pr-6">
                     <div className="space-y-4">
                       <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 mb-6">
                         <UsersIcon className="h-6 w-6" />
@@ -362,10 +363,32 @@ export default function SolicitudPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3">
                           <Label htmlFor="phone" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Teléfono / WhatsApp <span className="text-primary">*</span></Label>
-                          <PhoneInput
-                            value={formData.phone as any} onChange={(val) => handleSelectChange('phone', val)}
-                            placeholder="8888 8888" className="h-14 font-medium"
-                          />
+                          <div 
+                            className="relative"
+                            onClick={() => {
+                              if (!selectedCountry) setShowPhoneWarning(true);
+                            }}
+                          >
+                            <PhoneInput
+                              value={formData.phone as any} 
+                              defaultCountry="CR"
+                              country={selectedCountry}
+                              onCountryChange={(country) => {
+                                setSelectedCountry(country);
+                                if (country) setShowPhoneWarning(false);
+                              }}
+                              onChange={(val) => {
+                                handleSelectChange('phone', val);
+                              }}
+                              placeholder="8888 8888" className="h-14 font-medium"
+                            />
+                            {showPhoneWarning && !selectedCountry && (
+                              <p className="text-[10px] md:text-xs text-orange-500 font-bold mt-2 animate-pulse flex items-center gap-1">
+                                <Sparkles className="w-3 h-3" />
+                                🚩 Selecciona primero tu país para habilitar la escritura.
+                              </p>
+                            )}
+                          </div>
                         </div>
                         <div className="space-y-3">
                           <Label htmlFor="email" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Correo <span className="text-muted-foreground font-normal">(Opcional)</span></Label>
@@ -383,8 +406,8 @@ export default function SolicitudPage() {
 
               {/* STEP 2: TU NEGOCIO */}
               {currentStep === 2 && (
-                <Card className="animate-in fade-in zoom-in-95 duration-500 ease-out border-primary/10 shadow-xl lg:shadow-2xl lg:max-h-[calc(100vh-250px)] flex flex-col lg:overflow-hidden my-auto">
-                  <CardContent className="p-5 sm:p-8 md:p-12 space-y-8 overflow-y-visible lg:overflow-y-auto custom-scrollbar flex-1 lg:pr-6">
+                <Card className="animate-in fade-in zoom-in-95 duration-500 ease-out border-primary/10 shadow-xl lg:shadow-2xl lg:max-h-[calc(100vh-180px)] flex flex-col my-auto">
+                  <CardContent className="p-5 sm:p-8 md:p-12 space-y-8 overflow-y-auto custom-scrollbar flex-1 lg:pr-6">
                     <div className="space-y-4">
                       <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 mb-6">
                         <Building className="h-6 w-6" />
@@ -511,8 +534,8 @@ export default function SolicitudPage() {
 
               {/* STEP 3: OBJETIVOS */}
               {currentStep === 3 && (
-                <Card className="animate-in fade-in zoom-in-95 duration-500 ease-out border-primary/10 shadow-xl lg:shadow-2xl lg:max-h-[calc(100vh-250px)] flex flex-col lg:overflow-hidden my-auto">
-                  <CardContent className="p-5 sm:p-8 md:p-12 space-y-10 overflow-y-visible lg:overflow-y-auto custom-scrollbar flex-1 lg:pr-6">
+                <Card className="animate-in fade-in zoom-in-95 duration-500 ease-out border-primary/10 shadow-xl lg:shadow-2xl lg:max-h-[calc(100vh-180px)] flex flex-col my-auto">
+                  <CardContent className="p-5 sm:p-8 md:p-12 space-y-10 overflow-y-auto custom-scrollbar flex-1 lg:pr-6">
                     <div className="space-y-4">
                       <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 mb-6">
                         <Target className="h-6 w-6" />
@@ -612,8 +635,8 @@ export default function SolicitudPage() {
 
               {/* STEP 4: FINALIZACION */}
               {currentStep === 4 && (
-                <Card className="animate-in fade-in zoom-in-95 duration-500 ease-out border-primary/10 shadow-xl lg:shadow-2xl lg:max-h-[calc(100vh-250px)] flex flex-col lg:overflow-hidden my-auto">
-                  <CardContent className="p-5 sm:p-8 md:p-12 space-y-10 overflow-y-visible lg:overflow-y-auto custom-scrollbar flex-1 lg:pr-6">
+                <Card className="animate-in fade-in zoom-in-95 duration-500 ease-out border-primary/10 shadow-xl lg:shadow-2xl lg:max-h-[calc(100vh-180px)] flex flex-col my-auto">
+                  <CardContent className="p-5 sm:p-8 md:p-12 space-y-10 overflow-y-auto custom-scrollbar flex-1 lg:pr-6">
                     <div className="space-y-4">
                       <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 mb-6">
                         <Sparkles className="h-6 w-6" />
