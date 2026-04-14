@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user in the Kairos OS system.",
+      "description": "Represents a user in the Kairos Visuals system.",
       "properties": {
         "id": {
           "type": "string",
@@ -44,7 +44,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Client",
       "type": "object",
-      "description": "Represents a client in the Kairos OS system.",
+      "description": "Represents a client in the Kairos Visuals system.",
       "properties": {
         "id": {
           "type": "string",
@@ -177,7 +177,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Task",
       "type": "object",
-      "description": "Represents a task in the Kairos OS system.",
+      "description": "Represents a task in the Kairos Visuals system.",
       "properties": {
         "id": {
           "type": "string",
@@ -272,7 +272,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Quotation",
       "type": "object",
-      "description": "Represents a quotation in the Kairos OS system.",
+      "description": "Represents a quotation in the Kairos Visuals system.",
       "properties": {
         "id": {
           "type": "string",
@@ -310,7 +310,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Invoice",
       "type": "object",
-      "description": "Represents an invoice in the Kairos OS system.",
+      "description": "Represents an invoice in the Kairos Visuals system.",
       "properties": {
         "id": {
           "type": "string",
@@ -391,7 +391,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Expense",
       "type": "object",
-      "description": "Represents an expense in the Kairos OS system.",
+      "description": "Represents an expense in the Kairos Visuals system.",
       "properties": {
         "id": {
           "type": "string",
@@ -463,7 +463,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Sprint",
       "type": "object",
-      "description": "Represents a sprint in the Kairos OS system.",
+      "description": "Represents a sprint in the Kairos Visuals system.",
       "properties": {
         "id": {
           "type": "string",
@@ -496,6 +496,128 @@
         "name",
         "startDate",
         "endDate"
+      ]
+    },
+    "ServiceRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ServiceRequest",
+      "type": "object",
+      "description": "Represents a service briefing request from a potential client.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ServiceRequest entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "Client's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Client's last name."
+        },
+        "phone": {
+          "type": "string",
+          "description": "Client's phone number."
+        },
+        "email": {
+          "type": "string",
+          "description": "Client's email address.",
+          "format": "email"
+        },
+        "aboutBusiness": {
+          "type": "string",
+          "description": "Information about the client's business."
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Name of the client's company."
+        },
+        "industry": {
+          "type": "string",
+          "description": "Industry of the client's business."
+        },
+        "hasSocials": {
+          "type": "boolean",
+          "description": "Indicates if the business has social media presence."
+        },
+        "socials": {
+          "type": "array",
+          "description": "List of social media handles.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "platform": {
+                "type": "string"
+              },
+              "handle": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "platform",
+              "handle"
+            ]
+          }
+        },
+        "expectations": {
+          "type": "array",
+          "description": "Client's expectations from the service.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mainGoals": {
+          "type": "array",
+          "description": "Client's main goals.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "motivation": {
+          "type": "string",
+          "description": "Client's motivation for seeking services."
+        },
+        "contactSource": {
+          "type": "string",
+          "description": "How the client found the company."
+        },
+        "contactPreference": {
+          "type": "string",
+          "enum": [
+            "whatsapp",
+            "email",
+            "phone"
+          ],
+          "description": "Preferred method of contact."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "reviewed",
+            "converted",
+            "frozen",
+            "rejected"
+          ],
+          "description": "Current status of the request."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Draft creation date (ISO string or Timestamp).",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "phone",
+        "aboutBusiness",
+        "companyName",
+        "industry",
+        "status",
+        "createdAt"
       ]
     }
   },
@@ -674,8 +796,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "requests/{requestId}",
+        "definition": {
+          "entityName": "ServiceRequest",
+          "schema": {
+            "$ref": "#/backend/entities/ServiceRequest"
+          },
+          "description": "Stores briefing requests (leads) from the public form.",
+          "params": [
+            {
+              "name": "requestId",
+              "description": "The unique identifier of the briefing request."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the Kairos OS application, focusing on authorization independence, clarity, and scalability. The structure leverages path-based ownership for user-specific data and membership maps for collaborative data access. Denormalization is used extensively to ensure authorization independence, eliminating the need for `get()` calls in security rules.\n\n**Authorization Independence (CRITICAL):**\n\n*   **User Data:** The `users/{userId}` collection stores user profiles. This is private data, accessible only to the user with the matching `userId`. No denormalization is needed here as authorization is based solely on the path.\n*   **Tasks:** Tasks are stored in a root `/tasks/{taskId}` collection. This structure enables a shared workspace for all users, which is suitable for a small, collaborative team of superusers.\n*   **Clients:** Clients are stored in the `clients/{clientId}` collection. Authorization is managed through a membership model on each document.\n*   **Quotations, Invoices:** These are client-owned and stored in `/clients/{clientId}/quotations/{quotationId}` and `/clients/{clientId}/invoices/{invoiceId}`, respectively. The `clientId` is denormalized into each document, making list operations and data access rules simple and independent.\n*   **TaskTypes, Packs, Expenses, CreditPurchases, Sprints:** These are stored in root-level collections. Access control is determined by user roles, managed through the `roles_admin/{uid}` collection or team memberships denormalized into these documents where necessary.\n\n**QAPs (Rules Are Not Filters):**\n\nThe structure supports secure list operations by segregating data based on access needs. Private user data is stored under `/users/{userId}`, enabling rules that allow users to only list their own data. Membership models on collaborative documents (e.g., Clients) ensure that only authorized users can list and access these documents.\n\nThe use of root-level collections for TaskTypes and Packs also enables efficient and secure listing, as security rules can be applied at the collection level without needing to filter based on document content.\n\n**Invariants:**\n\n*   The structure supports ownership invariants through path-based ownership (`/users/{userId}/tasks/{taskId}`).\n*   Timestamps (e.g., `createdAt` in Quotations) are enforced via rules.\n*   Denormalized data (e.g., `clientId` in invoices) ensures data consistency across related documents.\n\nBy adhering to these principles and strategies, the data structure provides a secure, scalable, and easily debuggable foundation for the Kairos OS application."
+    "reasoning": "The Firestore data structure is designed to support the Kairos Visuals application, focusing on authorization independence, clarity, and scalability. The structure leverages path-based ownership for user-specific data and membership maps for collaborative data access. Denormalization is used extensively to ensure authorization independence, eliminating the need for `get()` calls in security rules.\n\n**Authorization Independence (CRITICAL):**\n\n*   **User Data:** The `users/{userId}` collection stores user profiles. This is private data, accessible only to the user with the matching `userId`. No denormalization is needed here as authorization is based solely on the path.\n*   **Tasks:** Tasks are stored in a root `/tasks/{taskId}` collection. This structure enables a shared workspace for all users, which is suitable for a small, collaborative team of superusers.\n*   **Clients:** Clients are stored in the `clients/{clientId}` collection. Authorization is managed through a membership model on each document.\n*   **Quotations, Invoices:** These are client-owned and stored in `/clients/{clientId}/quotations/{quotationId}` and `/clients/{clientId}/invoices/{invoiceId}`, respectively. The `clientId` is denormalized into each document, making list operations and data access rules simple and independent.\n*   **TaskTypes, Packs, Expenses, CreditPurchases, Sprints:** These are stored in root-level collections. Access control is determined by user roles, managed through the `roles_admin/{uid}` collection or team memberships denormalized into these documents where necessary.\n\n**QAPs (Rules Are Not Filters):**\n\nThe structure supports secure list operations by segregating data based on access needs. Private user data is stored under `/users/{userId}`, enabling rules that allow users to only list their own data. Membership models on collaborative documents (e.g., Clients) ensure that only authorized users can list and access these documents.\n\nThe use of root-level collections for TaskTypes and Packs also enables efficient and secure listing, as security rules can be applied at the collection level without needing to filter based on document content.\n\n**Invariants:**\n\n*   The structure supports ownership invariants through path-based ownership (`/users/{userId}/tasks/{taskId}`).\n*   Timestamps (e.g., `createdAt` in Quotations) are enforced via rules.\n*   Denormalized data (e.g., `clientId` in invoices) ensures data consistency across related documents.\n\nBy adhering to these principles and strategies, the data structure provides a secure, scalable, and easily debuggable foundation for the Kairos Visuals application."
   }
 }

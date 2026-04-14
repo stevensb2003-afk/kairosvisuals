@@ -1,10 +1,258 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // Allow read/write access to anyone, including unauthenticated users.
-      // This is the simplest possible configuration and removes all permission checks.
-      allow read, write: if true;
+    // ========================================================================
+    // HELPER FUNCTIONS
+    // ========================================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the authenticated user is a super admin
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'stevensb.2003@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Administrador', 'Administrativo', 'Creativo']
+      );
+    }
+
+    // Check if the authenticated user is an internal team member
+    function isTeamMember() {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.type == 'team'
+      );
+    }
+
+    // Check if the authenticated user is a specific client
+    // by verifying their UID matches the client's portalUserId
+    function isClientPortalUser(clientId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/clients/$(clientId)).data.portalUserId == request.auth.uid &&
+        get(/databases/$(database)/documents/clients/$(clientId)).data.portalAccessActive == true;
+    }
+
+    // ========================================================================
+    // USER PROFILES (Team members only)
+    // ========================================================================
+    match /users/{userId} {
+      allow read: if isTeamMember() || isOwner(userId);
+      allow write: if isOwner(userId) || isSuperAdmin();
+    }
+
+    // ========================================================================
+    // TASKS — Shared workspace for team; read-only for client (their tasks)
+    // New required fields: paymentCategory, revisionCount, maxRevisions,
+    // talentTag, talentHoursLogged, dodChecklist, blockedReason, extraApproved
+    // ========================================================================
+    match /tasks/{taskId} {
+      // Team members: full access
+      allow read, write: if isTeamMember();
+      
+      // Client portal: read only their own tasks
+      // Uses direct UID match OR isClientPortalUser for flexibility
+      allow read: if isAuthenticated() &&
+        resource.data.clientId != null &&
+        (resource.data.clientId == request.auth.uid ||
+         isClientPortalUser(resource.data.clientId));
+      
+      // Client portal: can update only client-review approval fields
+      allow update: if isAuthenticated() &&
+        resource.data.clientId != null &&
+        (resource.data.clientId == request.auth.uid ||
+         isClientPortalUser(resource.data.clientId)) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['dodChecklist', 'status', 'updatedAt', 'revisionCount', 'clientFeedback']);
+    }
+    
+    // ========================================================================
+    // TASK TYPES — Team workspace
+    // ========================================================================
+    match /task_types/{taskTypeId} {
+      allow read, write: if isTeamMember();
+      // Clients need to read task types for the portal display
+      allow read: if isAuthenticated();
+    }
+    
+    // ========================================================================
+    // PACKS — Team workspace
+    // ========================================================================
+    match /packs/{packId} {
+      allow read, write: if isTeamMember();
+    }
+    
+    // ========================================================================
+    // EXPENSES — Team workspace (Acuerdo §2.1)
+    // ========================================================================
+    match /expenses/{expenseId} {
+      allow read, write: if isTeamMember();
+    }
+
+    // ========================================================================
+    // SAVINGS GOALS — Team workspace
+    // ========================================================================
+    match /savings_goals/{goalId} {
+      allow read, write: if isTeamMember();
+    }
+    
+    // ========================================================================
+    // CREDIT PURCHASES — Team workspace
+    // ========================================================================
+    match /credit_purchases/{creditPurchaseId} {
+      allow read, write: if isTeamMember();
+    }
+    
+    // ========================================================================
+    // SPRINTS — Team workspace (Manual §1)
+    // ========================================================================
+    match /sprints/{sprintId} {
+      allow read, write: if isTeamMember();
+    }
+
+    // ========================================================================
+    // CLIENTS — Team: full access; Client: read own data only
+    // New fields: contractType, monthlyQuota, consumptionLimit,
+    // currentConsumption, paymentStatus, paymentSchedule, tcAccepted, etc.
+    // ========================================================================
+    match /clients/{clientId} {
+      // Team members: full access
+      allow read, write: if isTeamMember();
+      
+      // Client portal: allow self-creation when accepting a quotation
+      allow create: if isAuthenticated() && request.auth.uid == clientId;
+      
+      // Client portal: read own data
+      allow read: if isAuthenticated() && request.auth.uid == clientId;
+      
+      // Client portal: update only T&C acceptance and limited fields
+      allow update: if isAuthenticated() && request.auth.uid == clientId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['tcAccepted', 'tcAcceptedDate', 'updatedAt']);
+      
+      // Quotations sub-collection
+      match /quotations/{quotationId} {
+        allow read, write: if isTeamMember();
+        // Client can read their quotes and update status to accepted
+        allow read: if isAuthenticated() && request.auth.uid == clientId;
+        allow update: if isAuthenticated() && request.auth.uid == clientId &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'acceptedAt']);
+      }
+      
+      // Invoices sub-collection (T&C §2)
+      match /invoices/{invoiceId} {
+        allow read, write: if isTeamMember();
+        allow read: if isAuthenticated() && request.auth.uid == clientId;
+      }
+    }
+    
+
+    // ========================================================================
+    // PROJECTS — Team workspace
+    // ========================================================================
+    match /projects/{projectId} {
+      allow read, write: if isTeamMember();
+    }
+    
+    // ========================================================================
+    // FINANCIAL SUMMARIES — Team workspace (Acuerdo §3)
+    // ========================================================================
+    match /financial_summaries/{summaryId} {
+      allow read, write: if isTeamMember();
+    }
+    
+    // ========================================================================
+    // TALENT SETTLEMENTS — Team workspace (Acuerdo §2.3)
+    // ========================================================================
+    match /talent_settlements/{settlementId} {
+      allow read, write: if isTeamMember();
+    }
+
+    // ========================================================================
+    // INCOMES — Team workspace (finanzas §)
+    // ========================================================================
+    match /incomes/{incomeId} {
+      allow read, write: if isTeamMember();
+    }
+
+    // ========================================================================
+    // NOTIFICATIONS — Sistema de notificaciones
+    // Reglas:
+    //   - Equipo: lectura/escritura completa
+    //   - Clientes autenticados: pueden leer y marcar como leída sus propias notificaciones
+    //   - El sistema (server-side) puede crear notificaciones para cualquier usuario
+    // ========================================================================
+    match /notifications/{notificationId} {
+      // Equipo interno: acceso completo
+      allow read, write: if isTeamMember();
+
+      // Usuarios autenticados: pueden leer sus propias notificaciones (targetUserId == uid o 'all')
+      allow read: if isAuthenticated() &&
+        (resource.data.targetUserId == request.auth.uid ||
+         resource.data.targetUserId == 'all');
+
+      // Usuarios autenticados: pueden marcar como leídas sus propias notificaciones
+      allow update: if isAuthenticated() &&
+        (resource.data.targetUserId == request.auth.uid ||
+         resource.data.targetUserId == 'all') &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['read', 'readAt']);
+
+      // Usuarios autenticados: pueden crear notificaciones (para notificaciones desde el portal)
+      allow create: if isAuthenticated();
+    }
+
+    // ========================================================================
+    // COLLECTION GROUP RULES (For Admin Global Queries)
+    // ========================================================================
+    match /{path=**}/invoices/{invoiceId} {
+      allow read: if isTeamMember();
+    }
+    
+    match /{path=**}/quotations/{quotationId} {
+      allow read: if isTeamMember();
+    }
+
+    // ========================================================================
+    // SERVICE REQUESTS (Briefing Form)
+    // ========================================================================
+    match /requests/{requestId} {
+      allow read, write: if isTeamMember();
+      allow create: if true; // Public can submit briefing
+    }
+
+    // ========================================================================
+    // SETTINGS & CONFIGURATION
+    // ========================================================================
+    match /settings/{settingId} {
+      allow read, write: if isTeamMember();
+      allow read: if true; // Public can read config for the form
+    }
+
+    match /config/security {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // ========================================================================
+    // SERVICES CATALOG
+    // ========================================================================
+    match /services/{serviceId} {
+      allow read, write: if isTeamMember();
+      allow read: if true; // Public can see services to choose from
+    }
+
+    // ========================================================================
+    // PREDEFINED PLANS
+    // ========================================================================
+    match /predefined_plans/{planId} {
+      allow read, write: if isTeamMember();
+      allow read: if isAuthenticated();
     }
   }
 }

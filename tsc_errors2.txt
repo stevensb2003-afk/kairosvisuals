@@ -1,0 +1,3 @@
+src/app/clients/page.tsx(495,19): error TS2304: Cannot find name 'addDoc'.
+src/app/clients/page.tsx(512,19): error TS2304: Cannot find name 'addDoc'.
+src/app/clients/page.tsx(579,13): error TS2304: Cannot find name 'addDoc'.

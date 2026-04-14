@@ -1,5 +1,5 @@
 {
-  "name": "Kairos OS",
+  "name": "Kairos Visuals",
   "short_name": "KairosOS",
   "description": "Sistema central de Kairos Visuals",
   "start_url": "/",
@@ -8,14 +8,14 @@
   "theme_color": "#3B82F6",
   "icons": [
     {
-      "src": "/android-chrome-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     },
     {
-      "src": "/android-chrome-512x512.png",
+      "src": "/logo.jpg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/jpeg"
     }
   ]
 }

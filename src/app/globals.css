@@ -76,22 +76,101 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Hide number input arrows */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
 }
 
 @layer utilities {
   /* Custom Scrollbar Styles */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background-color: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 4px;
+    background-color: hsl(var(--primary) / 0.15);
+    border-radius: 20px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+    transition: all 0.3s ease;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5);
+    background-color: hsl(var(--primary) / 0.4);
   }
+
+  /* Premium Calendar Styling */
+  .rdp-day {
+    @apply transition-all duration-200 rounded-lg !important;
+  }
+  .rdp-day:hover:not([aria-selected]) {
+    @apply bg-primary/20 text-primary scale-110 !important;
+  }
+  .rdp-day_selected {
+    @apply shadow-lg shadow-primary/20 scale-105 !important;
+  }
+}
+
+/* Phone Input Custom Styles */
+.kairos-phone-input, .kairos-phone-input-sm {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: all 0.3s ease;
+}
+.kairos-phone-input input {
+  @apply h-11 w-full bg-background/40 border-primary/10 border-l-0 rounded-e-xl focus:ring-primary/20 transition-all pl-4 font-medium bg-muted/20 !important;
+  flex: 1 !important;
+  outline: none !important;
+}
+.kairos-phone-input button {
+  @apply h-11 bg-muted/20 border-primary/10 border-r-0 rounded-s-xl hover:bg-primary/10 transition-all px-4 !important;
+  flex-shrink: 0 !important;
+}
+.kairos-phone-input:focus-within button {
+  @apply border-primary/30 bg-primary/5 !important;
+}
+.kairos-phone-input:focus-within input {
+  @apply border-primary/30 bg-background/60 !important;
+}
+
+.kairos-phone-input-sm input {
+  @apply h-10 w-full bg-muted/40 border-none rounded-e-xl focus:ring-amber-500/20 text-[11px] font-bold pl-3 !important;
+  flex: 1 !important;
+  outline: none !important;
+}
+.kairos-phone-input-sm button {
+  @apply h-10 bg-muted/40 border-none rounded-s-xl hover:bg-amber-500/10 transition-all px-3 !important;
+  flex-shrink: 0 !important;
+}
+.kairos-phone-input-sm:focus-within button {
+  @apply bg-amber-500/10 text-amber-700 !important;
+}
+
+/* Animación para campana de notificaciones */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  15%       { transform: rotate(-8deg); }
+  30%       { transform: rotate(8deg); }
+  45%       { transform: rotate(-5deg); }
+  60%       { transform: rotate(5deg); }
+  75%       { transform: rotate(-3deg); }
+  90%       { transform: rotate(3deg); }
+}
+
+/* Print styles para el módulo de Reportes */
+@media print {
+  .print\:hidden { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .bg-background { background: white !important; }
+  .text-muted-foreground { color: #666 !important; }
 }

@@ -1,12 +1,12 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Palette, Package } from 'lucide-react';
+import { Users, Palette, Package, Building2, ClipboardList, ShieldAlert } from 'lucide-react';
 import { UserManagement } from '@/components/settings/user-management';
-import { TaskTypeManagement } from '@/components/settings/task-type-management';
-import { PackManagement } from '@/components/settings/pack-management';
+import { CompanySettings } from '@/components/settings/company-settings';
+import { BriefingConfig } from '@/components/settings/briefing-config';
+import { SecurityConfig } from '@/components/settings/security-config';
 import { useUser } from '@/firebase';
-import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SettingsPage() {
@@ -33,29 +33,40 @@ export default function SettingsPage() {
           Administración general para personalizar y escalar el negocio.
         </p>
       </div>
-      <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-3">
-          <TabsTrigger value="users">
+      <Tabs defaultValue="company" className="w-full">
+        <TabsList className="grid w-full lg:max-w-5xl max-w-full grid-cols-4 h-auto">
+          <TabsTrigger value="company" className="py-2">
+            <Building2 className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Empresa e Impuestos</span>
+            <span className="sm:hidden">Empresa</span>
+          </TabsTrigger>
+          <TabsTrigger value="users" className="py-2">
             <Users className="mr-2 h-4 w-4" />
-            Gestor de Usuarios
+            <span className="hidden sm:inline">Gestor de Usuarios</span>
+            <span className="sm:hidden">Usuarios</span>
           </TabsTrigger>
-          <TabsTrigger value="tasks">
-            <Palette className="mr-2 h-4 w-4" />
-            Gestor de Tasks
+          <TabsTrigger value="briefing" className="py-2">
+            <ClipboardList className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Briefing Form</span>
+            <span className="sm:hidden">Briefing</span>
           </TabsTrigger>
-          <TabsTrigger value="packs">
-            <Package className="mr-2 h-4 w-4" />
-            Gestor de Packs
+          <TabsTrigger value="security" className="py-2">
+            <ShieldAlert className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Seguridad (Team Code)</span>
+            <span className="sm:hidden">Seguridad</span>
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="users">
+        <TabsContent value="company" className="mt-4">
+          <CompanySettings />
+        </TabsContent>
+        <TabsContent value="users" className="mt-4">
           <UserManagement />
         </TabsContent>
-        <TabsContent value="tasks">
-          <TaskTypeManagement />
+        <TabsContent value="briefing" className="mt-4">
+          <BriefingConfig />
         </TabsContent>
-        <TabsContent value="packs">
-          <PackManagement />
+        <TabsContent value="security" className="mt-4">
+          <SecurityConfig />
         </TabsContent>
       </Tabs>
     </div>

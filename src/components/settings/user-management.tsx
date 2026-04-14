@@ -46,7 +46,7 @@ export function UserManagement() {
                                         <TableCell className="font-medium">{user.firstName} {user.lastName}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
-                                            <Badge variant={user.role === 'Administrativo' ? 'default' : 'secondary'}>{user.role}</Badge>
+                                            <Badge variant={user.role === 'Administrador' ? 'default' : 'secondary'}>{user.role}</Badge>
                                         </TableCell>
                                     </TableRow>
                                 ))}

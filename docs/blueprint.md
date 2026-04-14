@@ -1,4 +1,4 @@
-# **App Name**: Kairos OS
+# **App Name**: Kairos Visuals
 
 ## Core Features:
 
