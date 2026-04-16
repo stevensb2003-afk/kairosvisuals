@@ -74,6 +74,12 @@ export async function acceptQuotationClient(
   const recurringItems = (quotation.items || []).filter((item: any) => item.billingType === 'recurring' || !item.billingType); // Default to recurring if not specified
   const baseAmount = recurringItems.reduce((acc: number, item: any) => acc + (item.unitPrice * item.quantity), 0);
 
+  // Net totals from the quotation (already calculated with discounts, taxes, etc.)
+  const netQuotationTotal = quotation.totalAmount || quotation.total || 0;
+  const netSubtotal = quotation.subtotalAmount || quotation.subtotal || 0;
+  const netDiscount = quotation.totalDiscount || quotation.discount || 0;
+  const netTax = quotation.taxAmount || quotation.tax || 0;
+
   const startDate = quotation.startDate || new Date().toISOString();
   
   const nextBillingDate = calculateNextBillingDate(startDate);
@@ -93,9 +99,12 @@ export async function acceptQuotationClient(
 
     const updatedPlan = {
       ...currentActivePlan,
-      baseRecurringAmount: baseAmount,
+      // FIX #1: usar netQuotationTotal (con descuentos e IVA) en lugar del monto bruto baseAmount
+      baseRecurringAmount: netQuotationTotal,
       services: recurringItems.map((item: any) => ({
         serviceId: item.serviceId || '',
+        // FIX #3: persistir serviceName para que el dashboard del cliente lo muestre correctamente
+        serviceName: item.serviceName || '',
         description: item.description || item.serviceName || 'Servicio',
         quantity: item.quantity,
         unitPrice: item.unitPrice,
@@ -136,10 +145,12 @@ export async function acceptQuotationClient(
     planId: quotation.id,
     startDate: startDate,
     planStartDay: planStartDay,
-    baseRecurringAmount: baseAmount,
+    baseRecurringAmount: netQuotationTotal, // Net total (after discounts & taxes) as the monthly billing base
     status: 'active',
     services: recurringItems.map((item: any) => ({
       serviceId: item.serviceId || '',
+      // FIX #3: persistir serviceName para que el dashboard del cliente lo muestre correctamente
+      serviceName: item.serviceName || '',
       description: item.description || item.serviceName || 'Servicio',
       quantity: item.quantity,
       unitPrice: item.unitPrice,
@@ -159,27 +170,23 @@ export async function acceptQuotationClient(
 
   await setDoc(clientRef, {
     contractType: isRecurring ? 'recurring' : 'one_time',
-    monthlyQuota: baseAmount,
+    monthlyQuota: isRecurring ? netQuotationTotal : baseAmount,
     activePlan: isRecurring ? activePlan : null,
     updatedAt: new Date().toISOString(),
     portalAccessActive: true
   }, { merge: true });
 
-  // 4. Generate First Invoice (50% of monthly base)
-  const invoiceAmount = isRecurring ? (baseAmount / 2) : (quotation.totalAmount || quotation.total || 0);
+  // 4. Generate First Invoice (50% of net total — preserving discounts from quotation)
+  const invoiceAmount = isRecurring ? (netQuotationTotal / 2) : netQuotationTotal;
   const invoiceId = await getNextSequenceNumber(firestore, 'invoice');
-
-  const subtotalAmt = quotation.subtotalAmount || quotation.subtotal || 0;
-  const taxAmt = quotation.taxAmount || quotation.tax || 0;
-  const totalDiscAmt = quotation.totalDiscount || quotation.discount || 0;
 
   const newInvoice = {
     clientId: clientId,
     invoiceNumber: invoiceId,
-    totalAmount: isRecurring ? invoiceAmount : invoiceAmount,
-    subtotalAmount: isRecurring ? invoiceAmount : subtotalAmt,
-    taxAmount: isRecurring ? 0 : taxAmt,
-    totalDiscount: isRecurring ? 0 : totalDiscAmt,
+    totalAmount: invoiceAmount,
+    subtotalAmount: isRecurring ? (netSubtotal / 2) : netSubtotal,
+    taxAmount: isRecurring ? (netTax / 2) : netTax,
+    totalDiscount: isRecurring ? (netDiscount / 2) : netDiscount,
     firstPaymentAmount: invoiceAmount,
     secondPaymentAmount: 0,
     amountPaid: 0,
@@ -196,7 +203,7 @@ export async function acceptQuotationClient(
         quantity: 1,
         unitPrice: invoiceAmount,
         total: invoiceAmount,
-        discount: 0,
+        discount: netDiscount / 2,
         paymentCategory: 'plan'
       }
     ] : quotation.items.map((it: any) => ({
@@ -340,7 +347,11 @@ export async function generateMonth1Part2(
       formattedItems = activePlan.services.map((svc: any) => {
           const lineSubtotal = (svc.unitPrice * svc.quantity) / 2;
           const lineDisc = (svc.discountValue || 0) / 2;
-          const lineTax = ((lineSubtotal - lineDisc) * (svc.ivaRate || 0)) / 100;
+          const lineNet = lineSubtotal - lineDisc;
+          // FIX #2: el IVA es inclusivo (igual que en la cotización: se extrae del total, no se agrega encima)
+          const ivaRate = (svc.ivaRate || 0) / 100;
+          const lineBase = ivaRate > 0 ? lineNet / (1 + ivaRate) : lineNet;
+          const lineTax = lineNet - lineBase;
           
           subtotalAmt += lineSubtotal;
           totalDiscAmt += lineDisc;
@@ -351,7 +362,7 @@ export async function generateMonth1Part2(
               description: `Plan Mensual - Pago 2/2 (50%) - ${svc.description || 'Servicio'}`,
               quantity: svc.quantity,
               unitPrice: svc.unitPrice / 2,
-              total: (lineSubtotal - lineDisc + lineTax),
+              total: lineNet,
               discount: lineDisc,
               discountType: svc.discountType || 'amount',
               discountValue: svc.discountValue ? svc.discountValue / 2 : 0,

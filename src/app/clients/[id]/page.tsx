@@ -322,7 +322,7 @@ export default function ClientProfilePage() {
               const acceptedQuotations = quotes.filter((q: any) => q.status === 'accepted');
               const recurringPlans = acceptedQuotations.filter((q: any) => q.contractType === 'recurring');
               const oneTimeProjects = acceptedQuotations.filter((q: any) => q.contractType !== 'recurring');
-              
+
               setActivePlans(recurringPlans);
               setActiveProjects(oneTimeProjects);
 
@@ -470,9 +470,9 @@ export default function ClientProfilePage() {
     setIsProcessing(true);
     try {
       const { isLate } = await cancelPlanRequest(firestore, id, selectedLead?.clientName || 'Cliente');
-      toast({ 
-        title: "Plan cancelado", 
-        description: isLate ? "Cancelado con recargo por cancelación tardía." : "Cancelado exitosamente a tiempo." 
+      toast({
+        title: "Plan cancelado",
+        description: isLate ? "Cancelado con recargo por cancelación tardía." : "Cancelado exitosamente a tiempo."
       });
       window.location.reload();
     } catch (error: any) {
@@ -742,18 +742,36 @@ export default function ClientProfilePage() {
     );
   }
 
-  const hasPendingInvoices = leadInvoices.some(inv => inv.status === 'pending');
-  const hasPaidInvoices = leadInvoices.some(inv => inv.status === 'paid');
-  const hasAnyActivePlan = activePlans.length > 0 || activeProjects.length > 0;
-  
-  const isAccountPending = hasPendingInvoices;
-  
+  // Detección completa de estados de factura
+  const hasOverdueInvoices       = leadInvoices.some(inv => inv.status === 'overdue');
+  const hasPendingInvoices       = leadInvoices.some(inv => inv.status === 'pending');
+  const hasSentInvoices          = leadInvoices.some(inv => inv.status === 'sent');
+  const hasPartialInvoices       = leadInvoices.some(inv => inv.status === 'partially_paid');
+  const hasPendingVerifInvoices  = leadInvoices.some(inv => inv.status === 'pending_verification');
+  const hasPaidInvoices          = leadInvoices.some(inv => inv.status === 'paid');
+  const hasAnyActivePlan         = activePlans.length > 0 || activeProjects.length > 0;
+
+  // El estado más crítico/urgente toma precedencia (orden: vencida > pendiente > parcial > enviada > verificando > pagada > nueva)
+  const isAccountPending = hasOverdueInvoices || hasPendingInvoices || hasPartialInvoices || hasSentInvoices;
+
   let accountStatusLabel = 'Sin actividad';
   let accountStatusDescription = 'Sin registros financieros';
 
-  if (isAccountPending) {
+  if (hasOverdueInvoices) {
+    accountStatusLabel = 'Vencida';
+    accountStatusDescription = 'Hay facturas vencidas sin pagar — acción urgente requerida';
+  } else if (hasPendingInvoices) {
     accountStatusLabel = 'Pendiente';
     accountStatusDescription = 'Existen facturas por pagar';
+  } else if (hasPartialInvoices) {
+    accountStatusLabel = 'Pago Parcial';
+    accountStatusDescription = 'Facturas con abonos aplicados, saldo pendiente';
+  } else if (hasSentInvoices) {
+    accountStatusLabel = 'Factura Enviada';
+    accountStatusDescription = 'Factura enviada al cliente, en espera de pago';
+  } else if (hasPendingVerifInvoices) {
+    accountStatusLabel = 'Verificando Pago';
+    accountStatusDescription = 'Pago recibido, pendiente de confirmación';
   } else if (!hasPendingInvoices && hasPaidInvoices && hasAnyActivePlan) {
     accountStatusLabel = 'Al día';
     accountStatusDescription = 'Pagos actualizados y servicios activos';
@@ -767,8 +785,8 @@ export default function ClientProfilePage() {
     accountStatusLabel = 'Sin actividad';
     accountStatusDescription = 'No hay historial de planes ni facturas';
   }
-  
-  const isAccountOk = !isAccountPending && (accountStatusLabel === 'Al día' || accountStatusLabel === 'Nueva Cuenta');
+
+  const isAccountOk = !isAccountPending && (accountStatusLabel === 'Al día' || accountStatusLabel === 'Nueva Cuenta' || accountStatusLabel === 'Verificando Pago');
 
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 space-y-6">
@@ -898,9 +916,16 @@ export default function ClientProfilePage() {
                                   )}
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="text-2xl font-bold text-emerald-600">₡{plan.grandTotal?.toLocaleString() || plan.total?.toLocaleString()}</p>
-                                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 capitalize mt-2">
+                              <div className="text-right flex flex-col items-end gap-1">
+                                <div>
+                                  <p className="text-2xl font-black text-emerald-600 leading-none">
+                                    ₡{(plan.grandTotal || plan.totalAmount || plan.total || 0).toLocaleString()}
+                                  </p>
+                                  <p className="text-xs text-emerald-600/70 font-medium mt-1">
+                                    ₡{Math.round((plan.grandTotal || plan.totalAmount || plan.total || 0) / 2).toLocaleString()} <span className="text-muted-foreground/60">/ quincenal</span>
+                                  </p>
+                                </div>
+                                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 capitalize mt-1">
                                   Suscripción Recurrente
                                 </Badge>
                               </div>
@@ -910,9 +935,27 @@ export default function ClientProfilePage() {
                               <p className="text-xs font-bold text-muted-foreground uppercase">Servicios Incluidos:</p>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 {plan.items?.map((item: any, idx: number) => (
-                                  <div key={idx} className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50/50 border border-emerald-100/50 text-sm">
-                                    <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                                    <span className="font-medium truncate">{item.description}</span>
+                                  <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border/40 shadow-sm hover:border-emerald-500/30 transition-colors">
+                                    <div className="mt-0.5 p-1 bg-emerald-500/10 rounded-md shrink-0">
+                                      <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-bold text-sm text-foreground leading-tight">{item.serviceName || item.description}</p>
+                                      {item.serviceName && item.description && item.serviceName !== item.description && (
+                                        <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">{item.description}</p>
+                                      )}
+                                      <div className="flex flex-wrap gap-1 mt-1.5">
+                                        {item.quantity > 1 && (
+                                          <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/20">× {item.quantity} uds.</span>
+                                        )}
+                                        {item.quantity === 1 && (
+                                          <span className="inline-flex items-center text-[10px] font-bold text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">× 1</span>
+                                        )}
+                                        {(item.discount > 0) && (
+                                          <span className="inline-flex items-center text-[10px] font-bold text-amber-700 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/20">-₡{Number(item.discount).toLocaleString()}</span>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -977,9 +1020,27 @@ export default function ClientProfilePage() {
                               <p className="text-xs font-bold text-muted-foreground uppercase">Servicios Incluidos:</p>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 {project.items?.map((item: any, idx: number) => (
-                                  <div key={idx} className="flex items-center gap-2 p-3 rounded-lg bg-blue-50/50 border border-blue-100/50 text-sm">
-                                    <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />
-                                    <span className="font-medium truncate">{item.description}</span>
+                                  <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border/40 shadow-sm hover:border-blue-500/30 transition-colors">
+                                    <div className="mt-0.5 p-1 bg-blue-500/10 rounded-md shrink-0">
+                                      <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-bold text-sm text-foreground leading-tight">{item.serviceName || item.description}</p>
+                                      {item.serviceName && item.description && item.serviceName !== item.description && (
+                                        <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">{item.description}</p>
+                                      )}
+                                      <div className="flex flex-wrap gap-1 mt-1.5">
+                                        {item.quantity > 1 && (
+                                          <span className="inline-flex items-center text-[10px] font-bold text-blue-700 bg-blue-500/10 px-1.5 py-0.5 rounded-full border border-blue-500/20">× {item.quantity} uds.</span>
+                                        )}
+                                        {item.quantity === 1 && (
+                                          <span className="inline-flex items-center text-[10px] font-bold text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">× 1</span>
+                                        )}
+                                        {(item.discount > 0) && (
+                                          <span className="inline-flex items-center text-[10px] font-bold text-amber-700 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/20">-₡{Number(item.discount).toLocaleString()}</span>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -1144,7 +1205,7 @@ export default function ClientProfilePage() {
                         {filteredQuotations.map((q: any, idx: number) => (
                           <tr key={idx} className="hover:bg-muted/30 transition-colors">
                             <td className="p-4">
-                              <span 
+                              <span
                                 className="font-bold font-mono text-xs tracking-tight text-primary cursor-pointer hover:underline transition-colors"
                                 onClick={() => {
                                   setPreviewQuotation(q);
@@ -1227,7 +1288,7 @@ export default function ClientProfilePage() {
                         {filteredInvoices.map((inv: any) => (
                           <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
                             <td className="p-4">
-                              <span 
+                              <span
                                 className="font-bold font-mono text-xs tracking-tight text-foreground cursor-pointer hover:underline hover:text-primary transition-colors"
                                 onClick={() => {
                                   setPreviewQuotation(inv);
@@ -1701,54 +1762,85 @@ export default function ClientProfilePage() {
           </div>
           <div className="p-6 space-y-4">
             {activeQuotation ? (
-              <div className="border border-border/50 rounded-xl overflow-hidden bg-white shadow-sm">
+              <div className="border border-border/50 rounded-xl overflow-hidden bg-card shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-muted/50 border-b border-border/50">
+                    <thead className="bg-primary/5 border-b border-border/50">
                       <tr>
-                        <th className="text-left p-4 font-bold text-xs uppercase text-muted-foreground whitespace-nowrap">Servicio / Concepto</th>
-                        <th className="text-center p-4 font-bold text-xs uppercase text-muted-foreground">Cant.</th>
-                        <th className="text-right p-4 font-bold text-xs uppercase text-muted-foreground">P. Unitario</th>
-                        <th className="text-right p-4 font-bold text-xs uppercase text-muted-foreground">Total</th>
+                        <th className="text-left p-4 font-bold text-xs uppercase text-muted-foreground whitespace-nowrap tracking-wider">Servicio / Concepto</th>
+                        <th className="text-center p-4 font-bold text-xs uppercase text-muted-foreground tracking-wider">Cant.</th>
+                        <th className="text-right p-4 font-bold text-xs uppercase text-muted-foreground tracking-wider">P. Unitario</th>
+                        <th className="text-right p-4 font-bold text-xs uppercase text-muted-foreground tracking-wider">Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20">
-                      {activeQuotation.items?.map((item: any, i: number) => {
-                        const quantity = parseFloat(item.quantity) || 1;
-                        const unitPrice = parseFloat(item.unitPrice) || 0;
-                        const lineTotal = quantity * unitPrice;
+                      {(() => {
+                        // Factor de descuento global ponderado:
+                        // netFactor = (subtotal - descuentoTotal) / subtotal
+                        // P.Unit neto = unitPrice × netFactor
+                        const globalSubtotal = parseFloat(activeQuotation.subtotalAmount) || parseFloat(activeQuotation.subtotal) || 0;
+                        const globalDiscount = parseFloat(activeQuotation.totalDiscount) || parseFloat(activeQuotation.discount) || 0;
+                        const hasGlobalDiscount = globalDiscount > 0 && globalSubtotal > 0;
+                        const netFactor = hasGlobalDiscount ? (globalSubtotal - globalDiscount) / globalSubtotal : 1;
 
-                        return (
-                          <tr key={i} className="hover:bg-muted/10 transition-colors">
-                            <td className="p-4">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-foreground max-w-[300px] sm:max-w-md break-words">{item.description}</span>
-                                {item.overriddenQuantity && (
-                                  <span className="text-[10px] text-primary font-medium mt-1 inline-flex w-fit bg-primary/10 px-2 py-0.5 rounded-full">Base + {item.overriddenQuantity} servicios extra</span>
+                        return activeQuotation.items?.map((item: any, i: number) => {
+                          const quantity = parseFloat(item.quantity) || 1;
+                          const unitPrice = parseFloat(item.unitPrice) || 0;
+                          const netUnitPrice = Math.round(unitPrice * netFactor);
+                          const netLineTotal = netUnitPrice * quantity;
+
+                          return (
+                            <tr key={i} className="hover:bg-muted/10 transition-colors">
+                              <td className="p-4">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="font-bold text-foreground max-w-[260px] sm:max-w-md break-words">{item.serviceName || item.description}</span>
+                                  {item.serviceName && item.description && item.serviceName !== item.description && (
+                                    <span className="text-[11px] text-muted-foreground max-w-[260px] sm:max-w-md break-words leading-snug">{item.description}</span>
+                                  )}
+                                  {item.overriddenQuantity && (
+                                    <span className="text-[10px] text-primary font-medium inline-flex w-fit bg-primary/10 px-2 py-0.5 rounded-full mt-1">Base + {item.overriddenQuantity} servicios extra</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-4 text-center text-muted-foreground font-bold">{item.quantity}</td>
+                              <td className="p-4 text-right">
+                                {hasGlobalDiscount ? (
+                                  <div className="flex flex-col items-end gap-0.5">
+                                    <span className="line-through text-muted-foreground/50 text-xs">₡{unitPrice.toLocaleString()}</span>
+                                    <span className="font-bold text-foreground">₡{netUnitPrice.toLocaleString()}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground font-medium">₡{unitPrice.toLocaleString()}</span>
                                 )}
-                              </div>
-                            </td>
-                            <td className="p-4 text-center text-muted-foreground font-medium">{item.quantity}</td>
-                            <td className="p-4 text-right text-muted-foreground">₡{unitPrice.toLocaleString()}</td>
-                            <td className="p-4 text-right font-bold text-primary">₡{lineTotal.toLocaleString()}</td>
-                          </tr>
-                        );
-                      })}
+                              </td>
+                              <td className="p-4 text-right">
+                                <span className="font-bold text-primary">₡{netLineTotal.toLocaleString()}</span>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
-                    <tfoot className="bg-muted/30 border-t border-border/50">
+                    <tfoot className="bg-muted/30 border-t-2 border-border/50">
                       <tr>
                         <td colSpan={3} className="p-4 text-right font-bold text-muted-foreground text-xs uppercase tracking-wider">Subtotal:</td>
-                        <td className="p-4 text-right font-bold text-foreground">₡{activeQuotation.subtotal?.toLocaleString() || '0'}</td>
+                        <td className="p-4 text-right font-bold text-foreground">₡{(activeQuotation.subtotalAmount || activeQuotation.subtotal || 0).toLocaleString()}</td>
                       </tr>
-                      {activeQuotation.ivaAmount > 0 && (
+                      {(activeQuotation.totalDiscount || activeQuotation.discount || 0) > 0 && (
                         <tr>
-                          <td colSpan={3} className="p-4 text-right font-bold text-muted-foreground text-xs uppercase tracking-wider">IVA (13%):</td>
-                          <td className="p-4 text-right font-bold text-foreground">₡{activeQuotation.ivaAmount?.toLocaleString() || '0'}</td>
+                          <td colSpan={3} className="p-4 text-right font-bold text-amber-600 text-xs uppercase tracking-wider">Descuento Total:</td>
+                          <td className="p-4 text-right font-bold text-amber-600">-₡{(activeQuotation.totalDiscount || activeQuotation.discount || 0).toLocaleString()}</td>
+                        </tr>
+                      )}
+                      {(activeQuotation.taxAmount || activeQuotation.ivaAmount || 0) > 0 && (
+                        <tr>
+                          <td colSpan={3} className="p-4 text-right font-bold text-muted-foreground text-xs uppercase tracking-wider">IVA ({activeQuotation.ivaRate || 13}%):</td>
+                          <td className="p-4 text-right font-bold text-foreground">₡{(activeQuotation.taxAmount || activeQuotation.ivaAmount || 0).toLocaleString()}</td>
                         </tr>
                       )}
                       <tr className="bg-primary/5">
                         <td colSpan={3} className="p-4 text-right font-black text-primary text-sm uppercase tracking-widest align-middle">Total Contractual:</td>
-                        <td className="p-4 text-right font-black text-primary text-xl">₡{activeQuotation.grandTotal?.toLocaleString() || activeQuotation.subtotal?.toLocaleString()}</td>
+                        <td className="p-4 text-right font-black text-primary text-xl">₡{(activeQuotation.totalAmount || activeQuotation.grandTotal || activeQuotation.total || 0).toLocaleString()}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -1773,7 +1865,7 @@ export default function ClientProfilePage() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       <AlertDialog open={isCancelPlanOpen} onOpenChange={setIsCancelPlanOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
