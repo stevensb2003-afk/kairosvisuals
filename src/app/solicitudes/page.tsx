@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { 
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger 
+  Dialog, DialogContent, DialogDescription, DialogTitle 
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -48,12 +49,25 @@ export default function SolicitudesPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isAccepting, setIsAccepting] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [selectedClientDetails, setSelectedClientDetails] = useState<any>(null);
-  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [openClientCard, setOpenClientCard] = useState<string | null>(null);
+  const clientCardRef = useRef<HTMLDivElement | null>(null);
+  const [cardPosition, setCardPosition] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Close the inline client card when clicking outside
+  useEffect(() => {
+    if (!openClientCard) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (clientCardRef.current && !clientCardRef.current.contains(e.target as Node)) {
+        setOpenClientCard(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [openClientCard]);
 
   // Safety fix for "Ghost Overlay" issue
   useEffect(() => {
@@ -81,6 +95,11 @@ export default function SolicitudesPage() {
         // Step 1: Fetch all clients
         const clientsSnapshot = await getDocs(collection(firestore, 'clients'));
         const allQuotations: Quotation[] = [];
+        const clientsMap = new Map();
+        
+        clientsSnapshot.docs.forEach(doc => {
+          clientsMap.set(doc.id, { id: doc.id, ...doc.data() });
+        });
         
         // Step 2: Fetch quotations for each client
         // This avoids collectionGroup index issues and handles "missing collection" scenarios
@@ -91,8 +110,10 @@ export default function SolicitudesPage() {
             allQuotations.push({
               id: qDoc.id,
               clientId: clientDoc.id,
+              clientCompany: clientDoc.data().company || null,
+              clientData: clientsMap.get(clientDoc.id),
               ...data
-            } as Quotation);
+            } as any);
           });
         }));
         
@@ -218,29 +239,35 @@ export default function SolicitudesPage() {
     }
   };
 
+  const generatePdfBlob = async (elementId: string, qNum: string) => {
+    const element = document.getElementById(elementId);
+    if (!element) throw new Error("Plantilla no encontrada");
+
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    const pdfBlob = pdf.output('blob');
+    const fileName = `Cotizacion_${qNum}.pdf`;
+    
+    return { pdfBlob, fileName };
+  };
+
   const handleShare = async (quotation: any) => {
     if (!quotation) return;
     setIsExporting(true);
     try {
-      const element = document.getElementById(`print-area-preview`);
-      if (!element) throw new Error("Plantilla no encontrada");
-
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL('image/png');
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      const pdfBlob = pdf.output('blob');
       const qNum = quotation.quotationNumber || quotation.id;
-      const fileName = `Cotizacion_${qNum}.pdf`;
+      const { pdfBlob, fileName } = await generatePdfBlob('print-area-preview', qNum);
 
       if (navigator.share && navigator.canShare) {
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
@@ -251,12 +278,27 @@ export default function SolicitudesPage() {
             files: [file]
           });
           toast({ title: 'Cotización compartida' });
-          setIsExporting(false);
           return;
         }
       }
+      
+      toast({ title: 'Compartir no soportado', description: 'Tu navegador no soporta compartir archivos directamente. Por favor descarga el PDF.', variant: 'destructive' });
 
-      // Fallback
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Error al compartir', variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownload = async (quotation: any) => {
+    if (!quotation) return;
+    setIsExporting(true);
+    try {
+      const qNum = quotation.quotationNumber || quotation.id;
+      const { pdfBlob, fileName } = await generatePdfBlob('print-area-preview', qNum);
+
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -268,27 +310,9 @@ export default function SolicitudesPage() {
 
     } catch (err) {
       console.error(err);
-      toast({ title: 'Error al exportar', variant: 'destructive' });
+      toast({ title: 'Error al descargar', variant: 'destructive' });
     } finally {
       setIsExporting(false);
-    }
-  };
-
-  const handleClientClick = async (clientId: string) => {
-    try {
-      setLoading(true);
-      const clientDoc = await getDoc(doc(firestore, 'clients', clientId));
-      if (clientDoc.exists()) {
-        setSelectedClientDetails({ id: clientDoc.id, ...clientDoc.data() });
-        setIsClientModalOpen(true);
-      } else {
-        toast({ title: "Error", description: "No se encontró la información del cliente.", variant: "destructive" });
-      }
-    } catch (e) {
-      console.error(e);
-      toast({ title: "Error", description: "No se pudo cargar la información del cliente.", variant: "destructive" });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -376,20 +400,20 @@ export default function SolicitudesPage() {
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent border-b-border/50">
-                  <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider pl-6"># Cotiz.</TableHead>
-                  <TableHead className="w-[120px] font-bold text-xs uppercase tracking-wider">Fecha</TableHead>
-                  <TableHead className="w-[120px] font-bold text-xs uppercase tracking-wider">Vencimiento</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">Cliente</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">Título de Propuesta</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">Total</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">Estado</TableHead>
-                  <TableHead className="text-right font-bold text-xs uppercase tracking-wider pr-6">Acciones</TableHead>
+                  <TableHead className="w-[80px] font-bold text-xs uppercase tracking-wider pl-6"># Cotiz.</TableHead>
+                  <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider">Fecha</TableHead>
+                  <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider">Vence</TableHead>
+                  <TableHead className="w-[220px] font-bold text-xs uppercase tracking-wider">Cliente</TableHead>
+                  <TableHead className="min-w-[200px] font-bold text-xs uppercase tracking-wider">Título de Propuesta</TableHead>
+                  <TableHead className="w-[120px] text-right font-bold text-xs uppercase tracking-wider pr-4">Total</TableHead>
+                  <TableHead className="w-[120px] text-center font-bold text-xs uppercase tracking-wider">Estado</TableHead>
+                  <TableHead className="w-[140px] text-right font-bold text-xs uppercase tracking-wider pr-6">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredQuotations.map((q) => (
                   <TableRow key={q.id} className="group hover:bg-primary/[0.01] border-b-border/40 transition-colors">
-                    <TableCell className="pl-6 whitespace-nowrap min-w-[100px]">
+                    <TableCell className="pl-6 whitespace-nowrap min-w-[80px]">
                       <span className="font-bold text-primary text-xs">
                         {q.quotationNumber ? String(q.quotationNumber).padStart(4, '0') : '—'}
                       </span>
@@ -401,15 +425,82 @@ export default function SolicitudesPage() {
                       {q.validUntil ? new Date(q.validUntil).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col items-start">
-                        <button 
-                          onClick={() => handleClientClick(q.clientId)}
-                          className="font-bold text-foreground leading-none mb-1 text-left hover:text-primary hover:underline transition-colors focus:outline-none"
+                      {/* Inline non-modal client info card — uses portal to escape overflow */}
+                      <div className="relative">
+                        <button
+                          className="flex flex-col items-start text-left group/client w-full"
+                          onClick={(e) => {
+                            if (openClientCard === q.id) {
+                              setOpenClientCard(null);
+                              setCardPosition(null);
+                            } else {
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                              setCardPosition({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX });
+                              setOpenClientCard(q.id);
+                            }
+                          }}
                         >
-                          {q.clientName || 'Cliente sin nombre'}
+                          <span className={cn(
+                            "font-bold leading-none mb-1 transition-colors",
+                            openClientCard === q.id ? "text-primary" : "text-foreground group-hover/client:text-primary"
+                          )}>
+                            {q.clientName || 'Cliente sin nombre'}
+                          </span>
+                          {(q as any).clientCompany && (
+                            <span className="text-[11px] font-medium text-slate-400 mb-0.5">{(q as any).clientCompany}</span>
+                          )}
+                          <span className="text-[11px] text-muted-foreground">{q.clientEmail}</span>
                         </button>
-                        <span className="text-[11px] text-muted-foreground">{q.clientEmail}</span>
                       </div>
+
+                      {/* Portal card rendered at body level — escapes all overflow:hidden parents */}
+                      {openClientCard === q.id && cardPosition && isMounted && ReactDOM.createPortal(
+                        <div
+                          ref={clientCardRef}
+                          style={{ position: 'absolute', top: cardPosition.top, left: cardPosition.left }}
+                          className="z-[9999] w-72 rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-slate-950/95 backdrop-blur-md animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150"
+                        >
+                          {/* Header */}
+                          <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-slate-900/80">
+                            <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                              <User className="w-4 h-4 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-sm text-white truncate">{q.clientName || 'Cliente'}</p>
+                              {(q as any).clientCompany && (
+                                <p className="text-[11px] text-muted-foreground truncate">{(q as any).clientCompany}</p>
+                              )}
+                            </div>
+                          </div>
+                          {/* Info rows */}
+                          <div className="px-4 py-3 space-y-2.5">
+                            <div className="flex items-center gap-2.5">
+                              <Mail className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                              <span className="text-xs text-slate-300 truncate">{q.clientEmail || 'Sin correo'}</span>
+                            </div>
+                            <div className="flex items-center gap-2.5">
+                              <Phone className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                              <span className="text-xs text-slate-300">{(q as any).clientData?.clientPhone || (q as any).clientData?.phone || 'Sin teléfono'}</span>
+                            </div>
+                            {(q as any).clientCompany && (
+                              <div className="flex items-center gap-2.5">
+                                <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                                <span className="text-xs text-slate-300 truncate">{(q as any).clientCompany}</span>
+                              </div>
+                            )}
+                          </div>
+                          {/* CTA */}
+                          <div className="px-4 pb-4">
+                            <button
+                              className="w-full text-xs font-bold text-primary border border-primary/30 rounded-xl py-2 hover:bg-primary/10 transition-colors"
+                              onClick={(e) => { e.stopPropagation(); setOpenClientCard(null); router.push(`/clients/${q.clientId}`); }}
+                            >
+                              Ver Perfil Completo →
+                            </button>
+                          </div>
+                        </div>,
+                        document.body
+                      )}
                     </TableCell>
                     <TableCell className="font-semibold text-slate-700">
                       <div className="flex items-center gap-2">
@@ -417,10 +508,10 @@ export default function SolicitudesPage() {
                         {q.version > 1 && <Badge variant="outline" className="text-[10px] py-0 h-4 bg-muted/50 border-muted-foreground/20">v{q.version}</Badge>}
                       </div>
                     </TableCell>
-                    <TableCell className="font-black text-primary">
+                    <TableCell className="font-black text-primary text-right pr-4">
                       {formatCurrency(q.totalAmount)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       {getStatusBadge(q.status)}
                     </TableCell>
                     <TableCell className="text-right pr-4">
@@ -550,7 +641,7 @@ export default function SolicitudesPage() {
                     variant="default" 
                     size="icon" 
                     className="rounded-full shadow-lg shadow-primary/10 transition-transform active:scale-95 h-9 w-9"
-                    onClick={() => handleShare(previewQuotation)}
+                    onClick={() => handleDownload(previewQuotation)}
                     disabled={isExporting}
                     title="Descargar PDF"
                   >
@@ -572,8 +663,10 @@ export default function SolicitudesPage() {
                   <CartaTemplate 
                     invoice={previewQuotation} 
                     client={{ 
-                      clientName: previewQuotation.clientName || 'Cliente', 
-                      contactEmail: previewQuotation.clientEmail || '' 
+                      clientName: (previewQuotation as any).clientName || (previewQuotation as any).clientData?.clientName || 'Cliente', 
+                      company: (previewQuotation as any).clientCompany || (previewQuotation as any).clientData?.company,
+                      contactEmail: (previewQuotation as any).clientEmail || (previewQuotation as any).clientData?.clientEmail || '',
+                      contactPhone: (previewQuotation as any).clientPhone || (previewQuotation as any).clientData?.clientPhone || ''
                     }} 
                     settings={companySettings} 
                   />
@@ -596,71 +689,6 @@ export default function SolicitudesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Client Quick View Modal */}
-      <Dialog open={isClientModalOpen} onOpenChange={setIsClientModalOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              Detalles del Cliente
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedClientDetails ? (
-            <div className="space-y-4 mt-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Nombre completo</p>
-                <p className="font-semibold text-lg">{selectedClientDetails.clientName || 'N/A'}</p>
-              </div>
-              
-              <div className="grid grid-cols-1 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
-                  <div className="bg-primary/10 p-2 rounded-lg">
-                    <Mail className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Correo electrónico</p>
-                    <p className="font-medium text-sm break-all">{selectedClientDetails.clientEmail || 'N/A'}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
-                  <div className="bg-primary/10 p-2 rounded-lg">
-                    <Phone className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Teléfono</p>
-                    <p className="font-medium text-sm">{selectedClientDetails.clientPhone || 'N/A'}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
-                  <div className="bg-primary/10 p-2 rounded-lg">
-                    <Building2 className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Empresa</p>
-                    <p className="font-medium text-sm">{selectedClientDetails.company || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 mt-6 border-t border-border/50">
-                <Button 
-                  className="w-full rounded-full font-bold shadow-md shadow-primary/20"
-                  onClick={() => router.push(`/clients/${selectedClientDetails.id}`)}
-                >
-                  Ver Perfil Completo
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center p-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

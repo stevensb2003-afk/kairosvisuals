@@ -38,7 +38,7 @@ export default function Home() {
       if (isManual) setIsRefreshing(true);
       else setIsLoading(true);
 
-      const clientsSnap = await getDocs(collection(firestore, 'clients'));
+      const clientsSnap = await getDocs(query(collection(firestore, 'clients'), where('isArchived', '==', false)));
       const activeClients = clientsSnap.size;
 
       const leadsQuery = query(collection(firestore, 'requests'), where('status', '==', 'pending'));

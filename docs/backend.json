@@ -71,23 +71,30 @@
         "contactEmail"
       ]
     },
-    "TaskType": {
+    "ProductOrService": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "TaskType",
+      "title": "ProductOrService",
       "type": "object",
-      "description": "Represents a type of task with multimodal pricing: fixed, scalable, or package-based.",
+      "description": "Represents a service or product with multimodal pricing: fixed, scalable, or package-based.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the TaskType entity."
+          "description": "Unique identifier for the ProductOrService entity."
         },
         "name": {
           "type": "string",
-          "description": "Name of the task type."
+          "description": "Name of the service."
+        },
+        "description": {
+          "type": "string"
         },
         "color": {
           "type": "string",
-          "description": "Color code for the task type, in hex format."
+          "description": "Color code for the service, in hex format."
+        },
+        "unitType": {
+          "type": "string",
+          "enum": ["unit", "package", "session"]
         },
         "pricingModel": {
           "type": "string",
@@ -96,15 +103,10 @@
             "scalable",
             "package"
           ],
-          "description": "The pricing model for the task: 'fixed', 'scalable', or 'package'."
-        },
-        "price": {
-          "type": "number",
-          "description": "Price for 'fixed' pricing model."
+          "description": "The pricing model: 'fixed', 'scalable', or 'package'."
         },
         "basePrice": {
-          "type": "number",
-          "description": "Base price for 'scalable' model, includes a certain number of units."
+          "type": "number"
         },
         "includedUnits": {
           "type": "number",
@@ -116,13 +118,11 @@
         },
         "packages": {
           "type": "array",
-          "description": "Pricing tiers for 'package' model.",
           "items": {
             "type": "object",
             "properties": {
               "name": {
-                "type": "string",
-                "description": "Name of the package tier (e.g., 'Basic', 'Pro')."
+                "type": "string"
               },
               "units": {
                 "type": "number"
@@ -139,13 +139,10 @@
           }
         },
         "useComplexityMatrix": {
-          "type": "boolean",
-          "description": "Indicates if a complexity matrix is used for pricing.",
-          "default": false
+          "type": "boolean"
         },
         "complexityTiers": {
           "type": "array",
-          "description": "Surcharges per unit based on complexity level. Applies to scalable and package modes.",
           "items": {
             "type": "object",
             "properties": {
@@ -165,12 +162,17 @@
               "surcharge"
             ]
           }
-        }
+        },
+        "ivaType": { "type": "string" },
+        "ivaRate": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": [
         "id",
         "name",
-        "pricingModel"
+        "pricingModel",
+        "basePrice"
       ]
     },
     "Task": {
@@ -183,9 +185,9 @@
           "type": "string",
           "description": "Unique identifier for the Task entity."
         },
-        "taskTypeId": {
+        "serviceId": {
           "type": "string",
-          "description": "Reference to TaskType. (Relationship: TaskType 1:N Task)"
+          "description": "Reference to ProductOrService. (Relationship: ProductOrService 1:N Task)"
         },
         "clientId": {
           "type": "string",
@@ -359,23 +361,23 @@
           "type": "number",
           "description": "Base price of the pack."
         },
-        "taskTypeQuantities": {
+        "serviceQuantities": {
           "type": "array",
-          "description": "Quantities for each TaskType included in the pack.",
+          "description": "Quantities for each service included in the pack.",
           "items": {
             "type": "object",
             "properties": {
-              "taskTypeId": {
+              "serviceId": {
                 "type": "string",
-                "description": "ID of the task type."
+                "description": "ID of the service."
               },
               "quantity": {
                 "type": "number",
-                "description": "Quantity of this task type in the pack."
+                "description": "Quantity of this service in the pack."
               }
             },
             "required": [
-              "taskTypeId",
+              "serviceId",
               "quantity"
             ]
           }
@@ -718,17 +720,17 @@
         }
       },
       {
-        "path": "task_types/{taskTypeId}",
+        "path": "services/{serviceId}",
         "definition": {
-          "entityName": "TaskType",
+          "entityName": "ProductOrService",
           "schema": {
-            "$ref": "#/backend/entities/TaskType"
+            "$ref": "#/backend/entities/ProductOrService"
           },
-          "description": "Stores task types.",
+          "description": "Stores services catalog.",
           "params": [
             {
-              "name": "taskTypeId",
-              "description": "The unique identifier of the task type."
+              "name": "serviceId",
+              "description": "The unique identifier of the service."
             }
           ]
         }

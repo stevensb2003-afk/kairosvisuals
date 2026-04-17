@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useUser } from '@/firebase';
 import { collection, doc, addDoc, updateDoc, query, orderBy, collectionGroup, getDocs, onSnapshot, where } from 'firebase/firestore';
@@ -10,7 +11,8 @@ import {
   Receipt, Plus, FileText, CheckCircle, Clock, AlertCircle, XCircle,
   Eye, Send, ShieldCheck, Share, Download, Calendar as CalendarIcon,
   Filter, Search, Loader2, ArrowUpRight, ArrowRight,
-  Trash2, Package, Layers, RefreshCw
+  Trash2, Package, Layers, RefreshCw,
+  User, Mail, Phone, Building2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -117,6 +119,26 @@ export default function InvoicingPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [datePreset, setDatePreset] = useState<string>('thisMonth');
+
+  // ── Client info card (non-modal portal) ────────────────────────────────
+  const [openClientCard, setOpenClientCard] = useState<string | null>(null);
+  const clientCardRef = useRef<HTMLDivElement | null>(null);
+  const [cardPosition, setCardPosition] = useState<{ top: number; left: number } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => { setIsMounted(true); }, []);
+
+  useEffect(() => {
+    if (!openClientCard) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (clientCardRef.current && !clientCardRef.current.contains(e.target as Node)) {
+        setOpenClientCard(null);
+        setCardPosition(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [openClientCard]);
   
   // Rango de fechas
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(new Date()));
@@ -184,9 +206,11 @@ export default function InvoicingPage() {
   // pero una factura libre podría ser para cualquier cliente. 
   // Por ahora mostraremos todos los que tienen perfil de usuario cliente.
   const selectableClients = useMemo(() => {
-    return Object.values(clientMap).sort((a: any, b: any) => 
-      (a.clientName || '').localeCompare(b.clientName || '')
-    );
+    return Object.values(clientMap)
+      .filter((c: any) => !c.isArchived)
+      .sort((a: any, b: any) => 
+        (a.clientName || '').localeCompare(b.clientName || '')
+      );
   }, [clientMap]);
 
   // ── Facturas filtradas ──────────────────────────────────────────────────
@@ -220,9 +244,10 @@ export default function InvoicingPage() {
 
   const stats = useMemo(() => {
     const validInvoices = filteredInvoices.filter(i => i.status !== 'cancelled' && i.status !== 'draft');
+    const activeClientsCount = clients?.filter((c: any) => !c.isArchived).length || 0;
     
     return {
-      totalClients: clients?.length || 0,
+      totalClients: activeClientsCount,
       totalInvoiced: validInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0),
       totalReceived: validInvoices.reduce((sum, i) => sum + (i.amountPaid || 0), 0)
     };
@@ -350,13 +375,13 @@ export default function InvoicingPage() {
             <Table>
               <TableHeader className="bg-secondary/30">
                 <TableRow>
-                  <TableHead className="w-[150px]"># Factura</TableHead>
-                  <TableHead>Emisión</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Total Facturado</TableHead>
-                  <TableHead className="text-right">Balance Due</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead className="w-[160px] whitespace-nowrap font-bold text-xs uppercase tracking-wider pl-4"># Factura</TableHead>
+                  <TableHead className="w-[110px] font-bold text-xs uppercase tracking-wider">Emisión</TableHead>
+                  <TableHead className="w-[220px] font-bold text-xs uppercase tracking-wider">Cliente</TableHead>
+                  <TableHead className="w-[140px] text-right font-bold text-xs uppercase tracking-wider">Total</TableHead>
+                  <TableHead className="w-[130px] text-right font-bold text-xs uppercase tracking-wider">Balance Due</TableHead>
+                  <TableHead className="w-[160px] text-center font-bold text-xs uppercase tracking-wider">Estado</TableHead>
+                  <TableHead className="w-[140px] text-right font-bold text-xs uppercase tracking-wider pr-4">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -367,29 +392,98 @@ export default function InvoicingPage() {
 
                   return (
                     <TableRow key={inv.id} className="hover:bg-secondary/20 transition-colors">
-                      <TableCell className="font-semibold align-middle">
+                      <TableCell className="align-middle pl-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                           {inv.invoiceNumber}
-                           {inv.isPlanInvoice && <Badge variant="secondary" className="px-1 py-0 text-[9px] uppercase bg-amber-500/10 text-amber-600 border-amber-500/20"><RefreshCw className="w-3 h-3 mr-1"/>Ciclo</Badge>}
+                          <span className="font-bold text-primary text-xs font-mono">{inv.invoiceNumber || '—'}</span>
+                          {inv.isPlanInvoice && <Badge variant="secondary" className="px-1 py-0 text-[9px] uppercase bg-amber-500/10 text-amber-600 border-amber-500/20"><RefreshCw className="w-3 h-3 mr-1"/>Ciclo</Badge>}
                         </div>
                       </TableCell>
                       <TableCell className="align-middle whitespace-nowrap text-muted-foreground text-sm">
                         {inv.createdAt ? format(parseISO(inv.createdAt), 'dd/MM/yyyy') : '—'}
                       </TableCell>
                       <TableCell className="align-middle">
-                         <p className="flex items-center gap-2 font-medium">
-                            {client?.clientName || 'Cliente desconocido'}
-                         </p>
+                        {/* Non-modal client info card */}
+                        <div className="relative">
+                          <button
+                            className="flex flex-col items-start text-left group/client w-full"
+                            onClick={(e) => {
+                              if (openClientCard === inv.id) {
+                                setOpenClientCard(null);
+                                setCardPosition(null);
+                              } else {
+                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                setCardPosition({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX });
+                                setOpenClientCard(inv.id);
+                              }
+                            }}
+                          >
+                            <span className={cn(
+                              "font-bold leading-none mb-1 transition-colors",
+                              openClientCard === inv.id ? "text-primary" : "text-foreground group-hover/client:text-primary"
+                            )}>
+                              {client?.clientName || 'Cliente desconocido'}
+                            </span>
+                            {client?.company && (
+                              <span className="text-[11px] font-medium text-slate-400">{client.company}</span>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Portal card rendered at body level */}
+                        {openClientCard === inv.id && cardPosition && isMounted && ReactDOM.createPortal(
+                          <div
+                            ref={clientCardRef}
+                            style={{ position: 'absolute', top: cardPosition.top, left: cardPosition.left }}
+                            className="z-[9999] w-72 rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-slate-950/95 backdrop-blur-md animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150"
+                          >
+                            <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-slate-900/80">
+                              <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                                <User className="w-4 h-4 text-primary" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-sm text-white truncate">{client?.clientName || 'Cliente'}</p>
+                                {client?.company && (
+                                  <p className="text-[11px] text-muted-foreground truncate">{client.company}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="px-4 py-3 space-y-2.5">
+                              <div className="flex items-center gap-2.5">
+                                <Mail className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                                <span className="text-xs text-slate-300 truncate">{client?.email || client?.contactEmail || 'Sin correo'}</span>
+                              </div>
+                              <div className="flex items-center gap-2.5">
+                                <Phone className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                                <span className="text-xs text-slate-300">{client?.clientPhone || client?.phone || 'Sin teléfono'}</span>
+                              </div>
+                              {client?.company && (
+                                <div className="flex items-center gap-2.5">
+                                  <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-xs text-slate-300 truncate">{client.company}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="px-4 pb-4">
+                              <button
+                                className="w-full text-xs font-bold text-primary border border-primary/30 rounded-xl py-2 hover:bg-primary/10 transition-colors"
+                                onClick={(e) => { e.stopPropagation(); setOpenClientCard(null); router.push(`/clients/${inv.clientId}`); }}
+                              >
+                                Ver Perfil Completo →
+                              </button>
+                            </div>
+                          </div>,
+                          document.body
+                        )}
                       </TableCell>
                       <TableCell className="text-right align-middle font-bold tabular-nums">
                         {formatCurrency(inv.totalAmount || 0)}
                       </TableCell>
                       <TableCell className="text-right align-middle">
                         <span className={cn("font-medium tabular-nums", balanceDue > 0 && inv.status !== 'cancelled' ? "text-amber-500" : "text-muted-foreground")}>
-                           {formatCurrency(balanceDue)}
+                          {formatCurrency(balanceDue)}
                         </span>
                       </TableCell>
-                      <TableCell className="align-middle">
+                      <TableCell className="text-center align-middle">
                         <Badge variant="outline" className={cn('gap-1', cfg.color)}>
                           {cfg.icon}
                           {cfg.label}

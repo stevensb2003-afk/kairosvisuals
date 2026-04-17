@@ -690,22 +690,45 @@ export default function ClientProfilePage() {
     window.print();
   };
 
+  const generatePdfBlob = async (elementId: string, qNum: string) => {
+    const element = document.getElementById(elementId);
+    if (!element) throw new Error("Plantilla no encontrada");
+
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    const pdfBlob = pdf.output('blob');
+    const fileName = `Cotizacion_${qNum}.pdf`;
+    
+    return { pdfBlob, fileName };
+  };
+
   const handleDownload = async () => {
     if (!previewQuotation) return;
     setIsProcessing(true);
     try {
-      const element = document.getElementById('print-area-carta');
-      if (!element) throw new Error("No se encontró el área de impresión");
-
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Cotización_${previewQuotation.quotationNumber || previewQuotation.id}.pdf`);
+      const qNum = String(previewQuotation.quotationNumber || previewQuotation.id);
+      const { pdfBlob, fileName } = await generatePdfBlob('print-area-carta', qNum);
+      
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
       toast({ title: "Descarga exitosa", description: "El PDF se ha generado correctamente." });
     } catch (error) {
       console.error("PDF Error:", error);
@@ -715,10 +738,41 @@ export default function ClientProfilePage() {
     }
   };
 
-  const handleShare = () => {
+  const handleSharePdf = async () => {
+    if (!previewQuotation) return;
+    setIsProcessing(true);
+    try {
+      const qNum = String(previewQuotation.quotationNumber || previewQuotation.id);
+      const { pdfBlob, fileName } = await generatePdfBlob('print-area-carta', qNum);
+
+      if (navigator.share && navigator.canShare) {
+        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `Cotizacion ${previewQuotation.title || qNum}`,
+            text: `Adjunto envío la cotización`,
+            files: [file]
+          });
+          toast({ title: 'Cotización compartida' });
+          return;
+        }
+      }
+      
+      toast({ title: 'Compartir no soportado', description: 'Tu navegador no soporta compartir archivos directamente. Por favor descarga el PDF.', variant: 'destructive' });
+
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Error al compartir', variant: 'destructive' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleShareWhatsApp = () => {
     if (!previewQuotation || !selectedLead) return;
-    const phone = selectedLead.clientPhone?.replace(/\D/g, '');
-    const message = `Hola ${selectedLead.clientName}, te adjunto la propuesta *${previewQuotation.title}* por un monto de ₡${(previewQuotation.totalAmount || previewQuotation.total || 0).toLocaleString()}. ¡Quedo atento!`;
+    const phone = (selectedLead.clientPhone || selectedLead.phone)?.replace(/\D/g, '');
+    const clientName = selectedLead.clientName || selectedLead.name || `${selectedLead.firstName || ''} ${selectedLead.lastName || ''}`.trim() || 'Cliente';
+    const message = `Hola ${clientName}, te adjunto la propuesta *${previewQuotation.title || 'Cotización'}* por un monto de ₡${(previewQuotation.totalAmount || previewQuotation.total || 0).toLocaleString()}. ¡Quedo atento!`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -2354,8 +2408,11 @@ export default function ClientProfilePage() {
               <Button variant="outline" size="sm" className="h-9 px-3 text-xs font-bold gap-2 bg-zinc-800/50 border-zinc-700/50 text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all" onClick={handleDownload} disabled={isProcessing}>
                 {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} <span className="hidden sm:inline">Descargar PDF</span>
               </Button>
-              <Button size="sm" className="h-9 px-5 text-xs font-black gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-95 transition-all" onClick={handleShare}>
-                <Share2 className="w-3.5 h-3.5" /> Compartir
+              <Button size="sm" className="h-9 px-5 text-xs font-black gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg active:scale-95 transition-all" onClick={handleSharePdf} disabled={isProcessing}>
+                {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />} Compartir PDF
+              </Button>
+              <Button size="sm" className="h-9 px-4 text-xs font-black gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-lg shadow-emerald-500/20 active:scale-95 transition-all" onClick={handleShareWhatsApp}>
+                <Share2 className="w-3.5 h-3.5" /> WhatsApp
               </Button>
             </div>
           </div>
@@ -2365,7 +2422,8 @@ export default function ClientProfilePage() {
               <CartaTemplate
                 invoice={previewQuotation}
                 client={{
-                  clientName: selectedLead?.clientName || leadUser?.firstName + ' ' + leadUser?.lastName,
+                  clientName: selectedLead?.clientName || `${leadUser?.firstName || ''} ${leadUser?.lastName || ''}`.trim(),
+                  company: selectedLead?.company || leadUser?.company,
                   contactEmail: selectedLead?.clientEmail || leadUser?.email,
                   contactPhone: selectedLead?.clientPhone || leadUser?.phone
                 }}

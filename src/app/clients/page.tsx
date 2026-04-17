@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Contact, Loader2, Search, AlertTriangle, TrendingUp, MoreVertical, Receipt, LayoutDashboard, ExternalLink, Mail, MessageCircle, List, LayoutGrid, CheckCircle2 } from "lucide-react";
+import { Plus, Contact, Loader2, Search, AlertTriangle, TrendingUp, MoreVertical, Receipt, LayoutDashboard, ExternalLink, Mail, MessageCircle, List, LayoutGrid, CheckCircle2, Filter, ChevronDown, FolderArchive } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -53,8 +53,8 @@ export default function ClientsPage() {
   }, [newClientForm]);
 
   const [clientDocs, setClientDocs] = useState<Map<string, any>>(new Map());
-  const [planFilter, setPlanFilter] = useState<'all' | 'active' | 'none' | 'archived'>('all');
-  const [financialFilter, setFinancialFilter] = useState<'all' | 'upToDate' | 'overdue'>('all');
+  const [planFilter, setPlanFilter] = useState<'all' | 'active' | 'none' | 'onboarding' | 'recurring' | 'archived'>('all');
+  const [financialFilter, setFinancialFilter] = useState<'all' | 'upToDate' | 'pending' | 'overdue' | 'suspended'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -273,12 +273,23 @@ export default function ClientsPage() {
     if (planFilter === 'active') {
       list = list.filter(client => {
         const clientDoc = clientDocs.get(client.clientId);
-        return clientDoc?.activePlan?.status === 'active';
+        return (clientDoc?.activePlan && clientDoc?.activePlan?.status !== 'cancelled') || clientDoc?.contractType === 'recurring';
       });
     } else if (planFilter === 'none') {
       list = list.filter(client => {
         const clientDoc = clientDocs.get(client.clientId);
-        return !clientDoc?.activePlan || clientDoc?.activePlan?.status !== 'active';
+        return !clientDoc?.activePlan && clientDoc?.contractType !== 'recurring';
+      });
+    } else if (planFilter === 'onboarding') {
+      list = list.filter(client => {
+        const clientDoc = clientDocs.get(client.clientId);
+        const isActive = (clientDoc?.activePlan && clientDoc?.activePlan?.status !== 'cancelled') || clientDoc?.contractType === 'recurring';
+        return isActive && (clientDoc?.activePlan?.currentCycleMonth === 1 || !clientDoc?.activePlan?.currentCycleMonth);
+      });
+    } else if (planFilter === 'recurring') {
+      list = list.filter(client => {
+        const clientDoc = clientDocs.get(client.clientId);
+        return clientDoc?.activePlan && clientDoc?.activePlan?.status !== 'cancelled' && clientDoc?.activePlan?.currentCycleMonth > 1;
       });
     } else if (planFilter === 'archived') {
       list = list.filter(client => {
@@ -291,13 +302,27 @@ export default function ClientsPage() {
       list = list.filter(client => {
         const clientDoc = clientDocs.get(client.clientId);
         const pStatus = clientDoc?.paymentStatus || client.paymentStatus;
-        return pStatus !== 'overdue' && pStatus !== 'suspended';
+        const hasPending = clientDoc?.hasPending;
+        // Strict check: must be upToDate/current AND not have pending invoices flagged
+        return (pStatus === 'upToDate' || pStatus === 'current' || !pStatus) && !hasPending;
+      });
+    } else if (financialFilter === 'pending') {
+      list = list.filter(client => {
+        const clientDoc = clientDocs.get(client.clientId);
+        const pStatus = clientDoc?.paymentStatus || client.paymentStatus;
+        return pStatus === 'pending';
       });
     } else if (financialFilter === 'overdue') {
       list = list.filter(client => {
         const clientDoc = clientDocs.get(client.clientId);
         const pStatus = clientDoc?.paymentStatus || client.paymentStatus;
-        return pStatus === 'overdue' || pStatus === 'suspended';
+        return pStatus === 'overdue';
+      });
+    } else if (financialFilter === 'suspended') {
+      list = list.filter(client => {
+        const clientDoc = clientDocs.get(client.clientId);
+        const pStatus = clientDoc?.paymentStatus || client.paymentStatus;
+        return pStatus === 'suspended';
       });
     }
 
@@ -354,87 +379,109 @@ export default function ClientsPage() {
                   </div>
                 </div>
 
-                {/* Bottom Row: Filters */}
-                <div className="flex flex-wrap items-center gap-6 p-1.5 bg-muted/20 border border-border/30 rounded-xl">
-                  {/* Plan Filters */}
-                  <div className="flex items-center gap-2 border-r border-border/50 pr-6">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mr-1 opacity-70">Plan:</span>
-                    <Button
-                      variant={planFilter === 'all' ? 'default' : 'ghost'}
-                      size="sm"
-                      className={`h-8 text-xs rounded-full px-4 ${planFilter !== 'all' && 'hover:bg-background'}`}
-                      onClick={() => setPlanFilter('all')}
-                    >
-                      Todos
-                      <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px] border-0">
-                        {acceptedClients.filter(c => !c.isArchived).length}
-                      </Badge>
-                    </Button>
-                    <Button
-                      variant={planFilter === 'active' ? 'default' : 'ghost'}
-                      size="sm"
-                      className={`h-8 text-xs rounded-full px-4 gap-2 ${planFilter !== 'active' && 'hover:bg-background'}`}
-                      onClick={() => setPlanFilter('active')}
-                    >
-                      <TrendingUp className="w-3 h-3" />
-                      Con Plan
-                    </Button>
-                    <Button
-                      variant={planFilter === 'none' ? 'default' : 'ghost'}
-                      size="sm"
-                      className={`h-8 text-xs rounded-full px-4 gap-2 ${planFilter !== 'none' && 'hover:bg-background'}`}
-                      onClick={() => setPlanFilter('none')}
-                    >
-                      <LayoutDashboard className="w-3 h-3" />
-                      Sin Plan
-                    </Button>
-                    <Button
-                      variant={planFilter === 'archived' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className={`h-8 text-xs px-4 gap-2 transition-all rounded-full ${planFilter === 'archived' ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200 shadow-sm' : 'text-muted-foreground hover:bg-amber-50 hover:text-amber-600'}`}
-                      onClick={() => setPlanFilter('archived')}
-                    >
-                      <AlertTriangle className={`w-3 h-3 ${planFilter === 'archived' ? 'text-amber-600' : 'text-amber-500/50'}`} />
-                      Archivados
-                    </Button>
+                {/* Bottom Row: Filters and Action */}
+                <div className="flex flex-wrap items-center justify-between gap-4 w-full">
+                  <div className="flex flex-wrap items-center gap-2 p-1 bg-muted/30 border border-border/40 rounded-xl">
+                    {/* Plan Group */}
+                    <div className="flex items-center gap-1.5 px-2 py-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Filtros:</span>
+                      
+                      {/* Plan Filters Dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-9 text-xs gap-2 rounded-lg bg-background border-border/50 hover:bg-accent/50 transition-all shadow-sm">
+                            <LayoutDashboard className="w-3.5 h-3.5 text-primary" />
+                            <span className="font-medium">Plan:</span>
+                            <span className="font-bold text-primary">
+                              {planFilter === 'all' ? 'Todos' : 
+                               planFilter === 'active' ? 'Con Plan' : 
+                               planFilter === 'onboarding' ? 'Onboarding' : 
+                               planFilter === 'recurring' ? 'Recurrente' : 
+                               planFilter === 'none' ? 'Sin Plan' : 'Todos'}
+                            </span>
+                            <ChevronDown className="w-3 h-3 opacity-50" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-56 p-1">
+                          <DropdownMenuLabel className="text-[10px] px-2 py-1.5 uppercase tracking-widest opacity-50 font-bold">Categoría de Plan</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setPlanFilter('all')} className="gap-2 rounded-md">
+                            <List className="w-4 h-4" /> Ver Todos los Clientes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPlanFilter('active')} className="gap-2 rounded-md">
+                            <TrendingUp className="w-4 h-4 text-blue-500" /> Clientes con Plan Activo
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPlanFilter('onboarding')} className="gap-2 rounded-md">
+                            <LayoutDashboard className="w-4 h-4 text-indigo-500" /> Onboarding (Mes 1)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPlanFilter('recurring')} className="gap-2 rounded-md">
+                            <TrendingUp className="w-4 h-4 text-emerald-500" /> Recurrente (Mes 2+)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPlanFilter('none')} className="gap-2 rounded-md">
+                            <Contact className="w-4 h-4 text-muted-foreground" /> Clientes sin Plan
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      {/* Financial Filters Dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-9 text-xs gap-2 rounded-lg bg-background border-border/50 hover:bg-accent/50 transition-all shadow-sm">
+                            <Receipt className="w-3.5 h-3.5 text-primary" />
+                            <span className="font-medium">Estado:</span>
+                            <span className="font-bold text-primary">
+                              {financialFilter === 'all' ? 'Todos' : 
+                               financialFilter === 'upToDate' ? 'Al Día' : 
+                               financialFilter === 'pending' ? 'Pendiente' : 
+                               financialFilter === 'overdue' ? 'En Mora' : 
+                               financialFilter === 'suspended' ? 'Suspendido' : 'Todos'}
+                            </span>
+                            <ChevronDown className="w-3 h-3 opacity-50" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-56 p-1">
+                          <DropdownMenuLabel className="text-[10px] px-2 py-1.5 uppercase tracking-widest opacity-50 font-bold">Estado Financiero</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setFinancialFilter('all')} className="gap-2 rounded-md">
+                            <Filter className="w-4 h-4" /> Ver Todos los Estados
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFinancialFilter('upToDate')} className="gap-2 rounded-md">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Al Día (Pagado)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFinancialFilter('pending')} className="gap-2 rounded-md">
+                            <Receipt className="w-4 h-4 text-amber-500" /> Pendiente de Pago
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFinancialFilter('overdue')} className="gap-2 rounded-md">
+                            <AlertTriangle className="w-4 h-4 text-red-500" /> En Mora (Atrasado)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFinancialFilter('suspended')} className="gap-2 rounded-md">
+                            <AlertTriangle className="w-4 h-4 text-zinc-900" /> Suspendido (+5 días)
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="h-6 w-px bg-border/60 mx-1" />
+
+                    {/* Archived Toggle */}
+                    <div className="px-2">
+                      <Button
+                        variant={planFilter === 'archived' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className={`h-9 text-xs px-4 gap-2 transition-all rounded-lg ${planFilter === 'archived' ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-500/30 shadow-sm font-bold' : 'text-muted-foreground hover:bg-red-50 hover:text-red-500'}`}
+                        onClick={() => setPlanFilter(planFilter === 'archived' ? 'all' : 'archived')}
+                      >
+                        <FolderArchive className={`w-4 h-4 ${planFilter === 'archived' ? 'text-red-600' : 'text-red-400'}`} />
+                        Archivados
+                      </Button>
+                    </div>
                   </div>
 
-                  {/* Financial Filters */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mr-1 opacity-70">Estado:</span>
-                    <Button
-                      variant={financialFilter === 'all' ? 'default' : 'ghost'}
-                      size="sm"
-                      className={`h-8 text-xs rounded-full px-4 ${financialFilter !== 'all' && 'hover:bg-background'}`}
-                      onClick={() => setFinancialFilter('all')}
-                    >
-                      Todos
-                    </Button>
-                    <Button
-                      variant={financialFilter === 'upToDate' ? 'default' : 'ghost'}
-                      size="sm"
-                      className={`h-8 text-xs rounded-full px-4 gap-2 transition-all ${financialFilter === 'upToDate' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' : 'text-emerald-700 hover:bg-emerald-50'}`}
-                      onClick={() => setFinancialFilter('upToDate')}
-                    >
-                      <CheckCircle2 className="w-3 h-3" />
-                      Al Día
-                    </Button>
-                    <Button
-                      variant={financialFilter === 'overdue' ? 'default' : 'ghost'}
-                      size="sm"
-                      className={`h-8 text-xs rounded-full px-4 gap-2 transition-all ${financialFilter === 'overdue' ? 'bg-red-600 text-white shadow-md shadow-red-600/20' : 'text-red-700 hover:bg-red-50'}`}
-                      onClick={() => setFinancialFilter('overdue')}
-                    >
-                      <AlertTriangle className="w-3 h-3" />
-                      En Mora
-                    </Button>
-                  </div>
+                  <Button onClick={() => setIsCreateClientOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all whitespace-nowrap h-11 px-6 rounded-xl font-bold">
+                    <Plus className="w-5 h-5" /> Nuevo Cliente
+                  </Button>
                 </div>
               </div>
-
-              <Button onClick={() => setIsCreateClientOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all">
-                <Plus className="w-4 h-4" /> Nuevo Cliente
-              </Button>
             </div>
 
             {isLoading && acceptedClients.length === 0 ? (
@@ -484,18 +531,28 @@ export default function ClientsPage() {
                             </td>
                             <td className="px-6 py-4">
                               {contractType === 'recurring' ? (
-                                <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/20 py-0.5 font-medium">
-                                  <TrendingUp className="h-3 w-3 mr-1" /> Recurrente
-                                </Badge>
+                                clientDoc?.activePlan?.currentCycleMonth === 1 ? (
+                                  <Badge variant="outline" className="text-xs bg-indigo-500/10 text-indigo-600 border-indigo-500/20 py-0.5 font-medium">
+                                    <TrendingUp className="h-3 w-3 mr-1" /> Onboarding
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/20 py-0.5 font-medium">
+                                    <TrendingUp className="h-3 w-3 mr-1" /> Recurrente
+                                  </Badge>
+                                )
                               ) : (
                                 <Badge variant="outline" className="text-xs bg-slate-500/10 text-slate-500 border-slate-500/20 py-0.5 font-medium">Único</Badge>
                               )}
                             </td>
                             <td className="px-6 py-4">
-                              {isOverdue ? (
+                              {paymentStatus === 'overdue' || paymentStatus === 'suspended' ? (
                                 <Badge variant="destructive" className="text-xs py-0.5 shadow-sm">
                                   <AlertTriangle className="h-3 w-3 mr-1" />
                                   {paymentStatus === 'suspended' ? 'Suspendido' : `Mora${clientDoc?.daysOverdue ? ` (${clientDoc.daysOverdue}d)` : ''}`}
+                                </Badge>
+                              ) : paymentStatus === 'pending' ? (
+                                <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20 py-0.5 font-medium">
+                                  <Receipt className="h-3 w-3 mr-1" /> Pendiente
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20 py-0.5 font-medium">Al día</Badge>
@@ -523,7 +580,7 @@ export default function ClientsPage() {
                                       </DropdownMenuItem>
                                     ) : (
                                       <DropdownMenuItem className="text-red-600 font-medium" onClick={() => handleArchiveClient(client.clientId)}>
-                                        <AlertTriangle className="w-4 h-4 mr-2" /> Archivar
+                                        <FolderArchive className="w-4 h-4 mr-2" /> Archivar
                                       </DropdownMenuItem>
                                     )}
                                   </DropdownMenuContent>
@@ -559,19 +616,29 @@ export default function ClientsPage() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           {contractType === 'recurring' ? (
-                            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 border-blue-500/20 py-0.5">
-                              <TrendingUp className="h-2.5 w-2.5 mr-1" /> Recurrente
-                            </Badge>
+                            clientDoc?.activePlan?.currentCycleMonth === 1 ? (
+                              <Badge variant="outline" className="text-[10px] bg-indigo-500/10 text-indigo-600 border-indigo-500/20 py-0.5">
+                                <TrendingUp className="h-2.5 w-2.5 mr-1" /> Onboarding
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 border-blue-500/20 py-0.5">
+                                <TrendingUp className="h-2.5 w-2.5 mr-1" /> Recurrente
+                              </Badge>
+                            )
                           ) : (
                             <Badge variant="outline" className="text-[10px] bg-slate-500/10 text-slate-500 border-slate-500/20 py-0.5">Único</Badge>
                           )}
-                          {isOverdue ? (
+                          {paymentStatus === 'overdue' || paymentStatus === 'suspended' ? (
                             <Badge variant="destructive" className="text-[10px] py-0.5">
                               <AlertTriangle className="h-2.5 w-2.5 mr-1" />
                               {paymentStatus === 'suspended' ? 'Suspendido' : `Mora${clientDoc?.daysOverdue ? ` (${clientDoc.daysOverdue}d)` : ''}`}
                             </Badge>
+                          ) : paymentStatus === 'pending' ? (
+                            <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20 py-0.5 font-medium">
+                              <Receipt className="h-2.5 w-2.5 mr-1" /> Pendiente
+                            </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-600 border-green-500/20 py-0.5 font-medium">Al día</Badge>
+                            <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-green-600 border-emerald-500/20 py-0.5 font-medium">Al día</Badge>
                           )}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -590,7 +657,7 @@ export default function ClientsPage() {
                                 </DropdownMenuItem>
                               ) : (
                                 <DropdownMenuItem className="text-red-600 focus:text-red-700 focus:bg-red-50" onClick={() => handleArchiveClient(client.clientId)}>
-                                  <AlertTriangle className="w-4 h-4 mr-2" /> Archivar Cliente
+                                  <FolderArchive className="w-4 h-4 mr-2" /> Archivar
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>

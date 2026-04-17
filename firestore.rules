@@ -71,15 +71,6 @@ service cloud.firestore {
     }
     
     // ========================================================================
-    // TASK TYPES — Team workspace
-    // ========================================================================
-    match /task_types/{taskTypeId} {
-      allow read, write: if isTeamMember();
-      // Clients need to read task types for the portal display
-      allow read: if isAuthenticated();
-    }
-    
-    // ========================================================================
     // PACKS — Team workspace
     // ========================================================================
     match /packs/{packId} {

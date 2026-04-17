@@ -656,45 +656,64 @@ export default function CreateQuotationPage() {
     }
   };
 
+  const generatePdfBlob = async (type: 'carta' | 'pos') => {
+    const element = document.getElementById(type === 'carta' ? 'print-area-carta-quotation' : 'print-area-pos-quotation');
+    if (!element) throw new Error("Plantilla no encontrada");
+
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+
+    const isCarta = type === 'carta';
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: isCarta ? 'a4' : [80, (canvas.height * 80) / canvas.width]
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    const pdfBlob = pdf.output('blob');
+    const qNum = quotationNumber || 'Borrador';
+    const fileName = `Cotizacion_${qNum}.pdf`;
+
+    return { pdfBlob, fileName };
+  };
+
   const exportAndShareQuotation = async (type: 'carta' | 'pos') => {
     setIsExporting(true);
     try {
-      const element = document.getElementById(type === 'carta' ? 'print-area-carta-quotation' : 'print-area-pos-quotation');
-      if (!element) throw new Error("Plantilla no encontrada");
-
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL('image/png');
-
-      const isCarta = type === 'carta';
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: isCarta ? 'a4' : [80, (canvas.height * 80) / canvas.width]
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      const pdfBlob = pdf.output('blob');
-      const qNum = quotationNumber || 'Borrador';
-      const fileName = `Cotizacion_${qNum}.pdf`;
+      const { pdfBlob, fileName } = await generatePdfBlob(type);
 
       if (navigator.share && navigator.canShare) {
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
-            title: `Cotizacion ${qNum}`,
+            title: `Cotizacion ${fileName}`,
             text: `Adjunto envío la cotización`,
             files: [file]
           });
           toast({ title: 'Cotización compartida' });
-          setIsExporting(false);
           return;
         }
       }
+      
+      toast({ title: 'Compartir no soportado', description: 'Tu navegador no soporta compartir archivos directamente. Por favor descarga el PDF.', variant: 'destructive' });
 
-      // Fallback
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Error al compartir', variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const downloadQuotation = async (type: 'carta' | 'pos') => {
+    setIsExporting(true);
+    try {
+      const { pdfBlob, fileName } = await generatePdfBlob(type);
+
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -707,7 +726,7 @@ export default function CreateQuotationPage() {
 
     } catch (err) {
       console.error(err);
-      toast({ title: 'Error al exportar', variant: 'destructive' });
+      toast({ title: 'Error al descargar', variant: 'destructive' });
     } finally {
       setIsExporting(false);
     }
@@ -1066,7 +1085,11 @@ export default function CreateQuotationPage() {
           </CardHeader>
           <CardContent className="text-sm space-y-1">
             <p className="font-semibold text-lg">{clientData?.name || 'Cliente Desconocido'}</p>
-            <p>{clientData?.contactEmail}</p>
+            {clientData?.company && (
+              <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">{clientData.company}</p>
+            )}
+            {clientData?.contactEmail && <p className="text-muted-foreground">{clientData.contactEmail}</p>}
+            {clientData?.phone && <p className="text-muted-foreground">{clientData.phone}</p>}
           </CardContent>
         </Card>
       </div>
@@ -1466,9 +1489,15 @@ export default function CreateQuotationPage() {
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Guardar Borrador
           </Button>
-          <Button size="lg" onClick={() => handleAction('publish')} disabled={isSaving || items.length === 0 || isReadOnly}>
+          <Button
+            size="lg"
+            onClick={() => handleAction('publish')}
+            disabled={isSaving || items.length === 0 || isReadOnly}
+            variant={currentStatus === 'published' ? 'outline' : 'default'}
+            className={currentStatus === 'published' ? 'border-blue-500/40 text-blue-600 hover:bg-blue-500/5' : ''}
+          >
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Publicar Cotización
+            {currentStatus === 'published' ? 'Actualizar Propuesta' : 'Publicar Cotización'}
           </Button>
         </CardFooter>
       </Card>
@@ -1511,8 +1540,14 @@ export default function CreateQuotationPage() {
                 >
                   <Printer className="w-4 h-4" />
                 </Button>
-                <Button size="sm" onClick={() => handleAction('publish')} disabled={isSaving}>
-                  Publicar
+                <Button
+                  size="sm"
+                  onClick={() => handleAction('publish')}
+                  disabled={isSaving}
+                  variant={currentStatus === 'published' ? 'outline' : 'default'}
+                  className={currentStatus === 'published' ? 'border-blue-500/40 text-blue-600 hover:bg-blue-500/5' : ''}
+                >
+                  {currentStatus === 'published' ? 'Actualizar' : 'Publicar'}
                 </Button>
                 <Button
                   variant="ghost"

@@ -1,4 +1,4 @@
-import { Firestore, doc, getDoc, updateDoc, setDoc, addDoc, collection, runTransaction } from 'firebase/firestore';
+import { Firestore, doc, getDoc, updateDoc, setDoc, addDoc, collection, runTransaction, getDocs, query, where } from 'firebase/firestore';
 
 export async function getNextSequenceNumber(firestore: Firestore, type: 'invoice' | 'quotation'): Promise<string> {
   const counterRef = doc(firestore, 'settings', 'general');
@@ -25,6 +25,62 @@ export async function getNextSequenceNumber(firestore: Firestore, type: 'invoice
   });
 
   return `${prefix}${nextNumber.toString().padStart(4, '0')}`;
+}
+
+/**
+ * Synchronizes the client's root paymentStatus and daysOverdue based on their actual invoices.
+ */
+export async function syncClientFinancialStatus(firestore: Firestore, clientId: string) {
+  const clientRef = doc(firestore, 'clients', clientId);
+  const clientSnap = await getDoc(clientRef);
+  if (!clientSnap.exists()) return;
+
+  const invoicesRef = collection(firestore, 'clients', clientId, 'invoices');
+  
+  // Consider pending or overdue invoices
+  const qPending = query(invoicesRef, where('status', 'in', ['sent', 'partially_paid', 'overdue']));
+  const pendingSnaps = await getDocs(qPending);
+  
+  let isOverdue = false;
+  let hasPending = false;
+  let maxDaysOverdue = 0;
+  const today = new Date();
+
+  pendingSnaps.forEach(snap => {
+    const inv = snap.data();
+    hasPending = true;
+
+    if (inv.status === 'overdue') {
+      isOverdue = true;
+    }
+    
+    // Fallback date calculation
+    const dueDateStr = inv.firstPaymentDueDate || inv.issueDate;
+    if (dueDateStr) {
+        const dueDate = new Date(dueDateStr);
+        if (today > dueDate) {
+            const diffTime = Math.abs(today.getTime() - dueDate.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays > 0) {
+                isOverdue = true;
+                if (diffDays > maxDaysOverdue) maxDaysOverdue = diffDays;
+            }
+        }
+    }
+  });
+
+  let newStatus = 'upToDate'; // Zero balance
+  if (isOverdue) {
+      newStatus = maxDaysOverdue > 5 ? 'suspended' : 'overdue';
+  } else if (hasPending) {
+      newStatus = 'pending'; // Unpaid but not yet overdue
+  }
+
+  await updateDoc(clientRef, {
+      paymentStatus: newStatus,
+      daysOverdue: maxDaysOverdue,
+      updatedAt: new Date().toISOString()
+  });
 }
 
 /**
@@ -316,6 +372,9 @@ export async function processInvoicePayment(
       await updateDoc(clientRef, { activePlan, updatedAt: new Date().toISOString() });
     }
   }
+
+  // Sync client's financial status based on remaining invoices
+  await syncClientFinancialStatus(firestore, clientId);
 }
 
 export async function generateMonth1Part2(

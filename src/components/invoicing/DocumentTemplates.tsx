@@ -43,8 +43,13 @@ export const CartaTemplate: React.FC<TemplateProps> = ({ invoice, client, settin
       <div className="mb-10">
         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">{invoice.invoiceNumber ? 'Facturar a' : 'Presentado a'}:</h3>
         <p className="font-bold text-xl text-gray-900">{client.clientName || client.name}</p>
-        <p className="text-gray-600">{client.contactEmail}</p>
-        {client.contactPhone && <p className="text-gray-600">{client.contactPhone}</p>}
+        {(client.company || client.clientCompany) && (
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-0.5">{client.company || client.clientCompany}</p>
+        )}
+        {client.contactEmail && <p className="text-gray-600">{client.contactEmail}</p>}
+        {(client.contactPhone || client.phone || client.clientPhone) && (
+          <p className="text-gray-600">{client.contactPhone || client.phone || client.clientPhone}</p>
+        )}
       </div>
 
       <table className="w-full text-left mb-10 border-collapse">

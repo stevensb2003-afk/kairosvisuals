@@ -109,7 +109,7 @@ export default function InvoiceDetailPage() {
   }, [firestore, invoiceId, clientId, router]);
 
   // 2. Export functions
-  const exportAndShare = async (type: 'carta' | 'pos') => {
+  const exportAndShare = async (type: 'carta' | 'pos', action: 'share' | 'download' = 'share') => {
     setIsExporting(true);
     try {
       const element = document.getElementById(`print-area-${type}`);
@@ -132,7 +132,7 @@ export default function InvoiceDetailPage() {
       const pdfBlob = pdf.output('blob');
       const fileName = `Factura_${invoice.invoiceNumber}.pdf`;
 
-      if (navigator.share && navigator.canShare) {
+      if (action === 'share' && navigator.share && navigator.canShare) {
         const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
@@ -145,6 +145,7 @@ export default function InvoiceDetailPage() {
         }
       }
 
+      // Fallback for share, or if action is 'download'
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -285,11 +286,15 @@ export default function InvoiceDetailPage() {
         </div>
         
         <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => exportAndShare('pos')} disabled={isExporting}>
+            <Button variant="outline" onClick={() => exportAndShare('pos', 'download')} disabled={isExporting}>
               {isExporting ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : <Download className="w-4 h-4 mr-2"/>}
               POS Voucher
             </Button>
-            <Button className="bg-primary/10 text-primary hover:bg-primary/20" onClick={() => exportAndShare('carta')} disabled={isExporting}>
+            <Button variant="outline" onClick={() => exportAndShare('carta', 'download')} disabled={isExporting}>
+              {isExporting ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : <Download className="w-4 h-4 mr-2"/>}
+              Descargar PDF
+            </Button>
+            <Button className="bg-primary/10 text-primary hover:bg-primary/20" onClick={() => exportAndShare('carta', 'share')} disabled={isExporting}>
               {isExporting ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : <Share className="w-4 h-4 mr-2"/>}
               Compartir PDF
             </Button>
