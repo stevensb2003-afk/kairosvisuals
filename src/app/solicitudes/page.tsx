@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { 
   FilePlus2, Search, Filter, MoreHorizontal, Edit, Trash2, 
   FileText, CheckCircle2, Clock, AlertCircle, Loader2,
-  ArrowRight, Check, Share2, X, Download, Printer, Receipt
+  ArrowRight, Check, Share2, X, Download, Printer, Receipt,
+  User, Mail, Phone, Building2
 } from "lucide-react";
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, deleteDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
@@ -47,6 +48,8 @@ export default function SolicitudesPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isAccepting, setIsAccepting] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [selectedClientDetails, setSelectedClientDetails] = useState<any>(null);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -271,6 +274,24 @@ export default function SolicitudesPage() {
     }
   };
 
+  const handleClientClick = async (clientId: string) => {
+    try {
+      setLoading(true);
+      const clientDoc = await getDoc(doc(firestore, 'clients', clientId));
+      if (clientDoc.exists()) {
+        setSelectedClientDetails({ id: clientDoc.id, ...clientDoc.data() });
+        setIsClientModalOpen(true);
+      } else {
+        toast({ title: "Error", description: "No se encontró la información del cliente.", variant: "destructive" });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "No se pudo cargar la información del cliente.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -357,6 +378,7 @@ export default function SolicitudesPage() {
                 <TableRow className="hover:bg-transparent border-b-border/50">
                   <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider pl-6"># Cotiz.</TableHead>
                   <TableHead className="w-[120px] font-bold text-xs uppercase tracking-wider">Fecha</TableHead>
+                  <TableHead className="w-[120px] font-bold text-xs uppercase tracking-wider">Vencimiento</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Cliente</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Título de Propuesta</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wider">Total</TableHead>
@@ -367,17 +389,25 @@ export default function SolicitudesPage() {
               <TableBody>
                 {filteredQuotations.map((q) => (
                   <TableRow key={q.id} className="group hover:bg-primary/[0.01] border-b-border/40 transition-colors">
-                    <TableCell className="pl-6">
-                      <span className="font-bold text-primary text-xs tracking-tighter">
+                    <TableCell className="pl-6 whitespace-nowrap min-w-[100px]">
+                      <span className="font-bold text-primary text-xs">
                         {q.quotationNumber ? String(q.quotationNumber).padStart(4, '0') : '—'}
                       </span>
                     </TableCell>
                     <TableCell className="font-medium text-muted-foreground whitespace-nowrap">
                       {new Date(q.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                     </TableCell>
+                    <TableCell className="font-medium text-muted-foreground whitespace-nowrap">
+                      {q.validUntil ? new Date(q.validUntil).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'N/A'}
+                    </TableCell>
                     <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-foreground leading-none mb-1">{q.clientName || 'Cliente sin nombre'}</span>
+                      <div className="flex flex-col items-start">
+                        <button 
+                          onClick={() => handleClientClick(q.clientId)}
+                          className="font-bold text-foreground leading-none mb-1 text-left hover:text-primary hover:underline transition-colors focus:outline-none"
+                        >
+                          {q.clientName || 'Cliente sin nombre'}
+                        </button>
                         <span className="text-[11px] text-muted-foreground">{q.clientEmail}</span>
                       </div>
                     </TableCell>
@@ -398,8 +428,10 @@ export default function SolicitudesPage() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-9 w-9 hover:text-primary hover:bg-primary/10 rounded-full"
-                          onClick={() => router.push(`/solicitudes/create?quotationId=${q.id}&clientId=${q.clientId}`)}
+                          className={cn("h-9 w-9 rounded-full", q.status === 'accepted' ? "opacity-50 cursor-not-allowed" : "hover:text-primary hover:bg-primary/10")}
+                          onClick={() => q.status !== 'accepted' && router.push(`/solicitudes/create?quotationId=${q.id}&clientId=${q.clientId}`)}
+                          disabled={q.status === 'accepted'}
+                          title={q.status === 'accepted' ? 'No se puede editar una propuesta aceptada' : 'Editar Propuesta'}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -559,6 +591,72 @@ export default function SolicitudesPage() {
                   Compartir Propuesta
                 </Button>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Client Quick View Modal */}
+      <Dialog open={isClientModalOpen} onOpenChange={setIsClientModalOpen}>
+        <DialogContent className="max-w-md rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              Detalles del Cliente
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedClientDetails ? (
+            <div className="space-y-4 mt-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Nombre completo</p>
+                <p className="font-semibold text-lg">{selectedClientDetails.clientName || 'N/A'}</p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <Mail className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Correo electrónico</p>
+                    <p className="font-medium text-sm break-all">{selectedClientDetails.clientEmail || 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <Phone className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Teléfono</p>
+                    <p className="font-medium text-sm">{selectedClientDetails.clientPhone || 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <Building2 className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Empresa</p>
+                    <p className="font-medium text-sm">{selectedClientDetails.company || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 mt-6 border-t border-border/50">
+                <Button 
+                  className="w-full rounded-full font-bold shadow-md shadow-primary/20"
+                  onClick={() => router.push(`/clients/${selectedClientDetails.id}`)}
+                >
+                  Ver Perfil Completo
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-center p-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           )}
         </DialogContent>
