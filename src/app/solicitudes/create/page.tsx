@@ -793,6 +793,8 @@ export default function CreateQuotationPage() {
     return <div className="flex h-64 items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
   }
 
+  const isReadOnly = currentStatus === 'accepted';
+
   const filteredClients = allClients.filter(c =>
     c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
     c.company?.toLowerCase().includes(clientSearch.toLowerCase()) ||
@@ -1021,6 +1023,15 @@ export default function CreateQuotationPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-20">
+      {isReadOnly && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-500 px-4 py-3 rounded-md flex items-center gap-3">
+          <Info className="w-5 h-5 shrink-0" />
+          <div>
+            <p className="font-bold text-sm">Propuesta Aceptada (Solo Lectura)</p>
+            <p className="text-xs">Esta propuesta ya ha sido aceptada por el cliente y no puede ser modificada para mantener la integridad de los datos.</p>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.push('/solicitudes')}>
           <ArrowLeft className="w-5 h-5" />
@@ -1050,7 +1061,7 @@ export default function CreateQuotationPage() {
           <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground font-bold">Cobrar a (Cliente)</CardTitle>
             {!clientId && (
-              <Button variant="ghost" size="sm" onClick={() => setSelectedClientId(null)} className="h-7 text-xs">Cambiar</Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedClientId(null)} className="h-7 text-xs" disabled={isReadOnly}>Cambiar</Button>
             )}
           </CardHeader>
           <CardContent className="text-sm space-y-1">
@@ -1068,11 +1079,11 @@ export default function CreateQuotationPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Título de la Propuesta</Label>
-              <Input value={details.title} onChange={e => setDetails({ ...details, title: e.target.value })} placeholder="Ej. Paquete de Redes Sociales" />
+              <Input value={details.title} onChange={e => setDetails({ ...details, title: e.target.value })} placeholder="Ej. Paquete de Redes Sociales" disabled={isReadOnly} />
             </div>
             <div className="space-y-2">
               <Label>Días de Validez</Label>
-              <Input type="number" value={details.validityDays} onChange={e => setDetails({ ...details, validityDays: parseInt(e.target.value) || 0 })} />
+              <Input type="number" value={details.validityDays} onChange={e => setDetails({ ...details, validityDays: parseInt(e.target.value) || 0 })} disabled={isReadOnly} />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between mb-2">
@@ -1084,11 +1095,11 @@ export default function CreateQuotationPage() {
                 className="w-full"
               >
                 <TabsList className="grid w-full grid-cols-2 h-10">
-                  <TabsTrigger value="one_time" className="text-xs flex items-center gap-2">
+                  <TabsTrigger value="one_time" className="text-xs flex items-center gap-2" disabled={isReadOnly}>
                     <Package className="w-3 h-3" />
                     Pago Único
                   </TabsTrigger>
-                  <TabsTrigger value="recurring" className="text-xs flex items-center gap-2">
+                  <TabsTrigger value="recurring" className="text-xs flex items-center gap-2" disabled={isReadOnly}>
                     <Layers className="w-3 h-3" />
                     Plan Mensual
                   </TabsTrigger>
@@ -1105,6 +1116,7 @@ export default function CreateQuotationPage() {
                       className="w-4 h-4 rounded border-amber-500/50 bg-transparent text-amber-500 focus:ring-amber-500"
                       checked={isPlanUpdate}
                       onChange={(e) => setIsPlanUpdate(e.target.checked)}
+                      disabled={isReadOnly}
                     />
                     <span>Marcar como actualización de plan existente</span>
                   </label>
@@ -1129,6 +1141,7 @@ export default function CreateQuotationPage() {
                   <Select
                     value={details.startDate}
                     onValueChange={(val) => setDetails({ ...details, startDate: val })}
+                    disabled={isReadOnly}
                   >
                     <SelectTrigger className={contractType === 'recurring' && !details.startDate ? "border-destructive ring-1 ring-destructive/20 bg-destructive/5" : ""}>
                       <SelectValue placeholder="Seleccionar inicio..." />
@@ -1149,6 +1162,7 @@ export default function CreateQuotationPage() {
                     date={details.startDate ? new Date(details.startDate) : undefined}
                     onSelect={(date) => setDetails({ ...details, startDate: date ? date.toISOString().split('T')[0] : '' })}
                     placeholder="Sin fecha definida"
+                    disabled={isReadOnly}
                   />
                 </div>
               )}
@@ -1156,7 +1170,7 @@ export default function CreateQuotationPage() {
           </div>
           <div className="space-y-2">
             <Label>Términos y Notas Visibles</Label>
-            <Textarea value={details.notes} onChange={e => setDetails({ ...details, notes: e.target.value })} placeholder="Ej. Condiciones de pago, alcances del proyecto..." className="h-20" />
+            <Textarea value={details.notes} onChange={e => setDetails({ ...details, notes: e.target.value })} placeholder="Ej. Condiciones de pago, alcances del proyecto..." className="h-20" disabled={isReadOnly} />
             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1"><Info className="w-3 h-3" /> Este mensaje aparecerá al pie del PDF.</p>
           </div>
         </CardContent>
@@ -1169,10 +1183,10 @@ export default function CreateQuotationPage() {
             <CardDescription>Extrae los precios de tus servicios o crea ítems customizados.</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setIsPlanLoaderOpen(true)} size="sm" variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary">
+            <Button onClick={() => setIsPlanLoaderOpen(true)} size="sm" variant="outline" className="border-primary/20 hover:bg-primary/5 text-primary" disabled={isReadOnly}>
               <Layers className="w-4 h-4 mr-2" /> Cargar Plan
             </Button>
-            <Button onClick={addItem} size="sm" variant="secondary"><Plus className="w-4 h-4 mr-2" /> Agregar Fila</Button>
+            <Button onClick={addItem} size="sm" variant="secondary" disabled={isReadOnly}><Plus className="w-4 h-4 mr-2" /> Agregar Fila</Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -1203,7 +1217,7 @@ export default function CreateQuotationPage() {
                         {/* Main Row */}
                         <TableRow className={service && service.pricingModel !== 'fixed' ? 'border-b-0' : ''}>
                           <TableCell className="align-top">
-                            <Select value={item.serviceId} onValueChange={(val) => updateItem(item.id, 'serviceId', val)}>
+                            <Select value={item.serviceId} onValueChange={(val) => updateItem(item.id, 'serviceId', val)} disabled={isReadOnly}>
                               <SelectTrigger className="h-9">
                                 <SelectValue placeholder="Seleccionar" />
                               </SelectTrigger>
@@ -1221,6 +1235,7 @@ export default function CreateQuotationPage() {
                               onChange={(e) => updateItem(item.id, 'description', e.target.value)}
                               placeholder="Detalle extra..."
                               className="h-9"
+                              disabled={isReadOnly}
                             />
                           </TableCell>
                           <TableCell className="align-top">
@@ -1230,7 +1245,7 @@ export default function CreateQuotationPage() {
                               value={item.quantity}
                               onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
                               className="text-right h-9"
-                              disabled={item.serviceId !== 'custom' && service?.pricingModel !== 'fixed'}
+                              disabled={isReadOnly || (item.serviceId !== 'custom' && service?.pricingModel !== 'fixed')}
                             />
                           </TableCell>
                           <TableCell className="align-top">
@@ -1240,13 +1255,14 @@ export default function CreateQuotationPage() {
                               value={item.unitPrice}
                               onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                               className="text-right h-9"
-                              disabled={item.serviceId !== 'custom' && service?.pricingModel !== 'fixed'}
+                              disabled={isReadOnly || (item.serviceId !== 'custom' && service?.pricingModel !== 'fixed')}
                             />
                           </TableCell>
                           <TableCell className="align-top">
                             <Select
                               value={item.ivaType || 'none'}
                               onValueChange={(val) => updateItem(item.id, 'ivaType', val)}
+                              disabled={isReadOnly}
                             >
                               <SelectTrigger className="h-9 px-2">
                                 <SelectValue placeholder="IVA" />
@@ -1267,12 +1283,14 @@ export default function CreateQuotationPage() {
                                 value={item.discountValue || 0}
                                 onChange={(e) => updateItem(item.id, 'discountValue', parseFloat(e.target.value) || 0)}
                                 className="text-right h-9 flex-1"
+                                disabled={isReadOnly}
                               />
                               <Button
                                 variant="outline"
                                 size="icon"
                                 className="h-9 w-9 shrink-0"
                                 onClick={() => updateItem(item.id, 'discountType', item.discountType === 'percentage' ? 'amount' : 'percentage')}
+                                disabled={isReadOnly}
                               >
                                 {item.discountType === 'percentage' ? '%' : '₡'}
                               </Button>
@@ -1282,7 +1300,7 @@ export default function CreateQuotationPage() {
                             {formatCurrency(item.total)}
                           </TableCell>
                           <TableCell className="align-top">
-                            <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="text-destructive">
+                            <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="text-destructive" disabled={isReadOnly}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </TableCell>
@@ -1308,6 +1326,7 @@ export default function CreateQuotationPage() {
                                           value={item.overriddenQuantity || 1}
                                           onChange={(e) => updateItem(item.id, 'overriddenQuantity', parseInt(e.target.value) || 1)}
                                           className="h-8 bg-background/50 border-primary/20"
+                                          disabled={isReadOnly}
                                         />
                                       </div>
                                       <div className="text-xs text-muted-foreground flex items-center gap-2">
@@ -1328,6 +1347,7 @@ export default function CreateQuotationPage() {
                                         <Select
                                           value={item.selectedPackage || ''}
                                           onValueChange={(val) => updateItem(item.id, 'selectedPackage', val)}
+                                          disabled={isReadOnly}
                                         >
                                           <SelectTrigger className="h-8 bg-background/50 border-primary/20">
                                             <SelectValue placeholder="Elegir..." />
@@ -1353,6 +1373,7 @@ export default function CreateQuotationPage() {
                                         <Select
                                           value={item.selectedComplexityLevel?.toString() || ''}
                                           onValueChange={(val) => updateItem(item.id, 'selectedComplexityLevel', parseInt(val) || 1)}
+                                          disabled={isReadOnly}
                                         >
                                           <SelectTrigger className="h-8 bg-background/50 border-primary/20">
                                             <SelectValue placeholder="Elegir..." />
@@ -1404,6 +1425,7 @@ export default function CreateQuotationPage() {
                       size="icon"
                       className="h-6 w-6"
                       onClick={() => setGlobalDiscountType(globalDiscountType === 'percentage' ? 'amount' : 'percentage')}
+                      disabled={isReadOnly}
                     >
                       {globalDiscountType === 'percentage' ? '%' : '₡'}
                     </Button>
@@ -1415,6 +1437,7 @@ export default function CreateQuotationPage() {
                       value={globalDiscountValue}
                       onChange={(e) => setGlobalDiscountValue(parseFloat(e.target.value) || 0)}
                       className="text-right h-8"
+                      disabled={isReadOnly}
                     />
                   </div>
                 </div>
@@ -1439,11 +1462,11 @@ export default function CreateQuotationPage() {
             <FileText className="w-4 h-4 mr-2" />
             Vista Previa
           </Button>
-          <Button size="lg" variant="outline" onClick={() => handleAction('save')} disabled={isSaving || items.length === 0} className="mr-2 border-primary/20 hover:bg-primary/5">
+          <Button size="lg" variant="outline" onClick={() => handleAction('save')} disabled={isSaving || items.length === 0 || isReadOnly} className="mr-2 border-primary/20 hover:bg-primary/5">
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Guardar Borrador
           </Button>
-          <Button size="lg" onClick={() => handleAction('publish')} disabled={isSaving || items.length === 0}>
+          <Button size="lg" onClick={() => handleAction('publish')} disabled={isSaving || items.length === 0 || isReadOnly}>
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Publicar Cotización
           </Button>
