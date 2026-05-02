@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import type { Firestore } from 'firebase/firestore';
 import type { ScriptFormat, ScriptSection, SavedScript, CopyTone, CopyLength, CopyPurpose } from '@/lib/types';
 import { getBrandBookById } from '@/lib/brandbookService';
+import { buildBrandContext } from '@/utils/buildBrandContext';
 import { saveScript, getScripts, deleteScript } from '@/lib/scriptService';
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
@@ -98,18 +99,7 @@ export function useScriptWriter(apiKey: string, db: Firestore, userId: string | 
       let brandContext = '';
       if (state.brandBookId && db) {
         const bb = await getBrandBookById(db, state.brandBookId);
-        if (bb) {
-          brandContext = `
-BRAND BOOK:
-- Nombre: ${bb.name}
-- Misión: ${bb.mission || 'N/A'}
-- Visión: ${(bb as any).vision || 'N/A'}
-- Valores: ${bb.values || 'N/A'}
-- Propósito: ${bb.purpose || 'N/A'}
-- Audiencia: ${bb.targetAudience || 'N/A'}
-- Tono habitual: ${bb.tone?.join(', ') || 'N/A'}
-`.trim();
-        }
+        if (bb) brandContext = buildBrandContext(bb);
       }
 
       const systemPrompt = `Eres un experto en ${mode === 'script' ? 'guiones creativos' : 'copywriting y redacción publicitaria'} para contenido digital. 
@@ -129,14 +119,7 @@ ${brandContext ? `\n${brandContext}` : ''}
 REGLAS:
 - Cada sección debe ser concisa, directa y lista para usar
 - Adapta el tono y estilo al brand book si se proporcionó
-- El guión debe sonar natural y humano, no corporativo
-
-Responde con este JSON exacto:
-{
-  "sections": [
-    ${meta.sections.map((s) => `{ "label": "${s}", "content": "..." }`).join(',\n    ')}
-  ]
-}`;
+- El guión debe sonar natural y humano, no corporativo`;
       } else {
         userPrompt = `Genera 3 opciones de COPY (texto publicitario/descriptivo) para redes sociales.
 
@@ -152,16 +135,7 @@ REGLAS:
 - Genera exactamente 3 opciones (Opción 1, Opción 2, Opción 3)
 - Cada opción debe tener un enfoque ligeramente distinto pero respetando el tono
 - Incluye emojis pertinentes
-- Incluye un Call to Action (CTA) potente en cada opción
-
-Responde con este JSON exacto:
-{
-  "sections": [
-    { "label": "Opción 1", "content": "..." },
-    { "label": "Opción 2", "content": "..." },
-    { "label": "Opción 3", "content": "..." }
-  ]
-}`;
+- Incluye un Call to Action (CTA) potente en cada opción`;
       }
 
       const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {

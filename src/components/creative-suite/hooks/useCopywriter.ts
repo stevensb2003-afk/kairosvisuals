@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import type { Firestore } from 'firebase/firestore';
 import type { CopyLength, CopyOption, CopyPurpose, CopyTone, SavedCopy } from '@/lib/types';
 import { getBrandBookById } from '@/lib/brandbookService';
+import { buildBrandContext } from '@/utils/buildBrandContext';
 import { saveCopy, getCopys, deleteCopy } from '@/lib/copywritingService';
 
 
@@ -92,20 +93,7 @@ export function useCopywriter(apiKey: string, db: Firestore, userId: string | nu
       let brandContext = '';
       if (state.brandBookId) {
         const bb = await getBrandBookById(db, state.brandBookId);
-        if (bb) {
-          brandContext = `
-BRAND BOOK DE LA MARCA:
-- Nombre: ${bb.name}
-- Industria: ${bb.industry || 'N/A'}
-- Misión: ${bb.mission || 'N/A'}
-- Visión: ${(bb as any).vision || 'N/A'}
-- Valores: ${bb.values || 'N/A'}
-- Propósito: ${bb.purpose || 'N/A'}
-- Audiencia objetivo: ${bb.targetAudience || 'N/A'}
-- Tono de comunicación habitual: ${bb.tone?.join(', ') || 'N/A'}
-- Estilo gráfico: ${bb.visualIdentity?.graphicStyle || 'N/A'}
-`.trim();
-        }
+        if (bb) brandContext = buildBrandContext(bb);
       }
 
       const systemPrompt = `Eres un experto copywriter de marketing digital especializado en Instagram y redes sociales. 
@@ -126,22 +114,11 @@ ${brandContext ? `\n${brandContext}` : ''}
 
 REGLAS ESTRICTAS:
 - Genera exactamente 3 opciones de alta calidad.
-- Cada opción debe respetar ESTRICTAMENTE el rango de extensión: ${LENGTH_WORDS[state.length]}.
-- Aplica la estructura indicada para el formato seleccionado: ${LENGTH_STRUCTURE[state.length]}
-- Usa emojis pertinentes que refuercen el mensaje (más emojis en copy corto, menos en extenso).
+- Usa emojis pertinentes que refuercen el mensaje.
 - Incluye un Call to Action (CTA) potente y claro en cada opción.
 - Las 3 opciones deben variar en estructura: una más directa, otra narrativa y otra interactiva (pregunta).
 - Incluye hashtags relevantes al final.
-- Usa saltos de línea reales (\n) para separar párrafos.
-
-Responde con este JSON exacto:
-{
-  "options": [
-    { "id": "a", "text": "...", "toneLabel": "Directa y clara" },
-    { "id": "b", "text": "...", "toneLabel": "Storytelling" },
-    { "id": "c", "text": "...", "toneLabel": "Gancho/Pregunta" }
-  ]
-}`;
+- Usa saltos de línea reales (\n) para separar párrafos.`;
 
       const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
         method: 'POST',

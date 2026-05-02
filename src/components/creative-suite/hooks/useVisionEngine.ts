@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Firestore } from 'firebase/firestore';
 import { getBrandBookById } from '@/lib/brandbookService';
+import { buildBrandContext } from '@/utils/buildBrandContext';
 
 export type OutputFormat = 'post' | 'carousel' | 'reel_cover';
 export type BgType = 'navy' | 'orange' | 'cream';
@@ -104,30 +105,7 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
       try {
         const brandBook = await getBrandBookById(db, brandBookId);
         if (brandBook) {
-          const typoSecondary = brandBook.visualIdentity?.typography?.secondary || 'No especificada';
-          brandContext = `
-=== IDENTIDAD DE MARCA OFICIAL (LEE Y USA TODO) ===
-EMPRESA: ${brandBook.name}
-INDUSTRIA: ${brandBook.industry || 'No especificada'}
-MISIÓN: ${brandBook.mission || 'No especificada'}
-VISIÓN: ${(brandBook as any).vision || 'No especificada'}
-PROPÓSITO: ${brandBook.purpose || 'No especificado'}
-VALORES DE MARCA: ${brandBook.values || 'No especificados'}
-PÚBLICO OBJETIVO: ${brandBook.targetAudience || 'No especificado'}
-TONO DE VOZ: ${brandBook.tone?.join(', ') || 'No especificado'}
-ESTILO GRÁFICO: ${brandBook.visualIdentity?.graphicStyle || 'No especificado'}
-
-PALETA DE COLORES:
-  - Color Principal: ${brandBook.visualIdentity?.primaryColor || '#0A1A26'}
-  - Color Secundario: ${brandBook.visualIdentity?.secondaryColor || '#FF5C2B'}
-  - Color Terciario: ${brandBook.visualIdentity?.tertiaryColor || '#E8D9C5'}
-
-TIPOGRAFÍA DE MARCA:
-  - Fuente Principal (Títulos): ${brandBook.visualIdentity?.typography?.primary || 'Montserrat'}
-  - Fuente Secundaria (Cuerpo): ${typoSecondary}
-
-REGLA ESTRICTA: Usa OBLIGATORIAMENTE las fuentes de marca en fontPrimary y fontSecondary.
-Elige bgType basándote en qué color de la paleta comunica mejor cada slide (navy si el primario es oscuro, orange si el acento es cálido, cream si es neutro/claro).`;
+          brandContext = `\n=== IDENTIDAD DE MARCA OFICIAL ===\n${buildBrandContext(brandBook, { includeVisualIdentity: true })}\n\nREGLA ESTRICTA: Usa OBLIGATORIAMENTE las fuentes de marca en fontPrimary y fontSecondary.\nElige bgType basándote en qué color de la paleta comunica mejor cada slide.`;
         }
       } catch (err) {
         console.error('Error fetching brandbook', err);
@@ -168,22 +146,14 @@ REGLA ESTRICTA: Usa SIEMPRE "${fontPrimary}" en fontPrimary y "${fontSecondary}"
 - Formato 9:16 (1080x1920px). Zona segura: área central con margen de 12% en todos los lados.`;
 
     const creativityRules = `
-=== REGLAS CREATIVAS OBLIGATORIAS ===
-LONGITUD DE COPY (REGLA DE ORO — NO NEGOCIABLE):
-  - title: MÁXIMO 6 palabras. Impactante, directo, en mayúsculas.
-  - subtitle: MÁXIMO 8 palabras. Etiqueta o categoría en estilo minimalista.
-  - content: MÁXIMO 25 palabras. Frase completa, clara y con punch. NO listas. Solo prosa concisa.
-  - imageHint: Descripción visual en inglés para el diseñador. Máximo 15 palabras.
-
-VARIEDAD VISUAL (OBLIGATORIA entre slides/opciones):
-  - Nunca repitas el mismo layout en dos slides consecutivos.
-  - Alterna decorativeElement: usa arrows, grid, circles, lines, abstract o none. Nunca el mismo dos veces seguidas.
-  - Alterna bgType entre slides cuando sea posible.
-
-ZONA SEGURA 1:1 (CRÍTICO):
-  - El contenido textual PRINCIPAL (title + subtitle + content) debe diseñarse para caber en el área central cuadrada del canvas.
-  - El imageHint puede sugerir elementos decorativos fuera de esa zona.
-  - No uses textos largos que requieran múltiples líneas y desborden el cuadro.`;
+=== REGLAS CREATIVAS ===
+LÍMITES DE TEXTO:
+  - title: máx 6 palabras, mayúsculas, impactante
+  - subtitle: máx 8 palabras, estilo minimalista
+  - content: máx 25 palabras, prosa concisa, sin listas
+  - imageHint: descripción visual en inglés, máx 15 palabras
+VARIEDAD VISUAL: No repetir layout ni decorativeElement en slides consecutivos. Alternar bgType.
+ZONA SEGURA: Contenido textual debe caber en área central 1:1 del canvas.`;
 
     const systemPrompt = `Eres el Director Creativo Senior de una Agencia de Marketing Digital Premium. Tu misión es generar contenido visual estratégico de alto impacto para redes sociales.
 
@@ -247,8 +217,7 @@ FUENTES: En CADA slide, especifica fontPrimary (fuente para títulos) y fontSeco
     try {
       const MODEL_ID = 'gemini-2.5-flash';
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${apiKey}`;
-      console.log('[VisionEngine] 🚀 Sending request to:', MODEL_ID);
-      console.log('[VisionEngine] 📦 Format:', format, '| Topic:', topic || '(empty)');
+
 
       const res = await fetch(url, {
         method: 'POST',
@@ -256,9 +225,7 @@ FUENTES: En CADA slide, especifica fontPrimary (fuente para títulos) y fontSeco
         body: JSON.stringify(payload),
       });
 
-      console.log('[VisionEngine] 📡 HTTP Status:', res.status, res.statusText);
       const result = await res.json();
-      console.log('[VisionEngine] 📋 Full API Response (first 500):', JSON.stringify(result).substring(0, 500));
 
       if (!res.ok) {
         const errorMessage = result.error?.message || `HTTP ${res.status}: ${res.statusText}`;
@@ -298,7 +265,7 @@ FUENTES: En CADA slide, especifica fontPrimary (fuente para títulos) y fontSeco
 
       const candidate = result.candidates[0];
       const finishReason = candidate.finishReason || 'UNKNOWN';
-      console.log('[VisionEngine] ✅ finishReason:', finishReason);
+
 
       if (!candidate.content?.parts?.length) {
         console.error('[VisionEngine] ❌ No content/parts. finishReason:', finishReason);
@@ -318,7 +285,7 @@ FUENTES: En CADA slide, especifica fontPrimary (fuente para títulos) y fontSeco
       }
 
       let text = candidate.content.parts[0].text;
-      console.log('[VisionEngine] 📄 Raw text (300):', text?.substring(0, 300));
+
 
       if (!text) {
         console.error('[VisionEngine] ❌ text vacío');
@@ -339,7 +306,7 @@ FUENTES: En CADA slide, especifica fontPrimary (fuente para títulos) y fontSeco
 
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();
       const data = JSON.parse(text);
-      console.log('[VisionEngine] 🎨 Slides parsed:', data.slides?.length);
+
 
       if (!data.slides || !Array.isArray(data.slides) || data.slides.length === 0) {
         console.error('[VisionEngine] ❌ JSON sin slides:', data);
@@ -358,7 +325,7 @@ FUENTES: En CADA slide, especifica fontPrimary (fuente para títulos) y fontSeco
         return;
       }
 
-      console.log('[VisionEngine] ✅ SUCCESS! Generated', data.slides.length, 'slides');
+
       update({ slides: data.slides, currentIndex: 0 });
     } catch (error: any) {
       console.error('[VisionEngine] 💥 CATCH:', error.message, error);
@@ -380,7 +347,7 @@ FUENTES: En CADA slide, especifica fontPrimary (fuente para títulos) y fontSeco
   }, [state, apiKey, db, update]);
 
   const generateCaption = useCallback(async () => {
-    const { slides, currentIndex, format, tone, cta } = state;
+    const { slides, currentIndex, format, tone, cta, brandBookId } = state;
     if (!slides.length) return;
 
     update({ isCaptionModalOpen: true, isGeneratingCaption: true, captionText: '' });
@@ -388,13 +355,21 @@ FUENTES: En CADA slide, especifica fontPrimary (fuente para títulos) y fontSeco
     const effectiveTone = (tone && tone !== 'none') ? tone : 'Minimalist Luxe (sofisticado e inspirador)';
     const effectiveCta = (cta && cta !== 'none') ? cta : 'Interacción y engagement';
 
+    let captionBrandContext = '';
+    if (brandBookId && db) {
+      try {
+        const bb = await getBrandBookById(db, brandBookId);
+        if (bb) captionBrandContext = `\n\nCONTEXTO DE MARCA:\n${buildBrandContext(bb)}`;
+      } catch { /* silent */ }
+    }
+
     const slideData = format === 'carousel'
       ? slides.map((s, i) => `Slide ${i + 1}: ${s.title} — ${s.content}`).join('\n')
       : `Título: ${slides[currentIndex].title}\nSubtítulo: ${slides[currentIndex].subtitle}\nContenido: ${slides[currentIndex].content}`;
 
     const systemPrompt = `Eres el Copywriter de Kairós Studio. Tono: ${effectiveTone}.
 Redacta un caption CORTO para Instagram/LinkedIn. Estructura: 1) Gancho impactante 2) Valor en máx. 2 líneas 3) CTA claro — Objetivo: ${effectiveCta} 4) 3-5 hashtags relevantes.
-Ortografía impecable. Lectura rápida.`;
+Ortografía impecable. Lectura rápida.${captionBrandContext}`;
 
     const payload = {
       contents: [{ parts: [{ text: `Genera un caption para esta publicación:\n\n${slideData}` }] }],
@@ -424,7 +399,7 @@ Ortografía impecable. Lectura rápida.`;
     } finally {
       update({ isGeneratingCaption: false });
     }
-  }, [state, apiKey, update]);
+  }, [state, apiKey, db, update]);
 
   const copyCopys = useCallback(() => {
     if (!state.slides.length) return;
