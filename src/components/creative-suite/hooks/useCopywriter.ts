@@ -98,6 +98,7 @@ BRAND BOOK DE LA MARCA:
 - Nombre: ${bb.name}
 - Industria: ${bb.industry || 'N/A'}
 - Misión: ${bb.mission || 'N/A'}
+- Visión: ${(bb as any).vision || 'N/A'}
 - Valores: ${bb.values || 'N/A'}
 - Propósito: ${bb.purpose || 'N/A'}
 - Audiencia objetivo: ${bb.targetAudience || 'N/A'}

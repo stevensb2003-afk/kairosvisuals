@@ -189,6 +189,28 @@ export default function CreateBrandBookPage() {
             </div>
 
             <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Visión</Label>
+              <Textarea 
+                placeholder="¿A dónde quiere llegar la marca? ¿Cuál es su aspiración a futuro?" 
+                value={(formData as any).vision || ''}
+                onChange={e => setFormData({...formData, vision: e.target.value} as any)}
+                className="resize-none bg-muted/20 border-primary/10 rounded-xl"
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Valores</Label>
+              <Textarea 
+                placeholder="¿Cuáles son los valores que guían a la marca? Ej. Innovación, transparencia, inclusión..." 
+                value={formData.values || ''}
+                onChange={e => setFormData({...formData, values: e.target.value})}
+                className="resize-none bg-muted/20 border-primary/10 rounded-xl"
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Público Meta (Target Audience)</Label>
               <Textarea 
                 placeholder="Describe a quién va dirigida la marca..." 

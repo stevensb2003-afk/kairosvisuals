@@ -523,6 +523,7 @@ export interface BrandBook {
   
   // Brand Identity
   mission?: string;
+  vision?: string;
   values?: string;
   purpose?: string;
   targetAudience?: string;

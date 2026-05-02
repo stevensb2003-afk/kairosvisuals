@@ -108,6 +108,16 @@ export default function BrandBookDetailPage({ params }: { params: { id: string }
             </div>
 
             <div>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Visión</h3>
+              <p className="text-sm bg-background/50 p-3 rounded-lg border">{(book as any).vision || 'No definida'}</p>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Valores</h3>
+              <p className="text-sm bg-background/50 p-3 rounded-lg border">{book.values || 'No definidos'}</p>
+            </div>
+
+            <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Público Meta</h3>
               <p className="text-sm bg-background/50 p-3 rounded-lg border">{book.targetAudience || 'No definido'}</p>
             </div>

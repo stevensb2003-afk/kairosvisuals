@@ -110,6 +110,7 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
 EMPRESA: ${brandBook.name}
 INDUSTRIA: ${brandBook.industry || 'No especificada'}
 MISIÓN: ${brandBook.mission || 'No especificada'}
+VISIÓN: ${(brandBook as any).vision || 'No especificada'}
 PROPÓSITO: ${brandBook.purpose || 'No especificado'}
 VALORES DE MARCA: ${brandBook.values || 'No especificados'}
 PÚBLICO OBJETIVO: ${brandBook.targetAudience || 'No especificado'}

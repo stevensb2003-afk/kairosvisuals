@@ -103,6 +103,7 @@ export function useScriptWriter(apiKey: string, db: Firestore, userId: string | 
 BRAND BOOK:
 - Nombre: ${bb.name}
 - Misión: ${bb.mission || 'N/A'}
+- Visión: ${(bb as any).vision || 'N/A'}
 - Valores: ${bb.values || 'N/A'}
 - Propósito: ${bb.purpose || 'N/A'}
 - Audiencia: ${bb.targetAudience || 'N/A'}
