@@ -7,13 +7,14 @@ import {
   TrendingUp, CircleDollarSign, Plus, ArrowRight, Activity, Zap, RefreshCw, Settings, Inbox, Receipt
 } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, getDocs, query, where, collectionGroup } from 'firebase/firestore';
-import { formatCurrency } from '@/lib/utils';
+import { collection, getDocs, query, where, collectionGroup, onSnapshot } from 'firebase/firestore';
+import { formatCurrency, cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { CheckCircle, AlertCircle, XCircle, Send, ShieldCheck } from 'lucide-react';
 
 export default function Home() {
   const { user } = useUser();
@@ -30,6 +31,16 @@ export default function Home() {
   });
   const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
   const [revenueData, setRevenueData] = useState<any[]>([]);
+
+  const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    draft:                { label: 'Borrador',        color: 'text-slate-500',   icon: <FileText className="w-4 h-4" /> },
+    sent:                 { label: 'Enviada',          color: 'text-blue-500',      icon: <Send className="w-4 h-4" /> },
+    partially_paid:       { label: 'Abonos',           color: 'text-amber-500', icon: <CircleDollarSign className="w-4 h-4" /> },
+    pending_verification: { label: 'Verificando',      color: 'text-violet-500', icon: <ShieldCheck className="w-4 h-4" /> },
+    paid:                 { label: 'Pagada',           color: 'text-emerald-500', icon: <CheckCircle className="w-4 h-4" /> },
+    overdue:              { label: 'Vencida',          color: 'text-red-500',         icon: <AlertCircle className="w-4 h-4" /> },
+    cancelled:            { label: 'Cancelada',        color: 'text-muted-foreground', icon: <XCircle className="w-4 h-4" /> },
+  };
 
   const fetchDashboardData = async (isManual = false) => {
     if (!firestore) return;
@@ -96,10 +107,10 @@ export default function Home() {
 
       // Sort for recent activity (paid or recently created invoices)
       const sortedInvoices = allInvoices
-        .filter(inv => inv.status !== 'draft')
+        .filter(inv => inv.status !== 'draft' && inv.status !== 'cancelled')
         .sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+          const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
           return dateB - dateA;
         })
         .slice(0, 4);
@@ -115,7 +126,20 @@ export default function Home() {
   };
 
   useEffect(() => {
+    if (!firestore) return;
+    
+    // Real-time listener for the entire dashboard logic
     fetchDashboardData();
+    
+    const q = query(collectionGroup(firestore, 'invoices'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      // Re-run the calculations when any invoice changes
+      fetchDashboardData();
+    }, (error) => {
+      console.error("Dashboard real-time error", error);
+    });
+
+    return () => unsubscribe();
   }, [firestore]);
 
   const firstName = user?.displayName ? user.displayName.split(' ')[0] : 'Equipo';
@@ -330,15 +354,18 @@ export default function Home() {
                       className="group flex gap-3 p-3 rounded-xl hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all cursor-pointer"
                       onClick={() => router.push(`/invoicing/${inv.id}?clientId=${inv.clientId}`)}
                     >
-                       <div className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <ReceiptIcon status={inv.status} />
+                       <div className={cn(
+                         "w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform",
+                         STATUS_CONFIG[inv.status]?.color || 'text-primary'
+                       )}>
+                          {STATUS_CONFIG[inv.status]?.icon || <Receipt className="w-5 h-5" />}
                        </div>
                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold truncate group-hover:text-primary transition-colors">
                             {inv.concept || `Factura #${inv.invoiceNumber}`}
                           </p>
                           <p className="text-[11px] text-muted-foreground truncate uppercase font-semibold">
-                            {inv.createdAt ? format(parseISO(inv.createdAt), "dd MMM", { locale: es }) : ''} · {inv.status === 'paid' ? 'Pagada' : inv.status === 'partially_paid' ? 'Abonos' : 'Pendiente'}
+                            {inv.createdAt ? format(parseISO(inv.createdAt), "dd MMM", { locale: es }) : ''} · {STATUS_CONFIG[inv.status]?.label || inv.status}
                           </p>
                        </div>
                        <div className="text-right shrink-0">
@@ -359,10 +386,4 @@ export default function Home() {
   );
 }
 
-function ReceiptIcon({ status }: { status: string }) {
-   if (status === 'paid') return <CircleDollarSign className="w-5 h-5 text-emerald-500" />;
-   if (status === 'overdue') return <Clock className="w-5 h-5 text-red-500" />;
-   if (status === 'partially_paid') return <CircleDollarSign className="w-5 h-5 text-amber-500" />;
-   return <FileText className="w-5 h-5 text-blue-500" />;
-}
 
