@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LogoUploader } from '@/components/creative-suite/brand-books/logo-uploader';
 
 
 export default function CreateBrandBookPage() {
@@ -50,7 +51,8 @@ export default function CreateBrandBookPage() {
         primary: '',
         secondary: ''
       }
-    }
+    },
+    logoAssets: {}
   });
 
   const [currentTone, setCurrentTone] = useState('');
@@ -252,6 +254,26 @@ export default function CreateBrandBookPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Activos de Marca */}
+        <div className="space-y-6">
+          <div className="bg-card/50 backdrop-blur-sm border rounded-2xl p-7 space-y-5">
+            <h2 className="text-xl font-bold font-headline border-b pb-3">Activos de la Marca</h2>
+            
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-primary/70">Logotipos</h3>
+              <p className="text-xs text-muted-foreground">
+                Sube las variaciones del logo. Recomendamos usar formatos sin fondo (PNG o SVG) para mejor presentación.
+              </p>
+              
+              <LogoUploader 
+                value={formData.logoAssets || {}} 
+                onChange={(newAssets) => setFormData({...formData, logoAssets: newAssets})}
+                brandName={formData.name || 'brand'}
+              />
             </div>
           </div>
         </div>

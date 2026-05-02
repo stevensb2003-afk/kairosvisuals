@@ -514,11 +514,19 @@ export function calculateProfitDistribution(
 // BRAND BOOK
 // ============================================================================
 
+export interface BrandBookLogoAssets {
+  primary?: string;
+  secondary?: string; // e.g., horizontal/stacked alternative
+  icon?: string; // e.g., isotipo
+  monochrome?: string; // e.g., black and white / negative
+}
+
 export interface BrandBook {
   id: string;
   clientId?: string;
   name: string;
-  logoUrl?: string;
+  logoUrl?: string; // Keeping for backwards compatibility
+  logoAssets?: BrandBookLogoAssets;
   industry?: string;
   
   // Brand Identity
