@@ -514,6 +514,19 @@ export async function cancelPlanRequest(
 
   await updateDoc(clientRef, updates);
 
+  // Update associated quotation status to hide it from active plans
+  if (activePlan.planId) {
+    const quotationRef = doc(firestore, 'clients', clientId, 'quotations', activePlan.planId);
+    try {
+      await updateDoc(quotationRef, {
+        status: 'cancelled',
+        updatedAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn("Could not update quotation status to cancelled", e);
+    }
+  }
+
   if (isLate) {
     // Generate draft invoice for 50%
     const invoiceAmount = activePlan.baseRecurringAmount / 2;
