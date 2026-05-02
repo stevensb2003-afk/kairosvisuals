@@ -5,6 +5,26 @@ import { Firestore } from 'firebase/firestore';
 import { getBrandBookById } from '@/lib/brandbookService';
 import { buildBrandContext } from '@/utils/buildBrandContext';
 
+async function fetchLogoAsBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const mimeType = blob.type || 'image/png';
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        resolve({ data: dataUrl.split(',')[1], mimeType });
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export type OutputFormat = 'post' | 'carousel' | 'reel_cover';
 export type BgType = 'navy' | 'orange' | 'cream';
 export type SlideLayout = 'center' | 'split-left' | 'split-right' | 'bottom-heavy' | 'diagonal' | 'minimal-text';
@@ -100,12 +120,23 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
     update({ isGenerating: true });
 
     let brandContext = '';
+    let logoInlineParts: { inlineData: { mimeType: string; data: string } }[] = [];
 
     if (brandBookId && db) {
       try {
         const brandBook = await getBrandBookById(db, brandBookId);
         if (brandBook) {
-          brandContext = `\n=== IDENTIDAD DE MARCA OFICIAL ===\n${buildBrandContext(brandBook, { includeVisualIdentity: true })}\n\nREGLA ESTRICTA: Usa OBLIGATORIAMENTE las fuentes de marca en fontPrimary y fontSecondary.\nElige bgType basándote en qué color de la paleta comunica mejor cada slide.`;
+          brandContext = `\n=== IDENTIDAD DE MARCA OFICIAL ===\n${buildBrandContext(brandBook, { includeVisualIdentity: true })}\nElige bgType según el color de la paleta que mejor comunique cada slide.`;
+
+          // Fetch primary + icon logos as actual base64 images (max 2 to control tokens)
+          const logoUrls = [brandBook.logoAssets?.primary, brandBook.logoAssets?.icon]
+            .filter((u): u is string => Boolean(u));
+          if (logoUrls.length > 0) {
+            const results = await Promise.all(logoUrls.map(fetchLogoAsBase64));
+            logoInlineParts = results
+              .filter((r): r is { data: string; mimeType: string } => r !== null)
+              .map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.data } }));
+          }
         }
       } catch (err) {
         console.error('Error fetching brandbook', err);
@@ -116,14 +147,7 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
       const tColor = manualColors?.tertiary || '#E8D9C5';
       const fontPrimary = manualTypography?.primary || 'Montserrat';
       const fontSecondary = manualTypography?.secondary || 'Inter';
-      brandContext = `
-=== ESTÉTICA Y MARCA MANUAL ===
-PALETA:
-  - Principal: ${pColor}
-  - Secundario: ${sColor}
-  - Terciario: ${tColor}
-TIPOGRAFÍA: Principal "${fontPrimary}" para títulos, Secundaria "${fontSecondary}" para cuerpo.
-REGLA ESTRICTA: Usa SIEMPRE "${fontPrimary}" en fontPrimary y "${fontSecondary}" en fontSecondary en cada slide.`;
+      brandContext = `\n=== ESTÉTICA MANUAL ===\nPALETA: Principal ${pColor} · Secundario ${sColor} · Terciario ${tColor}\nFUENTES: "${fontPrimary}" títulos, "${fontSecondary}" cuerpo.`;
     }
 
     const formatInstruction =
@@ -145,31 +169,17 @@ REGLA ESTRICTA: Usa SIEMPRE "${fontPrimary}" en fontPrimary y "${fontSecondary}"
 - Título impactante de máximo 4 palabras en mayúsculas.
 - Formato 9:16 (1080x1920px). Zona segura: área central con margen de 12% en todos los lados.`;
 
-    const creativityRules = `
-=== REGLAS CREATIVAS ===
-LÍMITES DE TEXTO:
-  - title: máx 6 palabras, mayúsculas, impactante
-  - subtitle: máx 8 palabras, estilo minimalista
-  - content: máx 25 palabras, prosa concisa, sin listas
-  - imageHint: descripción visual en inglés, máx 15 palabras
-VARIEDAD VISUAL: No repetir layout ni decorativeElement en slides consecutivos. Alternar bgType.
-ZONA SEGURA: Contenido textual debe caber en área central 1:1 del canvas.`;
+    const creativityRules = `TEXTO: title ≤6 palabras/mayúsculas · subtitle ≤8 · content ≤25/prosa sin listas · imageHint ≤15/inglés. VARIEDAD: no repetir layout ni decorativeElement consecutivos, alterna bgType. ZONA SEGURA: contenido en área central 1:1 del canvas.`;
 
-    const systemPrompt = `Eres el Director Creativo Senior de una Agencia de Marketing Digital Premium. Tu misión es generar contenido visual estratégico de alto impacto para redes sociales.
+    const logoInstruction = logoInlineParts.length > 0
+      ? `\nLOGOS ADJUNTOS (${logoInlineParts.length}): Se incluyen los logos oficiales de la marca como imágenes de referencia visual. Analiza su estética, formas y estilo. El diseño debe ser coherente con esta identidad visual.`
+      : '';
 
-${formatInstruction}
-
-${brandContext}
-
-${tone && tone !== 'none' ? `TONO ESPECÍFICO PARA ESTE CONTENIDO: ${tone}.` : ''}
-${cta && cta !== 'none' ? `CTA OBLIGATORIO: El último slide o el CTA del diseño debe orientar al usuario a: ${cta}.` : ''}
-${service && service !== 'none' && service !== 'Equipo Kairós' ? `SERVICIO A DESTACAR: "${service}". El contenido debe posicionar este servicio como la solución ideal.` : ''}
-${service === 'Equipo Kairós' ? 'ENFOQUE HUMANO: Muestra el lado creativo, apasionado y talentoso del equipo Kairós. Autenticidad y calidad como valores.' : ''}
-${referenceImageBase64 ? 'IMAGEN DE REFERENCIA: Analiza la imagen adjunta. Identifica su intención comunicativa, estilo visual y mensaje. Recréalo adaptado a la identidad de marca.' : ''}
-
+    const systemPrompt = `Eres el Director Creativo Senior de una Agencia de Marketing Digital Premium. Genera contenido visual estratégico de alto impacto para redes sociales.
+${formatInstruction}${brandContext}${logoInstruction}
+${tone && tone !== 'none' ? `TONO: ${tone}.` : ''}${cta && cta !== 'none' ? ` CTA: ${cta}.` : ''}${service && service !== 'none' && service !== 'Equipo Kairós' ? ` SERVICIO: "${service}" como solución ideal.` : ''}${service === 'Equipo Kairós' ? ' ENFOQUE: creatividad, pasión y talento del equipo Kairós.' : ''}${referenceImageBase64 ? ' IMAGEN REFERENCIA: analiza intención, estilo y mensaje; recréalo adaptado a la marca.' : ''}
 ${creativityRules}
-
-FUENTES: En CADA slide, especifica fontPrimary (fuente para títulos) y fontSecondary (fuente para cuerpo). Deben ser fuentes de Google Fonts disponibles públicamente.`;
+FUENTES: En cada slide usa fontPrimary (títulos) y fontSecondary (cuerpo) de Google Fonts. ${brandBookId ? 'Usa OBLIGATORIAMENTE las fuentes del brand book.' : ''}`;
 
     const userPrompt = topic
       ? `BRIEF CREATIVO: ${topic}`
@@ -182,6 +192,7 @@ FUENTES: En CADA slide, especifica fontPrimary (fuente para títulos) y fontSeco
         parts: [
           { text: userPrompt },
           ...(referenceImageBase64 ? [{ inlineData: { mimeType: 'image/png', data: referenceImageBase64 } }] : []),
+          ...logoInlineParts,
         ],
       }],
       systemInstruction: { parts: [{ text: systemPrompt }] },
