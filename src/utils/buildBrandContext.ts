@@ -1,5 +1,12 @@
 import type { BrandBook } from '@/lib/types';
 
+/** Normalizes `values` which may be a legacy string or the new string[] */
+function normalizeValues(values: string | string[] | undefined): string {
+  if (!values) return 'N/A';
+  if (Array.isArray(values)) return values.join(', ') || 'N/A';
+  return values;
+}
+
 export function buildBrandContext(
   bb: BrandBook,
   opts?: { includeVisualIdentity?: boolean }
@@ -8,9 +15,12 @@ export function buildBrandContext(
     'BRAND BOOK:',
     `- Nombre: ${bb.name}`,
     `- Industria: ${bb.industry || 'N/A'}`,
+    `- Slogan: ${bb.slogan || 'N/A'}`,
+    `- Propuesta de valor: ${bb.valueProposition || 'N/A'}`,
+    `- Concepto de marca: ${bb.concept || 'N/A'}`,
     `- Misión: ${bb.mission || 'N/A'}`,
     `- Visión: ${bb.vision || 'N/A'}`,
-    `- Valores: ${bb.values || 'N/A'}`,
+    `- Valores: ${normalizeValues(bb.values as any)}`,
     `- Propósito: ${bb.purpose || 'N/A'}`,
     `- Audiencia: ${bb.targetAudience || 'N/A'}`,
     `- Tono: ${bb.tone?.join(', ') || 'N/A'}`,

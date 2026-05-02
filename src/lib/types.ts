@@ -533,7 +533,10 @@ export interface BrandBook {
   // Brand Identity
   mission?: string;
   vision?: string;
-  values?: string;
+  values?: string[]; // Array of brand values displayed as tags
+  slogan?: string;
+  valueProposition?: string;
+  concept?: string;
   purpose?: string;
   targetAudience?: string;
   tone?: string[];

@@ -43,6 +43,7 @@ export default function CreateBrandBookPage() {
     mission: '',
     targetAudience: '',
     tone: [],
+    values: [],
     visualIdentity: {
       primaryColor: '#7c3aed',
       secondaryColor: '#f59e0b',
@@ -56,6 +57,7 @@ export default function CreateBrandBookPage() {
   });
 
   const [currentTone, setCurrentTone] = useState('');
+  const [currentValue, setCurrentValue] = useState('');
 
   const handleAddTone = () => {
     if (currentTone.trim() && !formData.tone?.includes(currentTone.trim())) {
@@ -71,6 +73,22 @@ export default function CreateBrandBookPage() {
     setFormData(prev => ({
       ...prev,
       tone: prev.tone?.filter(t => t !== toneToRemove) || []
+    }));
+  };
+
+  const handleAddValue = () => {
+    const trimmed = currentValue.trim();
+    const vals = (formData.values as string[]) || [];
+    if (trimmed && !vals.includes(trimmed)) {
+      setFormData(prev => ({ ...prev, values: [...vals, trimmed] }));
+      setCurrentValue('');
+    }
+  };
+
+  const handleRemoveValue = (val: string) => {
+    setFormData(prev => ({
+      ...prev,
+      values: ((prev.values as string[]) || []).filter(v => v !== val)
     }));
   };
 
@@ -194,19 +212,72 @@ export default function CreateBrandBookPage() {
               <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Visión</Label>
               <Textarea 
                 placeholder="¿A dónde quiere llegar la marca? ¿Cuál es su aspiración a futuro?" 
-                value={(formData as any).vision || ''}
-                onChange={e => setFormData({...formData, vision: e.target.value} as any)}
+                value={formData.vision || ''}
+                onChange={e => setFormData({...formData, vision: e.target.value})}
                 className="resize-none bg-muted/20 border-primary/10 rounded-xl"
                 rows={3}
               />
             </div>
 
+            {/* Valores — Tag System */}
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Valores</Label>
-              <Textarea 
-                placeholder="¿Cuáles son los valores que guían a la marca? Ej. Innovación, transparencia, inclusión..." 
-                value={formData.values || ''}
-                onChange={e => setFormData({...formData, values: e.target.value})}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ej. Innovación, Transparencia"
+                  value={currentValue}
+                  onChange={e => setCurrentValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddValue(); } }}
+                  className="h-11 bg-muted/20 border-primary/10 rounded-xl"
+                />
+                <Button type="button" variant="secondary" onClick={handleAddValue} className="rounded-xl h-11 px-4">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              {((formData.values as string[]) || []).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {((formData.values as string[]) || []).map(v => (
+                    <span key={v} className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full text-xs font-semibold text-primary">
+                      {v}
+                      <button onClick={() => handleRemoveValue(v)} className="hover:text-destructive transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Slogan */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Slogan</Label>
+              <Input
+                placeholder="Ej. Just Do It, Think Different"
+                value={formData.slogan || ''}
+                onChange={e => setFormData({...formData, slogan: e.target.value})}
+                className="h-11 bg-muted/20 border-primary/10 rounded-xl"
+              />
+            </div>
+
+            {/* Propuesta de Valor */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Propuesta de Valor</Label>
+              <Textarea
+                placeholder="¿Qué valor único ofrece esta marca a su audiencia?"
+                value={formData.valueProposition || ''}
+                onChange={e => setFormData({...formData, valueProposition: e.target.value})}
+                className="resize-none bg-muted/20 border-primary/10 rounded-xl"
+                rows={3}
+              />
+            </div>
+
+            {/* Concepto */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70 ml-1">Concepto de Marca</Label>
+              <Textarea
+                placeholder="¿Cuál es el concepto o idea central que define a la marca?"
+                value={formData.concept || ''}
+                onChange={e => setFormData({...formData, concept: e.target.value})}
                 className="resize-none bg-muted/20 border-primary/10 rounded-xl"
                 rows={3}
               />
