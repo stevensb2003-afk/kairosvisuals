@@ -522,12 +522,17 @@ export default function CreateQuotationPage() {
     let currentMonth = now.getMonth();
     let currentYear = now.getFullYear();
 
+    // Umbral: inicio de la quincena actual (día 1 o 16)
+    const dayOfMonth = now.getDate();
+    const thresholdDate = new Date(currentYear, currentMonth, dayOfMonth >= 16 ? 16 : 1);
+    thresholdDate.setHours(0, 0, 0, 0);
+
     // Generate options for the next 4 months
     for (let i = 0; i < 4; i++) {
       [1, 16].forEach(day => {
         const date = new Date(currentYear, currentMonth, day);
-        // Only include future dates (or today)
-        if (date.setHours(0, 0, 0, 0) >= new Date().setHours(0, 0, 0, 0)) {
+        // Permitir si es igual o posterior al inicio de la quincena actual
+        if (date.setHours(0, 0, 0, 0) >= thresholdDate.getTime()) {
           options.push({
             label: `${day} de ${date.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}`,
             value: date.toISOString().split('T')[0]
