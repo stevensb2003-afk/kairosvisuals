@@ -8,7 +8,7 @@ import { buildBrandContext } from '@/utils/buildBrandContext';
 import { saveCopy, getCopys, deleteCopy } from '@/lib/copywritingService';
 
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const GEMINI_URL = '/api/gemini';
 
 const PURPOSE_LABELS: Record<CopyPurpose, string> = {
   inform: 'Informar',
@@ -120,7 +120,7 @@ REGLAS ESTRICTAS:
 - Incluye hashtags relevantes al final.
 - Usa saltos de línea reales (\n) para separar párrafos.`;
 
-      const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      const res = await fetch(GEMINI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

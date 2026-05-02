@@ -264,6 +264,7 @@ export interface InvoiceLineItem {
 
   // Service configuration (for reference and persistence)
   serviceId?: string;
+  serviceName?: string;
   selectedPackage?: string;
   selectedComplexityLevel?: number;
   overriddenQuantity?: number;

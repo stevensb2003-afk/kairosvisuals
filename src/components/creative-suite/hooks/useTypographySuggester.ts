@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from 'react';
 
-const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const GEMINI_URL = '/api/gemini';
 
 export interface TypographySuggestion {
   name: string;
@@ -65,7 +64,7 @@ export function useTypographySuggester(apiKey: string) {
         .join(' ');
 
       try {
-        const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+        const res = await fetch(GEMINI_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

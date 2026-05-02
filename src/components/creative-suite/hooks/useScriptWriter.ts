@@ -7,7 +7,7 @@ import { getBrandBookById } from '@/lib/brandbookService';
 import { buildBrandContext } from '@/utils/buildBrandContext';
 import { saveScript, getScripts, deleteScript } from '@/lib/scriptService';
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const GEMINI_URL = '/api/gemini';
 
 export const SCRIPT_FORMAT_META: Record<ScriptFormat, { label: string; emoji: string; sections: string[] }> = {
   reel: {
@@ -138,7 +138,7 @@ REGLAS:
 - Incluye un Call to Action (CTA) potente en cada opción`;
       }
 
-      const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      const res = await fetch(GEMINI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

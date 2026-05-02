@@ -272,6 +272,7 @@ export default function CreateInvoicePage() {
       return {
         id: crypto.randomUUID(),
         serviceId: pItem.serviceId,
+        serviceName: service?.name || '',
         description: pItem.overrideDescription || service?.description || '',
         quantity: pItem.quantity,
         unitPrice: basePrice,
@@ -336,6 +337,7 @@ export default function CreateInvoicePage() {
             return;
           }
 
+          updated.serviceName = selectedService.name || '';
           updated.description = selectedService.description || '';
           delete updated.overriddenQuantity;
           delete updated.selectedComplexityLevel;
@@ -362,6 +364,7 @@ export default function CreateInvoicePage() {
         }
       } else {
         updated.serviceId = undefined;
+        updated.serviceName = undefined;
         updated.unitPrice = 0;
         updated.quantity = 1;
         updated.discount = 0;
@@ -585,13 +588,14 @@ export default function CreateInvoicePage() {
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
-                    <TableHead className="w-[40%]">Descripción / Concepto</TableHead>
-                    <TableHead className="text-center w-24">Cant.</TableHead>
-                    <TableHead className="text-right w-32">Precio Unit.</TableHead>
-                    <TableHead className="text-right w-40">Descuento</TableHead>
-                    <TableHead className="text-right w-32">IVA</TableHead>
-                    <TableHead className="text-right w-32">Total</TableHead>
-                    <TableHead className="w-12"></TableHead>
+                    <TableHead className="w-[20%]">Servicio</TableHead>
+                    <TableHead className="w-[25%]">Descripción</TableHead>
+                    <TableHead className="text-center w-20">Cant.</TableHead>
+                    <TableHead className="text-right w-28">Precio Unit.</TableHead>
+                    <TableHead className="text-right w-36">Descuento</TableHead>
+                    <TableHead className="text-right w-28">IVA</TableHead>
+                    <TableHead className="text-right w-28">Total</TableHead>
+                    <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -604,41 +608,41 @@ export default function CreateInvoicePage() {
                     return (
                       <React.Fragment key={item.id}>
                         <TableRow className="group hover:bg-muted/30 border-b-0">
-                          <TableCell className="py-3">
-                            <div className="space-y-2">
-                              <Select
-                                value={item.serviceId || 'manual'}
-                                onValueChange={(val) => updateItem(item.id, 'serviceId', val)}
-                              >
-                                <SelectTrigger className="h-8 text-[11px] bg-background">
-                                  <SelectValue placeholder="Servicio de catálogo..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="manual">Manual / Libre</SelectItem>
-                                  <Separator className="my-1" />
-                                  <ScrollArea className="h-48">
-                                    {services?.map(s => (
-                                      <SelectItem key={s.id} value={s.id} className="text-xs">
-                                        <div className="flex items-center gap-2">
-                                          <Badge className="w-1.5 h-1.5 p-0 rounded-full" style={{ backgroundColor: s.color || '#ccc' }} />
-                                          {s.name}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </ScrollArea>
-                                </SelectContent>
-                              </Select>
-
-                              <Input
-                                value={item.description}
-                                onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                                placeholder="Descripción detallada del servicio..."
-                                className="h-8 text-xs border-dashed focus-visible:border-solid"
-                              />
-                            </div>
+                          <TableCell className="py-3 px-2 align-top">
+                            <Select
+                              value={item.serviceId || 'manual'}
+                              onValueChange={(val) => updateItem(item.id, 'serviceId', val)}
+                            >
+                              <SelectTrigger className="h-8 text-[11px] bg-background">
+                                <SelectValue placeholder="Servicio de catálogo..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="manual">Manual / Libre</SelectItem>
+                                <Separator className="my-1" />
+                                <ScrollArea className="h-48">
+                                  {services?.map(s => (
+                                    <SelectItem key={s.id} value={s.id} className="text-xs">
+                                      <div className="flex items-center gap-2">
+                                        <Badge className="w-1.5 h-1.5 p-0 rounded-full" style={{ backgroundColor: s.color || '#ccc' }} />
+                                        {s.name}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </ScrollArea>
+                              </SelectContent>
+                            </Select>
                           </TableCell>
 
-                          <TableCell className="py-3 px-1">
+                          <TableCell className="py-3 px-2 align-top">
+                            <Textarea
+                              value={item.description}
+                              onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                              placeholder="Descripción detallada del servicio..."
+                              className="min-h-[32px] h-8 py-1.5 resize-y text-xs border-dashed focus-visible:border-solid"
+                            />
+                          </TableCell>
+
+                          <TableCell className="py-3 px-1 align-top">
                             <Input
                               type="number"
                               value={item.quantity === 0 ? "" : item.quantity}
@@ -728,7 +732,7 @@ export default function CreateInvoicePage() {
 
                         {!isManual && (svc?.useComplexityMatrix || svc?.pricingModel === 'scalable') && (
                           <TableRow className="bg-primary/[0.02] border-b border-border/10">
-                            <TableCell colSpan={6} className="py-1 px-4">
+                            <TableCell colSpan={7} className="py-1 px-4">
                               <div className="flex flex-wrap items-center gap-4 py-1.5 animate-in slide-in-from-left-2 duration-300">
                                 <div className="flex items-center gap-2">
                                   <Settings className="w-3 h-3 text-primary/60" />

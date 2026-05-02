@@ -71,8 +71,8 @@ export const CartaTemplate: React.FC<TemplateProps> = ({ invoice, client, settin
             return (
               <tr key={idx} className="border-b border-gray-100">
                 <td className="py-4 text-gray-800">
-                  <p className="font-bold text-gray-900">{item.serviceName || item.description}</p>
-                  {item.serviceName && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
+                  <p className="font-bold text-gray-900">{item.serviceName || 'Servicio Personalizado'}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-wrap">{item.description}</p>
                   {(item.discountValue > 0 || item.discount > 0) && (
                     <p className="text-[10px] text-red-500 mt-1">
                       Descuento: {item.discountType === 'percentage' ? `${item.discountValue}%` : formatCurrency(item.discountValue || item.discount)}
@@ -162,8 +162,9 @@ export const POSTemplate: React.FC<TemplateProps> = ({ invoice, client, settings
               return (
               <tr key={idx}>
                 <td className="py-1 align-top text-[11px]">
-                  {item.serviceName || item.description}
+                  <span className="font-bold">{item.serviceName || 'Servicio Personalizado'}</span>
                   <br/>
+                  {item.description && <span className="text-gray-500 block truncate max-w-[150px] mb-0.5">{item.description}</span>}
                   <span className="text-gray-600">{item.quantity || 1}x {formatCurrency(subtotal / (item.quantity || 1))}</span>
                   {item.tax > 0 && <span className="text-gray-500 ml-1">(IVA {item.ivaRate}%)</span>}
                 </td>

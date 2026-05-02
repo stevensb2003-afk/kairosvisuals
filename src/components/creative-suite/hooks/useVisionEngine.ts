@@ -226,8 +226,7 @@ FUENTES: En cada slide usa fontPrimary (títulos) y fontSecondary (cuerpo) de Go
     };
 
     try {
-      const MODEL_ID = 'gemini-2.5-flash';
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${apiKey}`;
+      const url = '/api/gemini';
 
 
       const res = await fetch(url, {
@@ -388,8 +387,7 @@ Ortografía impecable. Lectura rápida.${captionBrandContext}`;
     };
 
     try {
-      const MODEL_ID = 'gemini-2.5-flash';
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${apiKey}`, {
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
