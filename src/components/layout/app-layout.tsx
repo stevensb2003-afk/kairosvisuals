@@ -14,7 +14,6 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Calendar,
   FileText,
   Receipt,
   Users,
@@ -23,12 +22,18 @@ import {
   Inbox,
   Package,
   RefreshCw,
-  Plus,
   LogOut,
   Loader2,
   Zap,
   X,
   Wallet,
+  Palette,
+  Sparkles,
+  ImageIcon,
+  Wand2,
+  ArrowLeft,
+  BookOpen,
+  PenLine,
 } from 'lucide-react';
 import React, { useEffect, useState, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -50,6 +55,13 @@ const navItems = [
   { href: '/finance', label: 'Gestión Financiera', icon: Wallet, roles: ['Administrador', 'Administrativo', 'Creativo'] },
 ];
 
+const creativeNavItems = [
+  { href: '/creative-suite', label: 'Creative Hub', icon: Sparkles, roles: ['Administrador', 'Administrativo', 'Creativo', 'Editor'] },
+  { href: '/creative-suite/brand-books', label: 'Brand Books', icon: BookOpen, roles: ['Administrador', 'Administrativo', 'Creativo', 'Editor'] },
+  { href: '/creative-suite/copywriting', label: 'Copywriting', icon: PenLine, roles: ['Administrador', 'Administrativo', 'Creativo', 'Editor'] },
+  { href: '/creative-suite/content-studio', label: 'Content Studio', icon: Wand2, roles: ['Administrador', 'Administrativo', 'Creativo', 'Editor'] },
+];
+
 const settingsNav = { href: '/settings', label: 'Settings', icon: Settings };
 
 const publicRoutes = [
@@ -60,6 +72,7 @@ const publicRoutes = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isCreativeSuite = pathname.startsWith('/creative-suite');
   const router = useRouter();
   const { user, userData, isUserLoading } = useUser();
   const auth = useAuth();
@@ -125,6 +138,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const getPageTitle = () => {
     if (pathname === '/') return 'TORRE DE CONTROL';
     if (pathname.startsWith('/settings')) return 'Settings';
+    if (isCreativeSuite) {
+      const currentCreativeNav = creativeNavItems.find(item => {
+        if (item.href === '/creative-suite') return pathname === '/creative-suite';
+        return pathname.startsWith(item.href);
+      });
+      return currentCreativeNav ? currentCreativeNav.label : 'Suite Creativa';
+    }
     const currentNav = navItems.find(item => {
         if (item.href === '/') return false;
         return pathname.startsWith(item.href);
@@ -157,47 +177,111 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          <Link href="/" className="flex items-start gap-1 p-2 flex-col" aria-label="Kairos Visuals Home">
-            <div className="flex items-center gap-2">
-              <Logo className="w-7 h-7 text-sidebar-foreground" />
-              <span className="text-lg font-headline font-bold text-sidebar-foreground group-data-[collapsible=icon]:hidden">Kairos Visuals</span>
+          {isCreativeSuite ? (
+            <div className="flex items-start gap-1 p-2 flex-col">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-md bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Palette className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-lg font-headline font-bold text-sidebar-foreground group-data-[collapsible=icon]:hidden">Suite Creativa</span>
+              </div>
+              <span className="text-xs text-primary/80 group-data-[collapsible=icon]:hidden pl-[36px] font-medium uppercase tracking-wider">Creative OS</span>
             </div>
-            <span className="text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden pl-[36px]">INTERNAL OS V2.4</span>
-          </Link>
+          ) : (
+            <Link href="/" className="flex items-start gap-1 p-2 flex-col" aria-label="Kairos Visuals Home">
+              <div className="flex items-center gap-2">
+                <Logo className="w-7 h-7 text-sidebar-foreground" />
+                <span className="text-lg font-headline font-bold text-sidebar-foreground group-data-[collapsible=icon]:hidden">Kairos Visuals</span>
+              </div>
+              <span className="text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden pl-[36px]">INTERNAL OS V2.4</span>
+            </Link>
+          )}
         </SidebarHeader>
         <SidebarContent>
-          <SidebarMenu>
-            {navItems
-              .filter(item => !item.roles || item.roles.includes(userData?.role))
-              .map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <Link href={item.href} passHref>
+          {isCreativeSuite ? (
+            <SidebarMenu>
+              {creativeNavItems
+                .filter(item => !item.roles || item.roles.includes(userData?.role))
+                .map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <Link href={item.href} passHref>
+                    <SidebarMenuButton
+                      isActive={item.href === '/creative-suite' ? pathname === '/creative-suite' : pathname.startsWith(item.href)}
+                      tooltip={item.label}
+                    >
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          ) : (
+            <SidebarMenu>
+              {navItems
+                .filter(item => !item.roles || item.roles.includes(userData?.role))
+                .map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <Link href={item.href} passHref>
+                    <SidebarMenuButton
+                      isActive={pathname === item.href}
+                      tooltip={item.label}
+                    >
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          )}
+        </SidebarContent>
+        <SidebarFooter>
+          {isCreativeSuite ? (
+            <SidebarMenu>
+              <SidebarMenuItem className="px-2 pb-2">
+                <Link href="/" passHref>
                   <SidebarMenuButton
-                    isActive={pathname === item.href}
-                    tooltip={item.label}
+                    className="border border-sidebar-border hover:bg-sidebar-accent h-12 transition-all font-semibold text-sidebar-foreground/80"
+                    tooltip="Volver a Suite Administrativa"
                   >
-                    <item.icon />
-                    <span>{item.label}</span>
+                    <ArrowLeft className="w-5 h-5" />
+                    <span>Suite Administrativa</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-        <SidebarFooter>
-           <SidebarMenu>
-            <SidebarMenuItem>
-              <Link href={settingsNav.href} passHref>
-                <SidebarMenuButton
-                  isActive={pathname.startsWith(settingsNav.href)}
-                  tooltip={settingsNav.label}
-                >
-                  <settingsNav.icon />
-                  <span>{settingsNav.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          </SidebarMenu>
+            </SidebarMenu>
+          ) : (
+            <>
+              <SidebarMenu>
+                <SidebarMenuItem className="px-2 pb-2">
+                  <Link href="/creative-suite" passHref>
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith('/creative-suite')}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 shadow-md transition-all font-bold"
+                      tooltip="Suite creativa"
+                    >
+                      <Palette className="w-5 h-5" />
+                      <span>Suite creativa</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              </SidebarMenu>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <Link href={settingsNav.href} passHref>
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith(settingsNav.href)}
+                      tooltip={settingsNav.label}
+                    >
+                      <settingsNav.icon />
+                      <span>{settingsNav.label}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </>
+          )}
           <Separator className="my-1 bg-sidebar-border/50" />
           <div className="p-2">
              <DropdownMenu>
@@ -225,9 +309,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className="h-screen overflow-hidden flex flex-col">
         {pageTitle ? (
-          <header className="sticky top-0 z-10 flex h-20 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6 md:px-8">
+          <header className="sticky top-0 z-50 flex h-20 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6 md:px-8">
               <SidebarTrigger className="md:hidden" />
               <div className="flex-1">
                   <h1 className="text-2xl font-bold font-headline">
@@ -258,7 +342,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <NotificationCenter />
           </header>
         ) : null}
-        <main className="flex-1 p-4 sm:p-6 md:p-8">
+        <main className={`flex-1 min-h-0 overflow-hidden ${isCreativeSuite ? '' : 'p-4 sm:p-6 md:p-8 overflow-y-auto'}`}>
             {children}
         </main>
       </SidebarInset>

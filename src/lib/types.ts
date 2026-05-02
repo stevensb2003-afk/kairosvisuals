@@ -511,6 +511,40 @@ export function calculateProfitDistribution(
 }
 
 // ============================================================================
+// BRAND BOOK
+// ============================================================================
+
+export interface BrandBook {
+  id: string;
+  clientId?: string;
+  name: string;
+  logoUrl?: string;
+  industry?: string;
+  
+  // Brand Identity
+  mission?: string;
+  values?: string;
+  purpose?: string;
+  targetAudience?: string;
+  tone?: string[];
+  
+  // Visual Identity (nested to match UI structure and logical grouping)
+  visualIdentity?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    tertiaryColor?: string;
+    typography?: {
+      primary?: string;
+      secondary?: string;
+    };
+    graphicStyle?: string;
+  };
+  
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
 // NOTIFICATIONS
 // ============================================================================
 
@@ -544,3 +578,79 @@ export interface AppNotification {
   createdAt: string;
   readAt?: string;
 }
+
+// ============================================================================
+// CONTENT STUDIO — COPYWRITING
+// ============================================================================
+
+export type CopyLength = 'short' | 'medium' | 'long';
+
+export type CopyPurpose =
+  | 'inform'
+  | 'sell'
+  | 'cta'
+  | 'educate'
+  | 'promote'
+  | 'holiday'
+  | 'entertain';
+
+export type CopyTone =
+  | 'professional'
+  | 'casual'
+  | 'playful'
+  | 'luxurious'
+  | 'urgent'
+  | 'inspirational'
+  | 'educational';
+
+export interface CopyOption {
+  id: string;       // 'a' | 'b' | 'c'
+  text: string;
+  toneLabel: string;
+}
+
+export interface SavedCopy {
+  id: string;
+  userId: string;
+  clientId?: string;
+  clientName?: string;
+  brandBookId?: string;
+  purpose: CopyPurpose;
+  tone: CopyTone;
+  length: CopyLength;
+  context: string;
+  options: CopyOption[];
+  selectedOptionId?: string;
+  createdAt: string;
+}
+
+// ============================================================================
+// CONTENT STUDIO — SCRIPTS / GUIONES
+// ============================================================================
+
+export type ScriptFormat =
+  | 'reel'
+  | 'story_sequence'
+  | 'tutorial'
+  | 'presentation'
+  | 'podcast_intro'
+  | 'ad_spot';
+
+export interface ScriptSection {
+  label: string;
+  content: string;
+}
+
+export interface SavedScript {
+  id: string;
+  userId: string;
+  clientId?: string;
+  clientName?: string;
+  brandBookId?: string;
+  title: string;
+  format: ScriptFormat;
+  context: string;
+  sections: ScriptSection[];
+  createdAt: string;
+}
+

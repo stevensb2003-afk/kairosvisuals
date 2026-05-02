@@ -20,13 +20,15 @@ interface PremiumDatePickerProps {
   onSelect: (date: Date | undefined) => void
   placeholder?: string
   className?: string
+  disabled?: boolean
 }
 
 export function PremiumDatePicker({
   date,
   onSelect,
   placeholder = "Seleccionar fecha",
-  className
+  className,
+  disabled
 }: PremiumDatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [view, setView] = React.useState<"calendar" | "year">("calendar")
@@ -87,6 +89,7 @@ export function PremiumDatePicker({
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
+          disabled={disabled}
           className={cn(
             "w-full justify-start text-left font-normal h-10 transition-all border-border hover:border-primary/50 hover:bg-primary/5",
             !date && "text-muted-foreground",

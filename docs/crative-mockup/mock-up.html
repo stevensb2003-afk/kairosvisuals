@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kairós Creative Studio - Vision Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: '#0A1A26',
+                        orange: '#FF5C2B',
+                        cream: '#E8D9C5',
+                    }
+                }
+            }
+        }
+    </script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=Montserrat:wght@300;500;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --navy: #0A1A26;
+            --orange: #FF5C2B;
+            --cream: #E8D9C5;
+            --white: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFDFD;
+            color: var(--navy);
+        }
+
+        .font-display {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .pragmatica-style {
+            font-family: 'Arial Black', 'Impact', sans-serif;
+            letter-spacing: -0.05em;
+            text-transform: uppercase;
+        }
+
+        .slide-container {
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .btn-primary {
+            background-color: var(--orange);
+            color: var(--navy);
+            font-weight: 800;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--navy);
+            color: var(--cream);
+            transform: translateY(-2px);
+        }
+
+        /* CORRECCIÓN: Mejor contraste para los botones inactivos */
+        .format-btn.active {
+            background-color: var(--navy) !important;
+            color: var(--white) !important;
+            border-color: var(--navy);
+        }
+
+        .format-btn.inactive {
+            background-color: #F3F4F6;
+            color: #4B5563;
+            border-color: #D1D5DB;
+        }
+
+        .image-preview-slot {
+            background-size: cover;
+            background-position: center;
+            border: 2px dashed #E5E7EB;
+        }
+
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-slide {
+            animation: fade-in-up 0.8s ease-out forwards;
+        }
+
+        /* Custom scrollbar for brandbook */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--navy);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="overflow-x-hidden">
+
+    <div class="min-h-screen flex flex-col lg:flex-row">
+
+        <!-- PANEL DE CONTROL IZQUIERDO -->
+        <aside
+            class="w-full lg:w-[460px] bg-white lg:border-r border-stone-100 p-6 lg:p-8 flex flex-col gap-6 lg:gap-8 shadow-2xl z-30 lg:overflow-y-auto lg:max-h-screen custom-scrollbar lg:shrink-0">
+            <div class="flex items-center gap-4 border-b border-stone-50 pb-6">
+                <div
+                    class="w-14 h-14 bg-[#FF5C2B] rounded-2xl flex items-center justify-center text-navy font-black text-3xl shadow-xl">
+                    K</div>
+                <div>
+                    <h1 class="text-2xl font-black pragmatica-style leading-none tracking-tighter">KAIRÓS <span
+                            class="font-light text-orange italic">VISION</span></h1>
+                    <p class="text-[9px] font-bold tracking-[0.4em] text-stone-500 uppercase mt-1">Creative Director AI
+                    </p> <!-- CORRECCIÓN: De stone-300 a stone-500 -->
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Formato de Salida -->
+                <div class="space-y-3">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-navy opacity-70">Objetivo del
+                        Diseño</label> <!-- CORRECCIÓN: De opacity-40 a 70 -->
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setFormat('post')" id="btn-post"
+                            class="format-btn inactive py-3 rounded-2xl text-[9px] font-black uppercase border transition-all">Post
+                            Único</button>
+                        <button onclick="setFormat('carousel')" id="btn-carousel"
+                            class="format-btn active py-3 rounded-2xl text-[9px] font-black uppercase border transition-all">Carrusel</button>
+                        <button onclick="setFormat('reel_cover')" id="btn-reel"
+                            class="format-btn inactive py-3 rounded-2xl text-[9px] font-black uppercase border transition-all">Portada
+                            Reel</button>
+                    </div>
+                </div>
+
+                <!-- Servicios (Lista Desplegable) -->
+                <div class="space-y-3">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-navy opacity-70">Servicio
+                        (Opcional)</label>
+                    <div class="relative">
+                        <select id="service-select"
+                            class="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-orange/10 outline-none transition-all text-navy cursor-pointer appearance-none">
+                            <option value="">Ninguno (Enfoque General)</option>
+                            <option value="Diseño gráfico y storytelling visual">Diseño gráfico y storytelling visual
+                            </option>
+                            <option value="Branding y logos">Branding y logos</option>
+                            <option value="Producción audiovisual">Producción audiovisual</option>
+                            <option value="Gestión de Redes Sociales">Gestión de Redes Sociales</option>
+                            <option value="Asesoría personalizada">Asesoría personalizada</option>
+                            <option value="Publicidad digital">Publicidad digital</option>
+                            <option value="Equipo Kairós">Equipo Kairós</option>
+                        </select>
+                        <!-- Ícono de flecha personalizada para el select -->
+                        <div
+                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-stone-500">
+                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NUEVO: Estrategia de Comunicación -->
+                <div class="space-y-3">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-navy opacity-70">Estrategia de
+                        Comunicación</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="relative">
+                            <select id="tone-select"
+                                class="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl text-[9px] font-bold focus:ring-4 focus:ring-orange/10 outline-none transition-all text-navy cursor-pointer appearance-none uppercase tracking-wider">
+                                <option value="">Tono (Auto)</option>
+                                <option value="Educativo y de Autoridad">Educativo</option>
+                                <option value="Inspiracional y Visionario">Inspiracional</option>
+                                <option value="Directo a Venta / Persuasivo">Directo / Venta</option>
+                                <option value="Cercano, Humano y Detrás de Escena">Cercano (Humano)</option>
+                            </select>
+                            <div
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-stone-500">
+                                <svg class="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <select id="cta-select"
+                                class="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl text-[9px] font-bold focus:ring-4 focus:ring-orange/10 outline-none transition-all text-navy cursor-pointer appearance-none uppercase tracking-wider">
+                                <option value="">CTA (Auto)</option>
+                                <option value="Comentar o Interactuar">Interactuar</option>
+                                <option value="Guardar este post para después">Guardar Post</option>
+                                <option value="Enviar un mensaje directo (DM) para cotizar">Enviar DM</option>
+                                <option value="Visitar el Link en la Bio">Link en Bio</option>
+                            </select>
+                            <div
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-stone-500">
+                                <svg class="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carga de Imagen -->
+                <div class="space-y-3">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-navy opacity-70">Referencia de
+                        Idea</label>
+                    <div class="relative">
+                        <input type="file" id="file-input" accept="image/*" class="hidden"
+                            onchange="handleFileSelect(event)">
+                        <button onclick="document.getElementById('file-input').click()"
+                            class="w-full py-4 bg-stone-50 border-2 border-dashed border-stone-300 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-stone-100 transition-all group">
+                            <div id="upload-icon"
+                                class="text-stone-400 group-hover:text-orange transition-colors text-xl">🖼️</div>
+                            <span id="upload-text"
+                                class="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Subir Imagen de
+                                Referencia</span>
+                        </button>
+                        <div id="image-preview"
+                            class="hidden mt-3 w-full h-32 rounded-2xl image-preview-slot relative group overflow-hidden border-2 border-stone-200">
+                            <button onclick="removeImage()"
+                                class="absolute top-2 right-2 bg-navy/90 text-white w-6 h-6 rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tema / Instrucciones -->
+                <div class="space-y-3">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-navy opacity-70">Instrucciones
+                        Adicionales</label>
+                    <textarea id="input-topic" placeholder="Describe tu idea detallada, conceptos o palabras clave..."
+                        class="w-full p-5 bg-stone-50 border border-stone-200 rounded-3xl text-xs font-medium h-24 resize-none focus:ring-4 focus:ring-orange/10 outline-none transition-all text-navy"></textarea>
+                </div>
+
+                <!-- Botón Generar -->
+                <button onclick="generateContent()" id="btn-generate"
+                    class="w-full btn-primary py-6 rounded-[2rem] text-sm uppercase tracking-[0.3em] shadow-2xl shadow-orange/30 flex items-center justify-center gap-3">
+                    <span id="btn-text">Kairisar Idea ✨</span>
+                    <span id="btn-loading" class="hidden">
+                        <svg class="animate-spin h-5 w-5 text-navy" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+
+            <!-- Marca Guía & Brandbook -->
+            <div class="mt-auto pt-8 border-t border-stone-200 space-y-6">
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-stone-500 mb-3">Brand Match</p>
+                        <div class="flex gap-2">
+                            <div class="w-6 h-6 rounded-full bg-[#0A1A26] border border-stone-200"></div>
+                            <div class="w-6 h-6 rounded-full bg-[#FF5C2B] border border-stone-200"></div>
+                            <div class="w-6 h-6 rounded-full bg-[#E8D9C5] border border-stone-200"></div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-stone-500 mb-3">Brand Fonts</p>
+                        <p class="text-[10px] font-black pragmatica-style text-navy">PRAGMATICA</p>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-navy">Montserrat</p>
+                    </div>
+                </div>
+                <button onclick="openBrandbook()"
+                    class="w-full py-4 bg-navy text-cream rounded-2xl flex items-center justify-center gap-3 hover:bg-orange hover:text-navy transition-all group">
+                    <span class="text-lg">📖</span>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em]">Ver Brandbook Oficial</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- ÁREA DE VISUALIZACIÓN DERECHA -->
+        <main class="flex-1 p-6 lg:p-16 flex flex-col items-center justify-center relative bg-[#F6F6F6]">
+
+            <div class="absolute top-4 lg:top-10 flex flex-col items-center gap-2 z-10">
+                <span class="text-[9px] font-black uppercase tracking-[0.6em] text-stone-500 text-center">Vista Previa
+                    Estratégica</span>
+                <div id="slide-dots" class="flex gap-2 mt-2 lg:mt-4"></div>
+            </div>
+
+            <!-- MESA DE TRABAJO -->
+            <div class="relative w-full max-w-md mx-auto aspect-[4/5] z-10 slide-container mt-12 lg:mt-0"
+                id="preview-container">
+                <div id="slide-renderer" class="w-full h-full">
+                    <!-- Estado Inicial -->
+                    <div
+                        class="w-full h-full bg-[#FDFDFD] rounded-[2rem] lg:rounded-[4rem] shadow-2xl flex flex-col items-center justify-center text-center p-8 lg:p-20 border-[8px] lg:border-[15px] border-white overflow-hidden relative">
+                        <div class="w-16 h-16 bg-orange/10 rounded-3xl flex items-center justify-center mb-6 lg:mb-10">
+                            <span class="text-3xl">✨</span>
+                        </div>
+                        <h2 class="text-3xl lg:text-4xl text-navy pragmatica-style leading-none mb-4 lg:mb-6">Tu
+                            momento<br><span class="text-orange">comienza aquí</span></h2>
+                        <p
+                            class="text-stone-500 text-[10px] font-bold uppercase tracking-[0.4em] max-w-xs leading-relaxed">
+                            Sube una imagen o describe tu tema para generar contenido de alto nivel.</p>
+                    </div>
+                </div>
+
+                <!-- Navegación lateral -->
+                <div id="nav-controls" class="hidden">
+                    <button onclick="prevSlide()"
+                        class="absolute top-1/2 -left-4 lg:-left-20 -translate-y-1/2 p-4 lg:p-6 rounded-full bg-white shadow-2xl text-navy hover:text-orange transition-all hover:scale-110 active:scale-95 z-50 border border-stone-100">←</button>
+                    <button onclick="nextSlide()"
+                        class="absolute top-1/2 -right-4 lg:-right-20 -translate-y-1/2 p-4 lg:p-6 rounded-full bg-white shadow-2xl text-navy hover:text-orange transition-all hover:scale-110 active:scale-95 z-50 border border-stone-100">→</button>
+                </div>
+            </div>
+
+            <!-- Controles Inferiores -->
+            <div class="mt-12 lg:mt-16 flex flex-wrap justify-center items-center gap-4">
+                <button onclick="copyToClipboard()"
+                    class="px-8 lg:px-12 py-5 bg-navy text-cream rounded-full shadow-2xl text-[10px] font-black uppercase tracking-[0.4em] hover:bg-orange hover:text-navy transition-all flex items-center gap-4">
+                    <span>📋</span> Copiar Copys
+                </button>
+                <button onclick="openCaptionGenerator()"
+                    class="px-8 lg:px-12 py-5 bg-white border border-stone-200 text-navy rounded-full shadow-2xl text-[10px] font-black uppercase tracking-[0.4em] hover:border-orange hover:text-orange transition-all flex items-center gap-4">
+                    <span>✍️</span> Generar Caption
+                </button>
+                <div id="slide-counter"
+                    class="px-8 py-5 bg-white border border-stone-200 rounded-full shadow-sm text-[10px] font-black text-orange uppercase tracking-widest">
+                    Slide 1/1
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- MODAL: BRANDBOOK -->
+    <div id="brandbook-modal"
+        class="fixed inset-0 bg-navy/90 backdrop-blur-md z-[60] hidden flex items-center justify-center p-4 lg:p-10 transition-all">
+        <div
+            class="bg-[#FDFDFD] w-full max-w-5xl h-full max-h-[90vh] rounded-[2rem] shadow-2xl flex flex-col overflow-hidden relative animate-slide border border-stone-200">
+
+            <!-- Header Brandbook -->
+            <div
+                class="p-6 lg:p-8 border-b border-stone-200 flex justify-between items-center bg-white sticky top-0 z-20 shadow-sm">
+                <div>
+                    <h2 class="text-xl font-black pragmatica-style text-navy leading-none">KAIRÓS CREATIVO</h2>
+                    <p class="text-[9px] font-bold tracking-[0.4em] text-orange uppercase mt-2">Guía de Identidad Visual
+                    </p>
+                </div>
+                <button onclick="closeBrandbook()"
+                    class="w-10 h-10 bg-stone-100 rounded-full text-navy hover:bg-orange hover:text-white transition-colors flex items-center justify-center font-black">✕</button>
+            </div>
+
+            <!-- Body Brandbook -->
+            <div class="p-8 lg:p-12 overflow-y-auto space-y-16 custom-scrollbar bg-[#F9F9F9]">
+
+                <!-- 01. ADN -->
+                <section class="space-y-8">
+                    <div class="flex items-center gap-4 border-b border-stone-200 pb-4">
+                        <svg class="w-8 h-8 text-orange" fill="none" stroke="currentColor" stroke-width="1.5"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                        </svg>
+                        <h3 class="text-2xl font-black pragmatica-style text-navy">01. ADN DE LA MARCA</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Concepto -->
+                        <div
+                            class="bg-navy text-white p-8 rounded-3xl flex flex-col justify-center shadow-lg relative overflow-hidden">
+                            <div class="absolute -right-10 -top-10 text-white/5"><svg class="w-64 h-64"
+                                    fill="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" />
+                                </svg></div>
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-orange mb-4 z-10">El
+                                Concepto</h4>
+                            <p class="text-sm text-cream font-medium leading-relaxed z-10"><strong
+                                    class="text-orange text-xl font-black pragmatica-style block mb-3">Kairós
+                                    (καιρός)</strong> Representa el momento perfecto, el tiempo oportuno, el instante
+                                exacto en que algo debe suceder. Es el punto donde la estrategia se alinea con el
+                                propósito divino. No es el tiempo cronológico, es el tiempo de la oportunidad.</p>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Propósito -->
+                            <div class="bg-orange p-6 rounded-2xl shadow-sm border border-orange">
+                                <h4 class="text-[10px] font-black uppercase tracking-widest text-navy mb-2 opacity-100">
+                                    Nuestro Propósito</h4>
+                                <p class="text-sm text-white font-bold leading-relaxed italic">"Usamos la creatividad
+                                    para inspirar, conectar y construir marcas con propósito."</p>
+                            </div>
+
+                            <!-- Diferencia -->
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col gap-4">
+                                <h4 class="text-[10px] font-black uppercase tracking-widest text-orange opacity-100">Lo
+                                    que nos diferencia</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-[9px] font-black uppercase tracking-widest text-stone-500 mb-1">
+                                            Tipo de Negocio</p>
+                                        <p class="text-xs font-bold text-navy">Agencia Creativa</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[9px] font-black uppercase tracking-widest text-stone-500 mb-1">
+                                            Público Meta</p>
+                                        <ul class="text-[11px] font-bold text-navy space-y-1">
+                                            <li>• Emprendedores</li>
+                                            <li>• Pymes</li>
+                                            <li>• Marcas Personales</li>
+                                            <li>• Negocios Locales</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="mt-2 pt-4 border-t border-stone-100">
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-stone-500 mb-1">
+                                        Propuesta de Valor</p>
+                                    <p class="text-xs font-medium text-navy leading-relaxed">Ofrecemos servicios
+                                        personalizados de branding, contenido y marketing digital de forma estratégica.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Misión y Visión -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-orange mb-3">Misión</h4>
+                            <p class="text-sm text-navy font-medium leading-relaxed">Impulsar a emprendedores y marcas
+                                costarricenses a comunicar su propósito a través de una identidad visual coherente,
+                                atractiva y estratégica.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-orange mb-3">Visión</h4>
+                            <p class="text-sm text-navy font-medium leading-relaxed">Ser una agencia creativa reconocida
+                                por su autenticidad, excelencia y enfoque humano, que inspira y transforma marcas con
+                                propósito.</p>
+                        </div>
+                    </div>
+
+                    <!-- Valores -->
+                    <div class="bg-cream p-8 rounded-3xl border border-stone-200">
+                        <h4 class="text-xs font-black uppercase tracking-widest text-navy mb-6">Valores</h4>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div>
+                                <svg class="w-6 h-6 text-navy mb-3" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                                </svg>
+                                <strong class="text-navy text-sm block">Excelencia</strong>
+                            </div>
+                            <div>
+                                <svg class="w-6 h-6 text-navy mb-3" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.829 1.58-1.99a4.5 4.5 0 005.628-5.628 4.5 4.5 0 00-5.628-5.628 4.5 4.5 0 00-5.628 5.628c0 .983.658 1.829 1.58 1.99v.192" />
+                                </svg>
+                                <strong class="text-navy text-sm block">Creatividad</strong>
+                            </div>
+                            <div>
+                                <svg class="w-6 h-6 text-navy mb-3" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                                </svg>
+                                <strong class="text-navy text-sm block">Honestidad</strong>
+                            </div>
+                            <div>
+                                <svg class="w-6 h-6 text-navy mb-3" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                                </svg>
+                                <strong class="text-navy text-sm block">Servicio Genuino</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 02. NUESTROS SERVICIOS -->
+                <section class="space-y-8">
+                    <div class="flex items-center gap-4 border-b border-stone-200 pb-4">
+                        <svg class="w-8 h-8 text-orange" fill="none" stroke="currentColor" stroke-width="1.5"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                        </svg>
+                        <h3 class="text-2xl font-black pragmatica-style text-navy">02. NUESTROS SERVICIOS</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div
+                            class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 hover:border-orange transition-colors">
+                            <div class="w-3 h-3 rounded-full bg-orange"></div>
+                            <span class="text-xs font-bold text-navy uppercase tracking-widest">Diseño gráfico y
+                                storytelling visual</span>
+                        </div>
+                        <div
+                            class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 hover:border-orange transition-colors">
+                            <div class="w-3 h-3 rounded-full bg-navy"></div>
+                            <span class="text-xs font-bold text-navy uppercase tracking-widest">Branding y logos</span>
+                        </div>
+                        <div
+                            class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 hover:border-orange transition-colors">
+                            <div class="w-3 h-3 rounded-full bg-orange"></div>
+                            <span class="text-xs font-bold text-navy uppercase tracking-widest">Producción
+                                audiovisual</span>
+                        </div>
+                        <div
+                            class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 hover:border-orange transition-colors">
+                            <div class="w-3 h-3 rounded-full bg-navy"></div>
+                            <span class="text-xs font-bold text-navy uppercase tracking-widest">Gestión de Redes
+                                Sociales</span>
+                        </div>
+                        <div
+                            class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 hover:border-orange transition-colors">
+                            <div class="w-3 h-3 rounded-full bg-orange"></div>
+                            <span class="text-xs font-bold text-navy uppercase tracking-widest">Asesoría
+                                personalizada</span>
+                        </div>
+                        <div
+                            class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-4 hover:border-orange transition-colors">
+                            <div class="w-3 h-3 rounded-full bg-navy"></div>
+                            <span class="text-xs font-bold text-navy uppercase tracking-widest">Publicidad
+                                digital</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 03. IDENTIDAD LOGOTÍPICA -->
+                <section class="space-y-8">
+                    <div class="flex items-center gap-4 border-b border-stone-200 pb-4">
+                        <svg class="w-8 h-8 text-orange" fill="none" stroke="currentColor" stroke-width="1.5"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.879-3.879a1.5 1.5 0 00-2.121-2.121l-3.879 3.879a15.995 15.995 0 00-4.648 4.764m3.42 3.42a15.995 15.995 0 01-4.764 4.648l-3.879 3.879a1.5 1.5 0 01-2.121-2.121l3.879-3.879a15.995 15.995 0 014.648-4.764" />
+                        </svg>
+                        <h3 class="text-2xl font-black pragmatica-style text-navy">03. IDENTIDAD LOGOTÍPICA</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Stack -->
+                        <div
+                            class="bg-navy p-8 rounded-3xl flex flex-col items-center justify-center gap-4 shadow-inner">
+                            <div class="text-[3rem] lg:text-[4rem] text-orange pragmatica-style leading-none relative">
+                                k<span class="absolute top-1 -right-1 w-5 h-5 bg-cream rounded-full"></span></div>
+                            <div class="text-center">
+                                <p class="text-cream pragmatica-style text-xl tracking-widest">KAIROS</p>
+                                <p class="text-white pragmatica-style text-lg tracking-widest">VISUALS</p>
+                            </div>
+                            <span
+                                class="mt-2 px-3 py-1 bg-white/20 rounded-full text-[8px] text-white font-bold uppercase tracking-widest">Principal
+                                (Stack)</span>
+                        </div>
+
+                        <!-- Isotipo -->
+                        <div
+                            class="bg-navy p-8 rounded-3xl flex flex-col items-center justify-center gap-4 shadow-inner">
+                            <div class="text-[4rem] lg:text-[5rem] text-orange pragmatica-style leading-none relative">
+                                k<span class="absolute top-2 -right-1 w-6 h-6 bg-cream rounded-full"></span></div>
+                            <span
+                                class="mt-4 px-3 py-1 bg-white/20 rounded-full text-[8px] text-white font-bold uppercase tracking-widest">Isotipo
+                                Solo</span>
+                        </div>
+
+                        <!-- Steam (Vertical) -->
+                        <div
+                            class="bg-navy p-8 rounded-3xl flex items-center justify-center gap-4 shadow-inner relative">
+                            <p
+                                class="text-orange pragmatica-style text-lg tracking-widest -rotate-90 origin-center hidden lg:block">
+                                KAIROS</p>
+                            <div class="text-[3rem] lg:text-[4rem] text-orange pragmatica-style leading-none relative">
+                                k<span class="absolute top-1 -right-1 w-5 h-5 bg-cream rounded-full"></span></div>
+                            <p
+                                class="text-white pragmatica-style text-lg tracking-widest -rotate-90 origin-center hidden lg:block">
+                                VISUALS</p>
+                            <span
+                                class="absolute bottom-4 px-3 py-1 bg-white/20 rounded-full text-[8px] text-white font-bold uppercase tracking-widest">Vertical
+                                (Steam)</span>
+                        </div>
+
+                        <!-- Horizontal -->
+                        <div
+                            class="bg-navy p-8 rounded-3xl flex flex-col items-center justify-center gap-6 shadow-inner md:col-span-2 lg:col-span-2">
+                            <div class="flex items-center gap-4 lg:gap-6">
+                                <div
+                                    class="text-[3rem] lg:text-[4rem] text-orange pragmatica-style leading-none relative">
+                                    k<span
+                                        class="absolute top-1 -right-1 w-4 h-4 lg:w-5 lg:h-5 bg-cream rounded-full"></span>
+                                </div>
+                                <div class="text-left border-l-2 border-orange pl-4">
+                                    <p
+                                        class="text-cream pragmatica-style text-xl lg:text-2xl tracking-widest leading-none">
+                                        KAIROS</p>
+                                    <p
+                                        class="text-white font-display font-bold text-[10px] lg:text-xs tracking-[0.4em] mt-1">
+                                        VISUALS</p>
+                                </div>
+                            </div>
+                            <span
+                                class="px-3 py-1 bg-white/20 rounded-full text-[8px] text-white font-bold uppercase tracking-widest">Horizontal</span>
+                        </div>
+
+                        <!-- Marca de Agua -->
+                        <div
+                            class="bg-navy p-8 rounded-3xl flex flex-col items-center justify-center gap-4 shadow-inner">
+                            <div
+                                class="text-[4rem] lg:text-[6rem] text-cream pragmatica-style leading-none relative opacity-30">
+                                k<span
+                                    class="absolute top-2 -right-2 w-6 h-6 lg:w-8 lg:h-8 bg-cream rounded-full"></span>
+                            </div>
+                            <span
+                                class="mt-2 px-3 py-1 bg-white/20 rounded-full text-[8px] text-white font-bold uppercase tracking-widest">Marca
+                                de Agua</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 04. UNIVERSO CROMÁTICO -->
+                <section class="space-y-8">
+                    <div class="flex items-center gap-4 border-b border-stone-200 pb-4">
+                        <svg class="w-8 h-8 text-orange" fill="none" stroke="currentColor" stroke-width="1.5"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25l7.22-7.22a3.75 3.75 0 015.304 5.304L6.75 21z" />
+                        </svg>
+                        <h3 class="text-2xl font-black pragmatica-style text-navy">04. UNIVERSO CROMÁTICO</h3>
+                    </div>
+                    <p class="text-sm text-navy font-medium">Combinación de la energía del naranja con la sobriedad del
+                        azul medianoche, logrando un balance Minimalist Luxe.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-[#FF5C2B] rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
+                            <h4 class="text-2xl font-black pragmatica-style mb-6">Naranja<br>Kairós</h4>
+                            <div class="space-y-1 text-xs font-bold font-mono">
+                                <p>HEX: #FF5C2B</p>
+                                <p>RGB: 255, 92, 43</p>
+                                <p>CMYK: 0, 78, 88, 0</p>
+                            </div>
+                            <p
+                                class="mt-6 text-[10px] uppercase tracking-widest font-black border-t border-white/40 pt-4">
+                                Energía y Creatividad</p>
+                        </div>
+                        <div class="bg-[#0A1A26] rounded-3xl p-8 text-white shadow-lg">
+                            <h4 class="text-2xl font-black pragmatica-style mb-6">Azul<br>Profundo</h4>
+                            <div class="space-y-1 text-xs font-bold font-mono text-cream">
+                                <p>HEX: #0A1A26</p>
+                                <p>RGB: 10, 26, 38</p>
+                                <p>CMYK: 88, 71, 56, 68</p>
+                            </div>
+                            <p
+                                class="mt-6 text-[10px] uppercase tracking-widest font-black border-t border-cream/40 pt-4 text-cream">
+                                Autoridad y Confianza</p>
+                        </div>
+                        <div class="bg-[#E8D9C5] rounded-3xl p-8 text-navy shadow-lg border border-stone-300">
+                            <h4 class="text-2xl font-black pragmatica-style mb-6">Crema<br>Kairós</h4>
+                            <div class="space-y-1 text-xs font-bold font-mono">
+                                <p>HEX: #E8D9C5</p>
+                                <p>RGB: 232, 217, 197</p>
+                                <p>CMYK: 8, 12, 21, 0</p>
+                            </div>
+                            <p
+                                class="mt-6 text-[10px] uppercase tracking-widest font-black border-t border-navy/30 pt-4">
+                                Calidez y Claridad</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 05. TIPOGRAFÍA -->
+                <section class="space-y-8">
+                    <div class="flex items-center gap-4 border-b border-stone-200 pb-4">
+                        <svg class="w-8 h-8 text-orange" fill="none" stroke="currentColor" stroke-width="1.5"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 10.5v-3a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v3m-9 9V5.25m0 15h3m-3 0H9" />
+                        </svg>
+                        <h3 class="text-2xl font-black pragmatica-style text-navy">05. TIPOGRAFÍAS</h3>
+                    </div>
+                    <div class="space-y-6">
+                        <div
+                            class="bg-white p-8 rounded-2xl border border-stone-200 shadow-sm flex flex-col md:flex-row items-center gap-8">
+                            <div class="flex-1">
+                                <p class="text-[10px] font-black text-orange uppercase tracking-widest mb-2">Tipografía
+                                    de Marca (Logo)</p>
+                                <h4 class="text-2xl font-black text-navy mb-2">Pragmatica Extended Bold</h4>
+                                <p class="text-xs text-navy font-medium leading-relaxed">Nuestra fuente de identidad.
+                                    Estructura ancha y peso visual fuerte. Usarse siempre en mayúsculas para el nombre
+                                    de la marca.</p>
+                            </div>
+                            <div
+                                class="flex-1 w-full bg-stone-50 p-6 rounded-xl flex items-center justify-center border border-stone-200">
+                                <span class="pragmatica-style text-4xl text-navy">KAIRÓS</span>
+                            </div>
+                        </div>
+
+                        <div
+                            class="bg-white p-8 rounded-2xl border border-stone-200 shadow-sm flex flex-col md:flex-row items-center gap-8">
+                            <div class="flex-1">
+                                <p class="text-[10px] font-black text-orange uppercase tracking-widest mb-2">Eslogan &
+                                    Subtítulos</p>
+                                <h4 class="text-2xl font-display font-bold text-navy mb-2">Montserrat</h4>
+                                <p class="text-xs text-navy font-medium leading-relaxed">Delgada y alta. Permite que el
+                                    eslogan se lea con claridad sin restar importancia al logo. Tracking (espaciado) de
+                                    +200 para look de lujo.</p>
+                            </div>
+                            <div
+                                class="flex-1 w-full bg-stone-50 p-6 rounded-xl flex items-center justify-center border border-stone-200">
+                                <span
+                                    class="font-display font-medium uppercase tracking-[0.3em] text-xl text-navy text-center">Minimalist
+                                    Luxe</span>
+                            </div>
+                        </div>
+
+                        <div
+                            class="bg-white p-8 rounded-2xl border border-stone-200 shadow-sm flex flex-col md:flex-row items-center gap-8">
+                            <div class="flex-1">
+                                <p class="text-[10px] font-black text-orange uppercase tracking-widest mb-2">Secundaria
+                                    (Cuerpo de texto)</p>
+                                <h4 class="text-2xl font-sans font-bold text-navy mb-2">Inter Regular</h4>
+                                <p class="text-xs text-navy font-medium leading-relaxed">Uso en presentaciones,
+                                    propuestas comerciales y web. Optimizada para pantallas, mantiene la limpieza
+                                    visual.</p>
+                            </div>
+                            <div class="flex-1 w-full bg-stone-50 p-6 rounded-xl border border-stone-200">
+                                <p class="font-sans text-sm text-navy font-medium leading-relaxed text-center">El diseño
+                                    es el embajador silencioso de tu marca. Con Inter logramos legibilidad perfecta en
+                                    cualquier dispositivo.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 06. TONO DE VOZ -->
+                <section class="bg-navy text-white p-10 lg:p-14 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                    <div class="absolute -right-20 -bottom-20 opacity-5"><svg class="w-96 h-96" fill="currentColor"
+                            viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                        </svg></div>
+
+                    <div class="flex items-center gap-4 border-b border-white/20 pb-6 mb-10 relative z-10">
+                        <svg class="w-8 h-8 text-orange" fill="none" stroke="currentColor" stroke-width="1.5"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                        </svg>
+                        <h3 class="text-2xl font-black pragmatica-style text-white">06. TONO DE VOZ</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 relative z-10">
+                        <div class="bg-white/10 border border-white/20 p-8 rounded-3xl backdrop-blur-sm shadow-inner">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-orange mb-4">Personalidad
+                            </h4>
+                            <p class="text-sm font-medium leading-relaxed text-cream"><strong
+                                    class="text-white block text-xl mb-3 font-display">Mentor creativo:</strong> Somos
+                                guías con experiencia. Sabios pero frescos. No dictamos órdenes, inspiramos caminos.</p>
+                        </div>
+                        <div class="bg-white/10 border border-white/20 p-8 rounded-3xl backdrop-blur-sm shadow-inner">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-orange mb-4">Tono</h4>
+                            <p class="text-sm font-medium leading-relaxed text-cream"><strong
+                                    class="text-white block text-xl mb-3 font-display">Inspirador, seguro y
+                                    directo:</strong> Hablamos con autoridad pero desde la cercanía humana. Evitamos
+                                tecnicismos vacíos.</p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="mt-12 bg-orange border border-orange rounded-3xl p-10 text-center relative z-10 shadow-xl">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-navy mb-3 opacity-90">Frase de
+                            Oro</p>
+                        <p class="text-3xl lg:text-4xl font-display font-bold text-white italic tracking-wide">
+                            "Creatividad en el tiempo perfecto"</p>
+                    </div>
+                </section>
+
+                <!-- 07. ELEMENTOS GRÁFICOS (NUEVO) -->
+                <section class="space-y-8 pb-10">
+                    <div class="flex items-center gap-4 border-b border-stone-200 pb-4">
+                        <svg class="w-8 h-8 text-orange" fill="none" stroke="currentColor" stroke-width="1.5"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.866 8.21 8.21 0 003 2.48z" />
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" />
+                        </svg>
+                        <h3 class="text-2xl font-black pragmatica-style text-navy">07. ELEMENTOS GRÁFICOS</h3>
+                    </div>
+                    <p class="text-sm text-navy font-medium">Recursos visuales de apoyo utilizados para enriquecer las
+                        composiciones manteniendo la estética Minimalist Luxe.</p>
+                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                        <!-- Arrows -->
+                        <div
+                            class="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 aspect-square shadow-sm hover:border-orange transition-colors text-center">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--orange)"
+                                stroke-width="1">
+                                <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                            <div>
+                                <span
+                                    class="text-[9px] font-black uppercase tracking-widest text-navy block">Flechas</span>
+                                <span title="Haz clic para copiar"
+                                    class="text-[8px] text-stone-500 font-mono bg-stone-100 px-2 py-1 rounded mt-2 block cursor-pointer select-all hover:bg-orange/10 hover:text-orange transition-colors">🔍
+                                    thin line arrow</span>
+                            </div>
+                        </div>
+                        <!-- Grid -->
+                        <div
+                            class="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 aspect-square shadow-sm hover:border-orange transition-colors relative overflow-hidden text-center">
+                            <div class="absolute inset-0 opacity-20"
+                                style="background-image: radial-gradient(var(--orange) 2px, transparent 2px); background-size: 15px 15px;">
+                            </div>
+                            <div class="relative z-10 flex flex-col items-center">
+                                <span
+                                    class="text-[9px] font-black uppercase tracking-widest text-navy bg-white/90 px-3 py-1 rounded-full shadow-sm block">Grid</span>
+                                <span title="Haz clic para copiar"
+                                    class="text-[8px] text-stone-600 font-mono bg-white/90 px-2 py-1 rounded mt-2 block cursor-pointer select-all shadow-sm hover:text-orange transition-colors">🔍
+                                    dot grid pattern</span>
+                            </div>
+                        </div>
+                        <!-- Circles -->
+                        <div
+                            class="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 aspect-square shadow-sm hover:border-orange transition-colors relative overflow-hidden text-center">
+                            <div
+                                class="w-16 h-16 border-[2px] border-orange rounded-full opacity-50 absolute -top-4 -right-4 pointer-events-none">
+                            </div>
+                            <div
+                                class="w-12 h-12 border-[4px] border-orange rounded-full opacity-20 absolute -bottom-2 -left-2 pointer-events-none">
+                            </div>
+                            <div class="relative z-10 flex flex-col items-center">
+                                <span
+                                    class="text-[9px] font-black uppercase tracking-widest text-navy block">Círculos</span>
+                                <span title="Haz clic para copiar"
+                                    class="text-[8px] text-stone-500 font-mono bg-stone-100 px-2 py-1 rounded mt-2 block cursor-pointer select-all hover:bg-orange/10 hover:text-orange transition-colors">🔍
+                                    thin circle outline</span>
+                            </div>
+                        </div>
+                        <!-- Lines -->
+                        <div
+                            class="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 aspect-square shadow-sm hover:border-orange transition-colors relative overflow-hidden text-center">
+                            <div class="absolute inset-4 border border-orange opacity-40 pointer-events-none"></div>
+                            <div class="relative z-10 flex flex-col items-center">
+                                <span
+                                    class="text-[9px] font-black uppercase tracking-widest text-navy bg-white/90 px-3 py-1 rounded-full shadow-sm block">Líneas</span>
+                                <span title="Haz clic para copiar"
+                                    class="text-[8px] text-stone-600 font-mono bg-white/90 px-2 py-1 rounded mt-2 block cursor-pointer select-all shadow-sm hover:text-orange transition-colors">🔍
+                                    minimal line border</span>
+                            </div>
+                        </div>
+                        <!-- Abstract -->
+                        <div
+                            class="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 aspect-square shadow-sm hover:border-orange transition-colors relative overflow-hidden text-center">
+                            <div
+                                class="w-16 h-16 border-[3px] border-orange opacity-30 rotate-45 absolute pointer-events-none">
+                            </div>
+                            <div class="relative z-10 flex flex-col items-center mt-4">
+                                <span
+                                    class="text-[9px] font-black uppercase tracking-widest text-navy bg-white/90 px-3 py-1 rounded-full shadow-sm block">Abstracto</span>
+                                <span title="Haz clic para copiar"
+                                    class="text-[8px] text-stone-600 font-mono bg-white/90 px-2 py-1 rounded mt-2 block cursor-pointer select-all shadow-sm hover:text-orange transition-colors">🔍
+                                    minimalist geometric</span>
+                            </div>
+                        </div>
+                        <!-- Aura Clara -->
+                        <div
+                            class="bg-white border border-stone-200 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 aspect-square shadow-sm hover:border-orange transition-colors relative overflow-hidden text-center">
+                            <div class="absolute inset-0 opacity-30 pointer-events-none"
+                                style="background: radial-gradient(circle at 50% 50%, var(--orange) 0%, transparent 70%);">
+                            </div>
+                            <div class="relative z-10 flex flex-col items-center mt-4">
+                                <span
+                                    class="text-[9px] font-black uppercase tracking-widest text-navy bg-white/90 px-3 py-1 rounded-full shadow-sm block">Aura
+                                    Clara</span>
+                                <span title="Haz clic para copiar"
+                                    class="text-[8px] text-stone-600 font-mono bg-white/90 px-2 py-1 rounded mt-2 block cursor-pointer select-all shadow-sm hover:text-orange transition-colors">🔍
+                                    soft orange aura</span>
+                            </div>
+                        </div>
+                        <!-- Aura Oscura -->
+                        <div
+                            class="bg-navy border border-stone-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 aspect-square shadow-sm hover:border-orange transition-colors relative overflow-hidden text-center">
+                            <div class="absolute inset-0 opacity-60 pointer-events-none"
+                                style="background: radial-gradient(circle at 50% 50%, var(--orange) 0%, transparent 65%);">
+                            </div>
+                            <div class="relative z-10 flex flex-col items-center mt-4">
+                                <span
+                                    class="text-[9px] font-black uppercase tracking-widest text-navy bg-white/90 px-3 py-1 rounded-full shadow-sm block">Aura
+                                    Oscura</span>
+                                <span title="Haz clic para copiar"
+                                    class="text-[8px] text-stone-600 font-mono bg-white/90 px-2 py-1 rounded mt-2 block cursor-pointer select-all shadow-sm hover:text-orange transition-colors">🔍
+                                    glowing dark aura</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Caption Generator -->
+    <div id="caption-modal"
+        class="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-3xl p-6 lg:p-8 shadow-2xl relative border border-stone-200">
+            <button onclick="closeCaptionModal()"
+                class="absolute top-4 lg:top-6 right-4 lg:right-6 text-stone-500 hover:text-navy transition-colors font-bold text-lg">✕</button>
+            <h3 class="text-xl font-black pragmatica-style text-navy mb-2">CAPTION GENERATOR</h3>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-orange mb-6">Redacción para Redes Sociales
+            </p>
+
+            <div id="caption-loading" class="hidden py-10 flex flex-col items-center justify-center gap-4">
+                <svg class="animate-spin h-8 w-8 text-orange" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+                <span class="text-xs font-bold text-navy uppercase tracking-widest">Redactando Copy...</span>
+            </div>
+
+            <div id="caption-content" class="hidden">
+                <textarea id="caption-text"
+                    class="w-full h-48 p-4 bg-stone-50 border border-stone-200 rounded-2xl text-sm font-medium resize-none focus:ring-4 focus:ring-orange/10 outline-none transition-all mb-4 custom-scrollbar text-navy"></textarea>
+                <button onclick="copyGeneratedCaption()"
+                    class="w-full btn-primary py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-orange/20">
+                    Copiar Caption
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = "";
+        const MODEL_ID = "gemini-2.5-flash-preview-09-2025";
+        let currentFormat = "carousel";
+        let currentSlides = [];
+        let currentIndex = 0;
+        let base64Image = null;
+
+        const colors = {
+            navy: '#0A1A26',
+            orange: '#FF5C2B',
+            cream: '#E8D9C5',
+            white: '#FFFFFF'
+        };
+
+        function setFormat(type) {
+            currentFormat = type;
+            document.getElementById('btn-post').className = type === 'post' ? 'format-btn active py-3 rounded-2xl text-[9px] font-black uppercase border transition-all' : 'format-btn inactive py-3 rounded-2xl text-[9px] font-black uppercase border transition-all';
+            document.getElementById('btn-carousel').className = type === 'carousel' ? 'format-btn active py-3 rounded-2xl text-[9px] font-black uppercase border transition-all' : 'format-btn inactive py-3 rounded-2xl text-[9px] font-black uppercase border transition-all';
+            document.getElementById('btn-reel').className = type === 'reel_cover' ? 'format-btn active py-3 rounded-2xl text-[9px] font-black uppercase border transition-all' : 'format-btn inactive py-3 rounded-2xl text-[9px] font-black uppercase border transition-all';
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                base64Image = e.target.result.split(',')[1];
+                const preview = document.getElementById('image-preview');
+                preview.style.backgroundImage = `url(${e.target.result})`;
+                preview.classList.remove('hidden');
+                document.getElementById('upload-icon').innerText = '✅';
+                document.getElementById('upload-text').innerText = 'Imagen Cargada';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            base64Image = null;
+            document.getElementById('image-preview').classList.add('hidden');
+            document.getElementById('upload-icon').innerText = '🖼️';
+            document.getElementById('upload-text').innerText = 'Subir Imagen de Referencia';
+            document.getElementById('file-input').value = '';
+        }
+
+        function openBrandbook() {
+            document.getElementById('brandbook-modal').classList.remove('hidden');
+        }
+
+        function closeBrandbook() {
+            document.getElementById('brandbook-modal').classList.add('hidden');
+        }
+
+        async function generateContent() {
+            const topic = document.getElementById('input-topic').value;
+            const currentService = document.getElementById('service-select').value;
+            const currentTone = document.getElementById('tone-select').value;
+            const currentCta = document.getElementById('cta-select').value;
+
+            const btnText = document.getElementById('btn-text');
+            const btnLoading = document.getElementById('btn-loading');
+
+            btnText.classList.add('hidden');
+            btnLoading.classList.remove('hidden');
+
+            let formatInstruction = "";
+            if (currentFormat === 'post') formatInstruction = "Generas 3 OPCIONES DISTINTAS de diseño para 1 post estático (misma idea, diferentes enfoques). Varía en cada opción la longitud del copy, el layout, el elemento decorativo y el color de fondo (bgType). REGLAS OBLIGATORIAS: Formato 4:5 (Resolución 1080x1350px). Mantén los textos y elementos importantes centrados (Zona Segura) para evitar recortes en la previsualización del feed (1:1).";
+            else if (currentFormat === 'carousel') formatInstruction = "Generas un diseño de un carrusel de 5 slides. REGLAS OBLIGATORIAS: Formato 4:5 (Resolución 1080x1350px) para cada slide. Mantén los textos y elementos importantes centrados (Zona Segura) para evitar recortes en la previsualización del feed (1:1).";
+            else if (currentFormat === 'reel_cover') formatInstruction = "Generas 3 OPCIONES DISTINTAS de diseño para 1 Portada de Reel. Varía textos, colores y layouts. REGLAS OBLIGATORIAS: Formato visual vertical (Resolución 1080x1920, 9:16). Mantén textos importantes estrictamente centrados (Zona segura) para evitar ser cubiertos por botones o descripciones de la app. La sugerencia visual (imageHint) debe ser una imagen fuertemente relacionada al tema del video.";
+
+            let system = `Eres el Director Creativo de Kairós Studio. Tu estética es Minimalist Luxe. 
+        ${formatInstruction}
+        MARCA: Colores Navy (#0A1A26), Orange (#FF5C2B), Cream (#E8D9C5). Tipografía: Pragmatica Bold y Montserrat.
+        
+        DISEÑO VISUAL ACTIVO: Analiza el concepto del usuario. Si pide "flechas", "tecnología", "algo moderno", etc., elige el 'decorativeElement' que mejor complemente la idea (arrows, grid, circles, lines, abstract). DEBES MANTENER la tipografía y los 3 colores de la marca intactos.
+        
+        ${currentTone ? "TONO DE COMUNICACIÓN OBLIGATORIO: " + currentTone + ". Asegúrate de que los textos y títulos generados reflejen esta personalidad." : ""}
+        ${currentCta ? "LLAMADO A LA ACCIÓN (CTA): El diseño y la estrategia final deben orientar al usuario a: " + currentCta + "." : ""}
+        ${currentService ? (currentService === 'Equipo Kairós' ? "ENFOQUE DEL MENSAJE: Crear contenido interno destacando al Equipo Kairós. Adapta los textos para mostrar el lado humano, el talento y la cultura de la agencia." : "ENFOQUE DEL MENSAJE: Promocionar el servicio de " + currentService + ". Adapta los textos a este enfoque.") : ""}
+        ${base64Image ? "Analiza la imagen adjunta. Recrea su intención comunicativa y estructura pero ADAPTÁNDOLA TOTALMENTE a la identidad de Kairós." : ""}
+        REGLA: Variedad en los layouts (center, split-left, split-right, bottom-heavy, diagonal). ${currentFormat === 'reel_cover' ? 'PARA PORTADA REEL, OBLIGATORIO usar layout "center" para respetar la Zona Segura.' : 'PARA POST/CARRUSEL (4:5), prioriza mantener la información vital dentro del recuadro central (1:1).'}`;
+
+            const userPrompt = topic || (base64Image ? "Crea un diseño basado en esta imagen de referencia para Kairós." : "Genera un post creativo para Kairós.");
+
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: userPrompt },
+                        ...(base64Image ? [{ inlineData: { mimeType: "image/png", data: base64Image } }] : [])
+                    ]
+                }],
+                systemInstruction: { parts: [{ text: system }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            slides: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        title: { type: "STRING" },
+                                        subtitle: { type: "STRING" },
+                                        content: { type: "STRING" },
+                                        imageHint: { type: "STRING" },
+                                        layout: { type: "STRING", enum: ["center", "split-left", "split-right", "bottom-heavy", "diagonal", "minimal-text"] },
+                                        bgType: { type: "STRING", enum: ["navy", "orange", "cream"] },
+                                        decorativeElement: { type: "STRING", enum: ["arrows", "grid", "circles", "lines", "abstract", "none"] }
+                                    },
+                                    required: ["title", "subtitle", "content", "imageHint", "layout", "bgType", "decorativeElement"]
+                                }
+                            }
+                        },
+                        required: ["slides"]
+                    }
+                }
+            };
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
+                currentSlides = data.slides;
+                currentIndex = 0;
+                renderSlide();
+                document.getElementById('nav-controls').classList.toggle('hidden', currentSlides.length <= 1);
+            } catch (e) {
+                alert("Error al conectar con el Mentor IA. Verifica tu conexión.");
+            } finally {
+                btnText.classList.remove('hidden');
+                btnLoading.classList.add('hidden');
+            }
+        }
+
+        function renderSlide() {
+            const slide = currentSlides[currentIndex];
+            const container = document.getElementById('slide-renderer');
+            const previewWrapper = document.getElementById('preview-container');
+
+            // Ajuste dinámico de aspecto (9:16 para reels, 4:5 para post/carrusel)
+            if (currentFormat === 'reel_cover') {
+                previewWrapper.className = 'relative w-full z-10 slide-container aspect-[9/16] max-w-sm mx-auto';
+            } else {
+                previewWrapper.className = 'relative w-full z-10 slide-container aspect-[4/5] max-w-md mx-auto';
+            }
+
+            const styles = {
+                navy: { bg: colors.navy, text: colors.cream, accent: colors.orange, line: 'bg-orange' },
+                orange: { bg: colors.orange, text: colors.navy, accent: colors.white, line: 'bg-navy' },
+                cream: { bg: colors.cream, text: colors.navy, accent: colors.orange, line: 'bg-orange' }
+            }[slide.bgType];
+
+            // LÓGICA DE ELEMENTOS DECORATIVOS (Basada en la IA)
+            let decoHTML = '';
+            const strokeColor = styles.accent;
+
+            if (slide.decorativeElement === 'arrows') {
+                decoHTML = `
+                <div class="absolute top-1/4 right-8 opacity-30 pointer-events-none z-0"><svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="0.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+                <div class="absolute bottom-1/4 left-8 opacity-30 pointer-events-none z-0 rotate-180"><svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="0.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>`;
+            } else if (slide.decorativeElement === 'grid') {
+                decoHTML = `<div class="absolute inset-0 opacity-[0.08] pointer-events-none z-0" style="background-image: radial-gradient(${strokeColor} 2px, transparent 2px); background-size: 30px 30px;"></div>`;
+            } else if (slide.decorativeElement === 'circles') {
+                decoHTML = `
+                <div class="absolute -top-20 -right-20 w-80 h-80 border-[2px] rounded-full opacity-30 pointer-events-none z-0" style="border-color: ${strokeColor}"></div>
+                <div class="absolute -bottom-10 -left-10 w-48 h-48 border-[20px] rounded-full opacity-10 pointer-events-none z-0" style="border-color: ${strokeColor}"></div>`;
+            } else if (slide.decorativeElement === 'lines') {
+                decoHTML = `
+                <div class="absolute top-12 left-12 right-12 h-[2px] opacity-30 pointer-events-none z-0" style="background-color: ${strokeColor}"></div>
+                <div class="absolute bottom-12 left-12 right-12 h-[2px] opacity-30 pointer-events-none z-0" style="background-color: ${strokeColor}"></div>
+                <div class="absolute top-12 bottom-12 left-12 w-[2px] opacity-30 pointer-events-none z-0" style="background-color: ${strokeColor}"></div>`;
+            } else if (slide.decorativeElement === 'abstract') {
+                decoHTML = `
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-gradient-to-tr from-transparent to-black opacity-[0.04] rounded-full pointer-events-none z-0 mix-blend-overlay"></div>
+                <div class="absolute right-12 bottom-32 w-24 h-24 border-[3px] opacity-20 rotate-45 pointer-events-none z-0" style="border-color: ${strokeColor}"></div>`;
+            }
+
+            let contentHTML = '';
+
+            if (slide.layout === 'center') {
+                contentHTML = `
+                <div class="h-full flex flex-col items-center justify-center text-center px-6 lg:px-16 space-y-6 lg:space-y-8 animate-slide relative z-10">
+                    <span class="text-[8px] lg:text-[9px] font-bold uppercase tracking-[0.6em] opacity-90" style="color: ${styles.accent}">${slide.subtitle}</span>
+                    <h2 class="${currentFormat === 'reel_cover' ? 'text-2xl lg:text-3xl' : 'text-3xl lg:text-4xl'} font-black pragmatica-style leading-[0.9]" style="color: ${styles.text}">${slide.title}</h2>
+                    <div class="w-12 lg:w-16 h-1 rounded-full ${styles.line}"></div>
+                    <p class="text-[11px] lg:text-[13px] font-medium leading-relaxed max-w-[14rem] lg:max-w-xs" style="color: ${styles.text}">${slide.content}</p>
+                </div>`;
+            } else if (slide.layout.includes('split')) {
+                const isLeft = slide.layout === 'split-left';
+                contentHTML = `
+                <div class="h-full flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-8 p-8 lg:p-14 items-center justify-center animate-slide">
+                    <div class="flex flex-col justify-center space-y-4 lg:space-y-6 ${isLeft ? '' : 'lg:order-last lg:text-right'} text-center lg:text-left z-20">
+                        <span class="text-[7px] lg:text-[8px] font-bold uppercase tracking-[0.5em] opacity-90" style="color: ${styles.accent}">${slide.subtitle}</span>
+                        <h2 class="text-2xl lg:text-3xl font-black pragmatica-style leading-none" style="color: ${styles.text}">${slide.title}</h2>
+                        <p class="text-[10px] lg:text-[11px] font-medium leading-relaxed" style="color: ${styles.text}">${slide.content}</p>
+                    </div>
+                    <!-- CORRECCIÓN DE OPACIDAD EN CARTA SUGERIDA -->
+                    <div class="bg-black/10 rounded-3xl lg:rounded-[2.5rem] border border-white/20 h-[120px] lg:h-[70%] w-full lg:w-auto flex items-center justify-center p-4 lg:p-8 text-center z-10 backdrop-blur-sm">
+                        <p class="text-[7px] lg:text-[8px] font-black uppercase tracking-widest opacity-80" style="color: ${styles.text}">Imagen Sugerida:<br><span class="font-bold mt-1 block opacity-100">${slide.imageHint}</span></p>
+                    </div>
+                </div>`;
+            } else if (slide.layout === 'bottom-heavy') {
+                contentHTML = `
+                <div class="h-full flex flex-col justify-end p-8 lg:p-16 space-y-6 lg:space-y-10 animate-slide">
+                    <div class="absolute top-10 lg:top-20 right-10 lg:right-20 w-24 h-24 lg:w-40 lg:h-40 rounded-full border-[8px] lg:border-[15px] opacity-10 z-0" style="border-color: ${styles.accent}"></div>
+                    <div class="space-y-3 lg:space-y-4 z-10">
+                        <h2 class="text-3xl lg:text-4xl font-black pragmatica-style leading-tight" style="color: ${styles.text}">${slide.title}</h2>
+                        <div class="flex items-center gap-3 lg:gap-4">
+                            <div class="h-[1px] w-8 lg:w-12 ${styles.line}"></div>
+                            <span class="text-[8px] lg:text-[10px] font-bold uppercase tracking-[0.5em] opacity-90" style="color: ${styles.accent}">${slide.subtitle}</span>
+                        </div>
+                        <p class="text-[10px] lg:text-[12px] font-medium leading-relaxed max-w-[16rem] lg:max-w-sm" style="color: ${styles.text}">${slide.content}</p>
+                    </div>
+                </div>`;
+            } else {
+                contentHTML = `
+                <div class="h-full relative p-8 lg:p-16 flex flex-col justify-between animate-slide z-10">
+                    <div class="absolute -top-6 -left-6 lg:-top-10 lg:-left-10 w-40 h-40 lg:w-64 lg:h-64 border-[20px] lg:border-[40px] opacity-10 rounded-full z-0" style="border-color: ${styles.accent}"></div>
+                    <h2 class="text-2xl lg:text-3xl font-black pragmatica-style self-start z-10 mt-6 lg:mt-0" style="color: ${styles.text}">${slide.title}</h2>
+                    <!-- CORRECCIÓN DE OPACIDAD EN CARTA SUGERIDA -->
+                    <div class="bg-black/10 rounded-2xl p-4 lg:p-6 self-center text-center max-w-[160px] lg:max-w-[200px] z-10 border border-white/20 backdrop-blur-sm">
+                        <p class="text-[6px] lg:text-[7px] font-black uppercase tracking-widest opacity-80" style="color: ${styles.text}">Sugerencia Visual:<br><span class="font-bold mt-1 block opacity-100">${slide.imageHint}</span></p>
+                    </div>
+                    <p class="text-[9px] lg:text-[11px] font-bold self-end text-right max-w-[180px] lg:max-w-[250px] leading-relaxed italic z-10 mb-6 lg:mb-0" style="color: ${styles.text}">${slide.content}</p>
+                </div>`;
+            }
+
+            // CORRECCIÓN: Overlay dinámico con contraste fuerte garantizado para la Zona Segura
+            const safeZoneOverlay = currentFormat === 'reel_cover'
+                ? '<div class="absolute inset-0 border-[3px] lg:border-[4px] border-dashed border-red-500/40 m-6 lg:m-12 pointer-events-none flex items-start justify-center pt-2 z-50"><span class="text-[7px] lg:text-[9px] text-white bg-red-500/90 px-2 lg:px-3 py-1 rounded-full uppercase font-black tracking-widest shadow-md">Zona Segura Reel</span></div>'
+                : `<div class="absolute inset-x-0 top-1/2 -translate-y-1/2 aspect-square border-[3px] lg:border-[4px] border-dashed opacity-40 pointer-events-none flex items-start justify-center pt-4 lg:pt-6 z-50" style="border-color: ${styles.text}"><span class="text-[7px] lg:text-[9px] uppercase font-black tracking-widest px-3 lg:px-4 py-1 lg:py-1.5 rounded-full shadow-md text-navy bg-white/90">Zona Segura Feed (1:1)</span></div>`;
+
+
+            container.innerHTML = `
+            <div class="w-full h-full rounded-[2rem] lg:rounded-[4rem] shadow-2xl border-[8px] lg:border-[12px] border-white overflow-hidden relative" style="background-color: ${styles.bg}">
+                ${decoHTML}
+                ${safeZoneOverlay}
+                <!-- CORRECCIÓN: Logo Superior con más contraste -->
+                <div class="absolute top-6 left-6 lg:top-12 lg:left-12 flex items-center gap-2 opacity-80 z-20">
+                    <div class="w-6 lg:w-8 h-1 rounded-full ${styles.line}"></div>
+                    <span class="text-[8px] lg:text-[10px] font-black uppercase tracking-widest" style="color: ${styles.text}">Kairós</span>
+                </div>
+                ${contentHTML}
+            </div>
+        `;
+            updateSlideControls();
+        }
+
+        function updateSlideControls() {
+            const label = currentFormat === 'carousel' ? 'Slide' : 'Opción';
+            document.getElementById('slide-counter').innerText = `${label} ${currentIndex + 1}/${currentSlides.length}`;
+            const dots = document.getElementById('slide-dots');
+            dots.innerHTML = currentSlides.map((_, i) => `<div class="h-1.5 rounded-full transition-all duration-500 ${i === currentIndex ? 'w-10 bg-orange' : 'w-2 bg-stone-300'}"></div>`).join('');
+        }
+
+        function nextSlide() { currentIndex = (currentIndex + 1) % currentSlides.length; renderSlide(); }
+        function prevSlide() { currentIndex = (currentIndex - 1 + currentSlides.length) % currentSlides.length; renderSlide(); }
+
+        function copyToClipboard() {
+            if (currentSlides.length === 0) return;
+            const label = currentFormat === 'carousel' ? 'SLIDE' : 'OPCIÓN';
+            const text = currentSlides.map((s, i) => `${label} ${i + 1}\n[${s.subtitle}]\n${s.title}\n\n${s.content}\nSugerencia Visual: ${s.imageHint}\n---`).join('\n\n');
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            alert("Estrategia copiada para tu planificación.");
+        }
+
+        async function openCaptionGenerator() {
+            if (currentSlides.length === 0) {
+                alert("Primero debes generar una idea (Kairisar Idea) para poder crear el caption.");
+                return;
+            }
+
+            const modal = document.getElementById('caption-modal');
+            const loading = document.getElementById('caption-loading');
+            const content = document.getElementById('caption-content');
+
+            modal.classList.remove('hidden');
+            loading.classList.remove('hidden');
+            content.classList.add('hidden');
+
+            const currentTone = document.getElementById('tone-select').value || 'Minimalist Luxe (sofisticado e inspirador)';
+            const currentCta = document.getElementById('cta-select').value || 'Interacción o Venta';
+
+            let slideData = "";
+            let postTypeLabel = "";
+            if (currentFormat === 'carousel') {
+                slideData = currentSlides.map((s, i) => `Slide ${i + 1}: ${s.title} - ${s.content}`).join('\n');
+                postTypeLabel = "un carrusel de " + currentSlides.length + " slides";
+            } else {
+                const s = currentSlides[currentIndex];
+                slideData = `Título principal: ${s.title}\nSubtítulo: ${s.subtitle}\nContenido: ${s.content}`;
+                postTypeLabel = "un post único";
+            }
+
+            const system = `Eres el Copywriter Principal de Kairós Studio. Tu tono de comunicación para este post es: ${currentTone}.
+        Redacta un caption CORTO y CONCISO para Instagram/LinkedIn basado estrictamente en la información del diseño. 
+        Estructura OBLIGATORIA:
+        1. Gancho: 1 línea inicial impactante.
+        2. Contexto: Máximo 2 líneas aportando el valor principal.
+        3. CTA (Call to Action): Fuerte, claro y elegante. OBJETIVO EXCLUSIVO DEL CTA: ${currentCta}.
+        4. Hashtags: 3 a 5 muy relevantes.
+        IMPORTANTE: No te extiendas. Debe ser de lectura muy rápida y tener ortografía impecable.`;
+
+            const userPrompt = `Genera un caption CORTO y estructurado para esta publicación tipo ${postTypeLabel} con la siguiente información:\n\n${slideData}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: system }] }
+            };
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const text = result.candidates[0].content.parts[0].text;
+
+                document.getElementById('caption-text').value = text;
+                loading.classList.add('hidden');
+                content.classList.remove('hidden');
+            } catch (e) {
+                alert("Error al generar el caption. Verifica tu conexión con el motor.");
+                closeCaptionModal();
+            }
+        }
+
+        function closeCaptionModal() {
+            document.getElementById('caption-modal').classList.add('hidden');
+        }
+
+        function copyGeneratedCaption() {
+            const text = document.getElementById('caption-text');
+            text.select();
+            document.execCommand('copy');
+            alert("Caption copiado al portapapeles. ¡Listo para publicar!");
+        }
+    </script>
+</body>
+
+</html>

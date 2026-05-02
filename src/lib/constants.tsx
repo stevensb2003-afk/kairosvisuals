@@ -25,6 +25,61 @@ export const ZapIcon = (props: React.SVGProps<SVGSVGElement>) => (
 // I'll export our custom one as Zap as well for compatibility.
 export const ZapSymbol = ZapIcon;
 
+export const INDUSTRIES = [
+  "Agencia de Viajes",
+  "Alimentos y Bebidas",
+  "Arquitectura y Diseño",
+  "Automotriz",
+  "Belleza y Cuidado Personal",
+  "Bienes Raíces",
+  "Consultoría y Servicios Profesionales",
+  "Educación y Formación",
+  "Entretenimiento",
+  "Eventos y Bodas",
+  "Farmacéutica y Salud",
+  "Finanzas y Seguros",
+  "Fitness y Deportes",
+  "Gastronomía / Restaurantes",
+  "Hotelería y Turismo",
+  "Inmobiliaria",
+  "Logística y Transporte",
+  "Manufactura",
+  "Moda y Accesorios",
+  "Música y Arte",
+  "ONG / Sin Fines de Lucro",
+  "Publicidad y Marketing",
+  "Retail / Comercio Minorista",
+  "Tecnología y Software",
+  "Telecomunicaciones",
+  "Otro",
+];
+
+export const EXPECTATIONS = [
+  "Crear y Fidelizar una Comunidad Activa",
+  "Generar más Leads y Consultas de Clientes",
+  "Educación de Audiencia sobre mis Servicios",
+  "Identidad de Marca Coherente",
+  "Diseño Visual de Alto Impacto",
+  "Estrategia de Contenido Clara"
+];
+
+export const MAIN_GOALS = [
+  "Escalar Ventas en un 50% o más",
+  "Posicionarme como Referente No. 1 en mi Nicho",
+  "Automatizar Marketing para Liberar mi Tiempo",
+  "Lanzar un Nuevo Producto o Servicio",
+  "Internacionalizar mi Marca",
+  "Mejorar el Enganche (Engagement)"
+];
+
+export const MOTIVATIONS = [
+  "Delegar las redes porque no tengo tiempo",
+  "Mi marca actual se ve anticuada",
+  "Acabo de iniciar un nuevo proyecto",
+  "No estoy logrando resultados con mi imagen actual",
+  "Quiero llevar mi negocio al siguiente nivel"
+];
+
 export const PRIORITY_CONFIG: Record<string, { label: string; className: string; icon: any }> = {
   'low':    { label: 'Baja',    className: 'bg-slate-500/10 text-slate-600 border-slate-500/30', icon: ChevronDown },
   'medium': { label: 'Media',   className: 'bg-blue-500/10 text-blue-600 border-blue-500/30', icon: Circle },

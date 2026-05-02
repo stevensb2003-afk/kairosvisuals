@@ -12,6 +12,7 @@ import { query, collection, onSnapshot, orderBy, where } from 'firebase/firestor
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ExpenseDialog } from '@/components/finance/expense-dialog';
+import { Expense } from '@/lib/types';
 
 export default function SubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<Expense[]>([]);

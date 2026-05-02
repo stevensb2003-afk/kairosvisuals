@@ -46,38 +46,10 @@ import html2canvas from 'html2canvas';
 import { Quotation } from '@/lib/types';
 import { formatCurrency, cn } from '@/lib/utils';
 import { acceptQuotationClient, processInvoicePayment, generateMonth1Part2, cancelPlanRequest } from '@/lib/billing_utils';
+import { INDUSTRIES, EXPECTATIONS, MAIN_GOALS, MOTIVATIONS } from "@/lib/constants";
 
 
-const INDUSTRIES = [
-  "Bienes Raíces", "Marcas Personales", "E-commerce", "Salud y Bienestar", "Gastronomía",
-  "Tecnología / SaaS", "Educación", "Servicios Profesionales", "Construcción / Arquitectura", "Otro"
-];
-
-const EXPECTATIONS = [
-  "Crear y Fidelizar una Comunidad Activa",
-  "Generar más Leads y Consultas de Clientes",
-  "Educación de Audiencia sobre mis Servicios",
-  "Identidad de Marca Coherente",
-  "Diseño Visual de Alto Impacto",
-  "Estrategia de Contenido Clara"
-];
-
-const MAIN_GOALS = [
-  "Escalar Ventas en un 50% o más",
-  "Posicionarme como Referente No. 1 en mi Nicho",
-  "Automatizar Marketing para Liberar mi Tiempo",
-  "Lanzar un Nuevo Producto o Servicio",
-  "Internacionalizar mi Marca",
-  "Mejorar el Enganche (Engagement)"
-];
-
-const MOTIVATIONS = [
-  "Delegar las redes porque no tengo tiempo",
-  "Mi marca actual se ve anticuada",
-  "Acabo de iniciar un nuevo proyecto",
-  "No estoy logrando resultados con mi imagen actual",
-  "Quiero llevar mi negocio al siguiente nivel"
-];
+// ... existing imports ...
 
 export default function ClientProfilePage() {
   const { id } = useParams() as { id: string };
