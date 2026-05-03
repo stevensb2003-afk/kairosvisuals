@@ -86,7 +86,6 @@ export function useCopywriter(apiKey: string, db: Firestore, userId: string | nu
   }, []);
 
   const generate = useCallback(async () => {
-    if (!apiKey) return;
     update({ isGenerating: true, error: null, options: [] });
 
     try {

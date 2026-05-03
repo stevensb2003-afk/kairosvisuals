@@ -90,7 +90,6 @@ export function useScriptWriter(apiKey: string, db: Firestore, userId: string | 
   }, []);
 
   const generate = useCallback(async () => {
-    if (!apiKey) return;
     update({ isGenerating: true, error: null, sections: [] });
 
     const meta = SCRIPT_FORMAT_META[state.format];

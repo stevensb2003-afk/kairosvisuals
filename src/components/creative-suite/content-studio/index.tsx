@@ -3,11 +3,7 @@
 import { Sparkles, Type } from 'lucide-react';
 import { TypographyPreview } from './typography-preview';
 
-interface ContentStudioProps {
-  apiKey: string;
-}
-
-export function ContentStudio({ apiKey }: ContentStudioProps) {
+export function ContentStudio() {
   return (
     <div className="h-full flex flex-col space-y-6 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       {/* Header */}
@@ -37,7 +33,7 @@ export function ContentStudio({ apiKey }: ContentStudioProps) {
               </div>
               <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white/60">Laboratorio de Tipografía</h2>
             </div>
-            <TypographyPreview apiKey={apiKey} />
+            <TypographyPreview />
           </div>
           
           {/* Placeholder for more visual tools */}

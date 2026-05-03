@@ -114,11 +114,7 @@ function SuggestionCard({
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
-interface TypographyPreviewProps {
-  apiKey: string;
-}
-
-export function TypographyPreview({ apiKey }: TypographyPreviewProps) {
+export function TypographyPreview() {
   const [primaryFont, setPrimaryFont] = useState('Outfit');
   const [secondaryFont, setSecondaryFont] = useState('Inter');
   const [appliedId, setAppliedId] = useState<string | null>(null);
@@ -131,7 +127,7 @@ export function TypographyPreview({ apiKey }: TypographyPreviewProps) {
     platforms: [],
   });
 
-  const { isLoading, suggestions, error, suggestFromBriefing, clearSuggestions } = useTypographySuggester(apiKey);
+  const { isLoading, suggestions, error, suggestFromBriefing, clearSuggestions } = useTypographySuggester();
 
   useGoogleFonts([primaryFont, secondaryFont]);
 

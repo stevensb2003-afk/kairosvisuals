@@ -38,17 +38,13 @@ Reglas:
 - Las 3 combinaciones deben ser distintas entre sí (estilos diferentes).
 - Ordénalas de mayor a menor fitScore.`;
 
-export function useTypographySuggester(apiKey: string) {
+export function useTypographySuggester() {
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<TypographySuggestion[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const suggestFromBriefing = useCallback(
     async (briefing: BrandBriefing): Promise<TypographySuggestion[]> => {
-      if (!apiKey) {
-        setError('API Key no configurada.');
-        return [];
-      }
       setIsLoading(true);
       setError(null);
       setSuggestions([]);
@@ -90,7 +86,7 @@ export function useTypographySuggester(apiKey: string) {
         setIsLoading(false);
       }
     },
-    [apiKey]
+    []
   );
 
   const clearSuggestions = useCallback(() => {
