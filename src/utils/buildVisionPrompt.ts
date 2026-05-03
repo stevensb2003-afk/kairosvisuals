@@ -4,6 +4,8 @@ import {
   DECORATIVE_DESCRIPTIONS,
   LAYOUT_ENUM,
   MOOD_ENUM,
+  TEXT_EFFECT_ENUM,
+  FRAME_TYPE_ENUM,
 } from '@/constants/creative-palettes';
 import { OutputFormat } from '@/components/creative-suite/hooks/useVisionEngine';
 
@@ -84,7 +86,7 @@ REGLAS DE CALIDAD CREATIVA MÁXIMA:
 - Titles: ≤7 palabras, MAYÚSCULAS, impacto inmediato — que detengan el scroll.
 - Subtitles: ≤10 palabras, contextualizan el título sin repetirlo.
 - Content: ≤30 palabras de prosa fluida — nunca listas con guiones.
-- ImageHint: ≤15 palabras en inglés, descripción visual fotográfica precisa para un director creativo.
+- ImageHint: ≤15 palabras en inglés. Genera fondos fotográficos limpios, profesionales y de alta calidad (high-end photography, cinematic lighting). EVITA collages, superposiciones extrañas o texto en la imagen. La imagen debe servir como un fondo perfecto y unificado, no como una composición recargada.
 - VARIEDAD OBLIGATORIA: No repetir la misma combinación de [bgType + layout + decorativeElement + mood] en ningún slide o opción.
 - ESTRUCTURA bgType — CRÍTICO: Los colores del canvas SIEMPRE son los de la marca/paleta del cliente. El bgType solo define la ESTRUCTURA del fondo:
   * "dark" = fondo oscuro (usar primary oscurecido) — ideal para tech, lujo, drama
@@ -97,9 +99,15 @@ REGLAS DE CALIDAD CREATIVA MÁXIMA:
 - GUÍA DE ELEMENTOS DECORATIVOS — elige el más coherente con el mood y tema:
 ${Object.entries(DECORATIVE_DESCRIPTIONS).map(([key, desc]) => `  * ${key}: ${desc}`).join('\n')}
 - TIPOGRAFÍA: Elige Google Fonts coherentes con el mood — nunca uses la misma fuente en todos los slides.
-- Mood define la energía visual: "bold" es contundente, "elegant" es refinado, "dramatic" es cinematográfico, "editorial" es intelectual, "playful" es juguetón, "minimal" es tipográfico puro.`;
+- Mood define la energía visual: "bold" es contundente, "elegant" es refinado, "dramatic" es cinematográfico, "editorial" es intelectual, "playful" es juguetón, "minimal" es tipográfico puro.
+- EFECTOS Y MARCOS: Tienes el poder de añadir un textEffect al título (glow, drop-shadow, stroke, gradient, neon) o un frameType al contenido (solid, dashed, glass, minimal, neon-border). Úsalos de manera balanceada (no en todos los slides) para destacar momentos clave.`;
 
-  const fontInstructions = brandBookId
+  const fontInstructions = config.manualTypography
+    ? `FUENTES OBLIGATORIAS DE LA MARCA:
+- fontPrimary: "${config.manualTypography.primary}"
+- fontSecondary: "${config.manualTypography.secondary}"
+NUNCA inventes fuentes. Usa EXCLUSIVAMENTE estas dos fuentes en todos los slides para mantener la fidelidad de la marca.`
+    : brandBookId
     ? 'FUENTES: Usa OBLIGATORIAMENTE las fuentes definidas en el brand book adjunto.'
     : 'FUENTES: Selecciona combinaciones de Google Fonts coherentes con el mood de cada slide.';
 
@@ -137,8 +145,10 @@ export function buildResponseSchema() {
             mood: { type: 'STRING', enum: MOOD_ENUM },
             fontPrimary: { type: 'STRING' },
             fontSecondary: { type: 'STRING' },
+            textEffect: { type: 'STRING', enum: TEXT_EFFECT_ENUM },
+            frameType: { type: 'STRING', enum: FRAME_TYPE_ENUM },
           },
-          required: ['title', 'subtitle', 'content', 'imageHint', 'layout', 'bgType', 'decorativeElement', 'mood', 'fontPrimary', 'fontSecondary'],
+          required: ['title', 'subtitle', 'content', 'imageHint', 'layout', 'bgType', 'decorativeElement', 'mood', 'fontPrimary', 'fontSecondary', 'textEffect', 'frameType'],
         },
       },
     },

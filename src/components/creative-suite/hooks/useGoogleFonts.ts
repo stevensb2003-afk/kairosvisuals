@@ -21,6 +21,7 @@ export function useGoogleFonts(fontNames: (string | undefined | null)[]) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = href;
+      link.crossOrigin = 'anonymous';
       link.setAttribute('data-gfont', encoded);
       document.head.appendChild(link);
     });

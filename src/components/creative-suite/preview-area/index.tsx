@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Sparkles, Image as ImageIcon } from 'lucide-
 import { Slide, OutputFormat, BrandColors, DEFAULT_BRAND_COLORS } from '../hooks/useVisionEngine';
 import { SlideCanvas, getRatioClasses } from './slide-canvas';
 import { ActionBar } from './action-bar';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { useState } from 'react';
 
 interface PreviewAreaProps {
@@ -13,6 +13,8 @@ interface PreviewAreaProps {
   format: OutputFormat;
   canvasRatio: '1:1' | '16:9' | '9:16' | '4:5' | '3:4' | '21:9';
   brandName?: string;
+  brandLogoBase64?: string | null;
+  brandLogoMimeType?: string | null;
   resolvedColors: BrandColors;
   generatedImages: string[];
   selectedImageIndex: number;
@@ -29,6 +31,8 @@ export function PreviewArea({
   format,
   canvasRatio,
   brandName,
+  brandLogoBase64,
+  brandLogoMimeType,
   resolvedColors,
   generatedImages,
   selectedImageIndex,
@@ -50,14 +54,12 @@ export function PreviewArea({
     if (!el) return;
     try {
       setIsExporting(true);
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: null,
+      const dataUrl = await toPng(el, {
+        cacheBust: true,
+        pixelRatio: 2,
       });
-      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `kairisar-slide-${currentIndex + 1}.png`;
+      link.download = `kairos-slide-${currentIndex + 1}.png`;
       link.href = dataUrl;
       link.click();
     } catch (error) {
@@ -85,18 +87,20 @@ export function PreviewArea({
         {/* Canvas area */}
         <div className="relative flex items-center justify-center w-full min-h-[400px]">
           {currentSlide ? (
-            <div id="slide-canvas-export" className="animate-in fade-in slide-in-from-bottom-4 duration-500 rounded-[2.5rem] lg:rounded-[3.5rem] overflow-hidden">
+            <div id="slide-canvas-export" className="animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
               <SlideCanvas
                 slide={currentSlide}
                 format={format}
                 canvasRatio={canvasRatio}
                 brandName={brandName}
+                brandLogoBase64={brandLogoBase64}
+                brandLogoMimeType={brandLogoMimeType}
                 resolvedColors={resolvedColors}
                 generatedImage={activeImage}
               />
             </div>
           ) : (
-            <div className={`w-full rounded-[2.5rem] lg:rounded-[3.5rem] overflow-hidden bg-white/5 backdrop-blur-2xl border-[4px] lg:border-[8px] border-[#0A1A26] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-center p-12 mx-auto ${getRatioClasses(canvasRatio)}`}>
+            <div className={`overflow-hidden bg-[#0A1A26]/50 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-center p-12 mx-auto ${getRatioClasses(canvasRatio)}`}>
               <div className="w-16 h-16 bg-[#FF5C2B]/10 rounded-3xl flex items-center justify-center mb-6">
                 <Sparkles className="w-8 h-8 text-[#FF5C2B]" />
               </div>

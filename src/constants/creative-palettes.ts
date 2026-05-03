@@ -55,6 +55,22 @@ export type SlideMood =
   | 'dramatic'
   | 'editorial';
 
+export type TextEffect = 
+  | 'none'
+  | 'glow'
+  | 'drop-shadow'
+  | 'stroke'
+  | 'gradient'
+  | 'neon';
+
+export type FrameType =
+  | 'none'
+  | 'solid'
+  | 'dashed'
+  | 'glass'
+  | 'minimal'
+  | 'neon-border';
+
 export interface ColorToken {
   bg: string;
   text: string;
@@ -247,6 +263,14 @@ export const LAYOUT_ENUM: SlideLayout[] = [
 // ...existing code...
 export const MOOD_ENUM: SlideMood[] = [
   'bold', 'elegant', 'playful', 'minimal', 'dramatic', 'editorial',
+];
+
+export const TEXT_EFFECT_ENUM: TextEffect[] = [
+  'none', 'glow', 'drop-shadow', 'stroke', 'gradient', 'neon'
+];
+
+export const FRAME_TYPE_ENUM: FrameType[] = [
+  'none', 'solid', 'dashed', 'glass', 'minimal', 'neon-border'
 ];
 
 /**

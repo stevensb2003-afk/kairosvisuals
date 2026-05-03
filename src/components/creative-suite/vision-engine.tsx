@@ -46,6 +46,8 @@ export function VisionEngine() {
         format={state.format}
         canvasRatio={state.canvasRatio}
         brandName={state.brandName ?? undefined}
+        brandLogoBase64={state.brandLogoBase64}
+        brandLogoMimeType={state.brandLogoMimeType}
         resolvedColors={state.resolvedColors}
         generatedImages={state.generatedImages}
         selectedImageIndex={state.selectedImageIndex}

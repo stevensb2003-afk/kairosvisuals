@@ -6,30 +6,24 @@ import { getBrandBookById } from '@/lib/brandbookService';
 import { buildBrandContext } from '@/utils/buildBrandContext';
 import { buildSystemPrompt, buildUserPrompt, buildResponseSchema } from '@/utils/buildVisionPrompt';
 import { buildImagePromptFromBrand } from '@/utils/buildImagePrompt';
-import type { BgType, DecorativeElement, SlideLayout, SlideMood, BrandColors } from '@/constants/creative-palettes';
+import type { BgType, DecorativeElement, SlideLayout, SlideMood, BrandColors, TextEffect, FrameType } from '@/constants/creative-palettes';
 
 async function fetchLogoAsBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(`/api/utils/proxy-image?url=${encodeURIComponent(url)}`);
     if (!res.ok) return null;
-    const blob = await res.blob();
-    const mimeType = blob.type || 'image/png';
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        resolve({ data: dataUrl.split(',')[1], mimeType });
-      };
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
+    const result = await res.json();
+    return {
+      data: result.data,
+      mimeType: result.mimeType
+    };
   } catch {
     return null;
   }
 }
 
 export type OutputFormat = 'post' | 'carousel' | 'reel_cover';
-export type { BgType, DecorativeElement, SlideLayout, SlideMood, BrandColors };
+export type { BgType, DecorativeElement, SlideLayout, SlideMood, BrandColors, TextEffect, FrameType };
 
 // Default brand colors (Kairós brand identity)
 export const DEFAULT_BRAND_COLORS: BrandColors = {
@@ -49,6 +43,8 @@ export interface Slide {
   mood?: SlideMood;
   fontPrimary?: string;
   fontSecondary?: string;
+  textEffect?: TextEffect;
+  frameType?: FrameType;
 }
 
 export interface VisionState {
@@ -62,6 +58,8 @@ export interface VisionState {
   resolvedColors: BrandColors;               // ← always-accurate brand colors for canvas
   manualColors: { primary: string; secondary: string; tertiary: string } | null;
   manualTypography: { primary: string; secondary: string } | null;
+  brandLogoBase64: string | null;
+  brandLogoMimeType: string | null;
   referenceImageBase64: string | null;
   referenceImagePreviewUrl: string | null;
   slides: Slide[];
@@ -95,6 +93,8 @@ const initialState: VisionState = {
   resolvedColors: DEFAULT_BRAND_COLORS,
   manualColors: null,
   manualTypography: null,
+  brandLogoBase64: null,
+  brandLogoMimeType: null,
   referenceImageBase64: null,
   referenceImagePreviewUrl: null,
   slides: [],
@@ -177,6 +177,8 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
     let brandName: string | null = null;
     let resolvedColors: BrandColors = DEFAULT_BRAND_COLORS;
     let logoInlineParts: { inlineData: { mimeType: string; data: string } }[] = [];
+    let brandLogoBase64: string | null = null;
+    let brandLogoMimeType: string | null = null;
     let fetchedBrandBook: any = null;
 
     if (brandBookId && db) {
@@ -198,6 +200,11 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
             logoInlineParts = results
               .filter((r): r is { data: string; mimeType: string } => r !== null)
               .map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.data } }));
+            
+            if (results[0]) {
+              brandLogoBase64 = results[0].data;
+              brandLogoMimeType = results[0].mimeType;
+            }
           }
         }
       } catch (err) {
@@ -319,11 +326,19 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
             })
           });
           
-          const imgData = await imgRes.json();
-          if (imgRes.ok && imgData.images && imgData.images.length > 0) {
+          const textRes = await imgRes.text();
+          let imgData;
+          try {
+            imgData = JSON.parse(textRes);
+          } catch (e) {
+            console.error('[VisionEngine] Error parseando respuesta de Imagen 3:', textRes);
+          }
+
+          if (imgRes.ok && imgData?.images && imgData.images.length > 0) {
+            console.log('[VisionEngine] ✅ Imagen generada con éxito. Tamaño del string base64:', imgData.images[0].length);
             newGeneratedImages = imgData.images;
           } else {
-            console.error('[VisionEngine] Error generando imágenes con Imagen 3:', imgData);
+            console.error('[VisionEngine] Error generando imágenes con Imagen 3. Status:', imgRes.status, 'Respuesta:', imgData || textRes);
           }
         } catch (imgErr) {
           console.error('[VisionEngine] Error en petición a /api/imagen:', imgErr);
@@ -335,6 +350,8 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
         currentIndex: 0, 
         brandName, 
         resolvedColors,
+        brandLogoBase64,
+        brandLogoMimeType,
         generatedImages: newGeneratedImages,
         selectedImageIndex: 0
       });

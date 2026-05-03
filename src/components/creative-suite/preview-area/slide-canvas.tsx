@@ -9,6 +9,7 @@ import {
   BgType,
   DecorativeElement,
   resolveBrandColors,
+  isColorDark,
 } from '@/constants/creative-palettes';
 import { useGoogleFonts } from '../hooks/useGoogleFonts';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,38 @@ function resolveBodyFont(fontSecondary?: string): string {
 
 const TITLE_BASE = 'font-black uppercase tracking-tighter leading-[0.9]';
 
+// ─── Style Helpers ────────────────────────────────────────────────────────────
+function getTextEffectClasses(effect?: string): string {
+  switch (effect) {
+    case 'glow': return 'drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]';
+    case 'drop-shadow': return 'drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]';
+    case 'gradient': return 'bg-clip-text text-transparent bg-gradient-to-br from-white to-white/50';
+    case 'neon': return 'drop-shadow-[0_0_10px_currentColor] drop-shadow-[0_0_20px_currentColor]';
+    default: return '';
+  }
+}
+
+function getTextEffectStyles(effect: string | undefined, accentColor: string, defaultColor: string): React.CSSProperties {
+  if (effect === 'stroke') {
+    return { WebkitTextStroke: `1px ${accentColor}`, color: 'transparent' };
+  }
+  if (effect === 'gradient') {
+    return { backgroundImage: `linear-gradient(to bottom right, ${defaultColor}, ${accentColor})` };
+  }
+  return { color: defaultColor };
+}
+
+function getFrameStyles(type: string | undefined, accentColor: string): React.CSSProperties {
+  switch (type) {
+    case 'solid': return { border: `3px solid ${accentColor}`, padding: '1.5rem', borderRadius: '1.5rem' };
+    case 'dashed': return { border: `3px dashed ${accentColor}`, padding: '1.5rem', borderRadius: '1.5rem' };
+    case 'glass': return { background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', padding: '1.5rem', borderRadius: '1.5rem' };
+    case 'minimal': return { borderLeft: `4px solid ${accentColor}`, paddingLeft: '1.5rem' };
+    case 'neon-border': return { border: `2px solid ${accentColor}`, boxShadow: `0 0 15px ${accentColor}, inset 0 0 15px ${accentColor}`, padding: '1.5rem', borderRadius: '1.5rem' };
+    default: return {};
+  }
+}
+
 // ─── Slide Content ────────────────────────────────────────────────────────────
 type ColorToken = ReturnType<typeof resolveBrandColors>;
 
@@ -43,37 +76,29 @@ function SlideContent({ slide, colors, format }: {
   const titleFont = resolveTitleFont(slide.fontPrimary);
   const bodyFont = resolveBodyFont(slide.fontSecondary);
 
-  const ImageHintBox = () => (
-    <div className="w-full rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-5 flex flex-col items-center justify-center gap-2 shadow-2xl relative overflow-hidden group">
-      <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-      <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60 relative z-10" style={{ color: colors.text }}>
-        Visual Concept
-      </p>
-      <p className="text-[10px] font-medium text-center italic relative z-10 line-clamp-3" style={{ color: colors.text, fontFamily: bodyFont }}>
-        &ldquo;{slide.imageHint}&rdquo;
-      </p>
-    </div>
-  );
+
 
   if (slide.layout === 'center') return (
     <div className="h-full flex flex-col items-center justify-center text-center z-10"
       style={{ padding: isReel ? '10% 8%' : '20% 10%' }}>
-      <div className="space-y-3 w-full">
-        <span className={subtitleStyle} style={{ color: colors.accent, fontFamily: bodyFont }}>{slide.subtitle}</span>
-        <h3 className={cn(titleSize, TITLE_BASE, 'line-clamp-3')} style={{ color: colors.text, fontFamily: titleFont }}>{slide.title}</h3>
+      <div className="flex flex-col items-center justify-center w-full" style={getFrameStyles(slide.frameType, colors.accent)}>
+        <div className="space-y-3 w-full">
+          <span className={subtitleStyle} style={{ color: colors.accent, fontFamily: bodyFont }}>{slide.subtitle}</span>
+          <h3 className={cn(titleSize, TITLE_BASE, 'line-clamp-3', getTextEffectClasses(slide.textEffect))} style={{ fontFamily: titleFont, ...getTextEffectStyles(slide.textEffect, colors.accent, colors.text) }}>{slide.title}</h3>
+        </div>
+        <div className="w-12 h-[3px] rounded-full my-4 flex-shrink-0" style={{ backgroundColor: colors.accent }} />
+        <p className="text-[13px] font-medium leading-relaxed max-w-[15rem] line-clamp-4" style={{ color: colors.muted, fontFamily: bodyFont }}>
+          {slide.content}
+        </p>
       </div>
-      <div className="w-12 h-[3px] rounded-full my-4 flex-shrink-0" style={{ backgroundColor: colors.accent }} />
-      <p className="text-[13px] font-medium leading-relaxed max-w-[15rem] line-clamp-4" style={{ color: colors.muted, fontFamily: bodyFont }}>
-        {slide.content}
-      </p>
     </div>
   );
 
   if (slide.layout === 'bottom-heavy') return (
     <div className="h-full flex flex-col justify-end z-10" style={{ padding: '8% 10% 12%' }}>
       <div className="absolute top-[12%] right-[8%] w-40 h-40 rounded-full border-[1px] opacity-10 z-0" style={{ borderColor: colors.accent }} />
-      <div className="space-y-4 z-10">
-        <h3 className={cn(titleSize, TITLE_BASE, 'line-clamp-3')} style={{ color: colors.text, fontFamily: titleFont }}>{slide.title}</h3>
+      <div className="space-y-4 z-10 w-full" style={getFrameStyles(slide.frameType, colors.accent)}>
+        <h3 className={cn(titleSize, TITLE_BASE, 'line-clamp-3', getTextEffectClasses(slide.textEffect))} style={{ fontFamily: titleFont, ...getTextEffectStyles(slide.textEffect, colors.accent, colors.text) }}>{slide.title}</h3>
         <div className="flex items-center gap-3">
           <div className="h-[2px] w-10 rounded-full flex-shrink-0" style={{ backgroundColor: colors.accent }} />
           <span className={subtitleStyle} style={{ color: colors.accent, fontFamily: bodyFont }}>{slide.subtitle}</span>
@@ -89,14 +114,13 @@ function SlideContent({ slide, colors, format }: {
     const isLeft = slide.layout === 'split-left';
     return (
       <div className="h-full flex flex-col items-center justify-center gap-6 z-10" style={{ padding: '10% 10%' }}>
-        <div className={cn('flex flex-col justify-center space-y-3 w-full', isLeft ? 'text-left' : 'items-end text-right')}>
+        <div className={cn('flex flex-col justify-center space-y-3 w-full', isLeft ? 'text-left' : 'items-end text-right')} style={getFrameStyles(slide.frameType, colors.accent)}>
           <span className={subtitleStyle} style={{ color: colors.accent, fontFamily: bodyFont }}>{slide.subtitle}</span>
-          <h3 className={cn('text-3xl lg:text-4xl', TITLE_BASE, 'line-clamp-3')} style={{ color: colors.text, fontFamily: titleFont }}>{slide.title}</h3>
+          <h3 className={cn('text-3xl lg:text-4xl', TITLE_BASE, 'line-clamp-3', getTextEffectClasses(slide.textEffect))} style={{ fontFamily: titleFont, ...getTextEffectStyles(slide.textEffect, colors.accent, colors.text) }}>{slide.title}</h3>
           <p className="text-[12px] font-medium leading-relaxed max-w-[14rem] line-clamp-3" style={{ color: colors.muted, fontFamily: bodyFont }}>
             {slide.content}
           </p>
         </div>
-        <ImageHintBox />
       </div>
     );
   }
@@ -104,8 +128,8 @@ function SlideContent({ slide, colors, format }: {
   if (slide.layout === 'minimal-text') return (
     <div className="h-full flex flex-col justify-between z-10" style={{ padding: '14% 10%' }}>
       <span className={subtitleStyle} style={{ color: colors.accent, fontFamily: bodyFont }}>{slide.subtitle}</span>
-      <div className="space-y-6">
-        <h3 className={cn(titleSize, TITLE_BASE, 'line-clamp-3')} style={{ color: colors.text, fontFamily: titleFont }}>{slide.title}</h3>
+      <div className="space-y-6 w-full" style={getFrameStyles(slide.frameType, colors.accent)}>
+        <h3 className={cn(titleSize, TITLE_BASE, 'line-clamp-3', getTextEffectClasses(slide.textEffect))} style={{ fontFamily: titleFont, ...getTextEffectStyles(slide.textEffect, colors.accent, colors.text) }}>{slide.title}</h3>
         <div className="w-10 h-[2px]" style={{ backgroundColor: colors.accent }} />
       </div>
       <p className="text-[12px] font-medium max-w-[13rem] italic opacity-80 line-clamp-3" style={{ color: colors.muted, fontFamily: bodyFont }}>
@@ -118,12 +142,9 @@ function SlideContent({ slide, colors, format }: {
   return (
     <div className="h-full relative flex flex-col justify-between z-10" style={{ padding: '14% 10%' }}>
       <div className="absolute -top-16 -left-16 w-80 h-80 border-[50px] opacity-5 rounded-full z-0" style={{ borderColor: colors.accent }} />
-      <div className="space-y-2 z-10">
+      <div className="space-y-2 z-10 w-full" style={getFrameStyles(slide.frameType, colors.accent)}>
         <span className={subtitleStyle} style={{ color: colors.accent, fontFamily: bodyFont }}>{slide.subtitle}</span>
-        <h3 className={cn('text-3xl lg:text-4xl', TITLE_BASE, 'line-clamp-3')} style={{ color: colors.text, fontFamily: titleFont }}>{slide.title}</h3>
-      </div>
-      <div className="max-w-[180px] z-10">
-        <ImageHintBox />
+        <h3 className={cn('text-3xl lg:text-4xl', TITLE_BASE, 'line-clamp-3', getTextEffectClasses(slide.textEffect))} style={{ fontFamily: titleFont, ...getTextEffectStyles(slide.textEffect, colors.accent, colors.text) }}>{slide.title}</h3>
       </div>
       <p className="text-[12px] font-medium self-end text-right max-w-[14rem] leading-relaxed italic line-clamp-3 z-10" style={{ color: colors.muted, fontFamily: bodyFont }}>
         {slide.content}
@@ -138,35 +159,48 @@ export interface SlideCanvasProps {
   format: OutputFormat;
   canvasRatio: '1:1' | '16:9' | '9:16' | '4:5' | '3:4' | '21:9';
   brandName?: string;
+  brandLogoBase64?: string | null;
+  brandLogoMimeType?: string | null;
   resolvedColors: BrandColors;
   generatedImage?: string | null;
 }
 
+export const LOGO_POSITIONS: Record<string, string> = {
+  'center': 'top-8 left-1/2 -translate-x-1/2',
+  'bottom-heavy': 'top-8 left-8 lg:top-10 lg:left-10',
+  'split-left': 'top-8 right-8 lg:top-10 lg:right-10 flex-row-reverse',
+  'split-right': 'top-8 left-8 lg:top-10 lg:left-10',
+  'minimal-text': 'bottom-8 right-8 lg:bottom-10 lg:right-10 flex-row-reverse',
+  'diagonal': 'top-8 left-8 lg:top-10 lg:left-10',
+  'default': 'top-8 left-8 lg:top-10 lg:left-10'
+};
+
 export function getRatioClasses(ratio: string) {
   switch (ratio) {
-    case '1:1': return 'aspect-square max-w-sm';
-    case '16:9': return 'aspect-video max-w-2xl';
-    case '9:16': return 'aspect-[9/16] max-w-xs';
-    case '4:5': return 'aspect-[4/5] max-w-sm';
-    case '3:4': return 'aspect-[3/4] max-w-sm';
-    case '21:9': return 'aspect-[21/9] max-w-3xl';
-    default: return 'aspect-[4/5] max-w-sm';
+    case '1:1': return 'aspect-square w-[350px] lg:w-[400px]';
+    case '16:9': return 'aspect-video w-[350px] lg:w-[600px]';
+    case '9:16': return 'aspect-[9/16] w-[280px] lg:w-[320px]';
+    case '4:5': return 'aspect-[4/5] w-[350px] lg:w-[400px]';
+    case '3:4': return 'aspect-[3/4] w-[350px] lg:w-[400px]';
+    case '21:9': return 'aspect-[21/9] w-[350px] lg:w-[600px]';
+    default: return 'aspect-[4/5] w-[350px] lg:w-[400px]';
   }
 }
 
-export function SlideCanvas({ slide, format, canvasRatio, brandName, resolvedColors, generatedImage }: SlideCanvasProps) {
+export function SlideCanvas({ slide, format, canvasRatio, brandName, brandLogoBase64, brandLogoMimeType, resolvedColors, generatedImage }: SlideCanvasProps) {
   const colors = resolveBrandColors(resolvedColors, slide.bgType as BgType);
   const isReel = format === 'reel_cover';
   const titleFont = resolveTitleFont(slide.fontPrimary);
   const displayBrand = brandName || 'Kairós';
   const hasAiImage = Boolean(generatedImage);
+  const isTextDark = isColorDark(colors.text);
 
   useGoogleFonts([slide.fontPrimary, slide.fontSecondary]);
 
   return (
     <div
       className={cn(
-        'w-full rounded-[3rem] lg:rounded-[4rem] overflow-hidden relative border-[12px] lg:border-[16px] border-white shadow-[0_50px_100px_-20px_rgba(10,26,38,0.4)]',
+        'overflow-hidden relative shadow-[0_50px_100px_-20px_rgba(10,26,38,0.4)]',
         getRatioClasses(canvasRatio)
       )}
       style={{ background: hasAiImage ? resolvedColors.secondary : colors.bg }}
@@ -180,23 +214,13 @@ export function SlideCanvas({ slide, format, canvasRatio, brandName, resolvedCol
         />
       )}
 
-      {/* LAYER 0b: Dark scrim over photo for text legibility */}
-      {hasAiImage && (
-        <div
-          className="absolute inset-0 z-[1] pointer-events-none"
-          style={{
-            background: `linear-gradient(160deg, ${resolvedColors.secondary}CC 0%, ${resolvedColors.secondary}66 50%, ${resolvedColors.secondary}99 100%)`,
-          }}
-        />
-      )}
-
       {/* LAYER 0c: CSS structural overlay (only without AI photo) */}
       {!hasAiImage && colors.overlay && (
         <div className="absolute inset-0 pointer-events-none z-[1]" style={{ background: colors.overlay }} />
       )}
 
       {/* LAYER 1: Decorative elements — reduced opacity when photo is active */}
-      <div className={cn('transition-opacity duration-500', hasAiImage ? 'opacity-30' : 'opacity-100')}>
+      <div className={cn('transition-opacity duration-500', hasAiImage ? 'opacity-0' : 'opacity-100')}>
         <DecorativeLayer
           element={slide.decorativeElement as DecorativeElement}
           accent={colors.accent}
@@ -216,36 +240,51 @@ export function SlideCanvas({ slide, format, canvasRatio, brandName, resolvedCol
         </div>
       )}
 
-      {/* LAYER 3: Brand watermark */}
+      {/* LAYER 3: Brand watermark / Logo */}
       <div
         className={cn(
-          'absolute top-8 left-8 lg:top-10 lg:left-10 flex items-center gap-3 z-20',
+          'absolute flex items-center gap-3 z-20 transition-all duration-500',
+          LOGO_POSITIONS[slide.layout] || LOGO_POSITIONS['default'],
           hasAiImage
-            ? 'bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10'
+            ? cn('backdrop-blur-md px-3 py-1.5 rounded-full border', isTextDark ? 'bg-white/50 border-black/10' : 'bg-black/30 border-white/10')
             : 'opacity-60'
         )}
       >
-        <div className="h-[2px] w-6 rounded-full" style={{ backgroundColor: colors.accent }} />
-        <span
-          className="text-[10px] font-black uppercase tracking-[0.3em]"
-          style={{ color: '#ffffff', fontFamily: titleFont }}
-        >
-          {displayBrand}
-        </span>
+        {brandLogoBase64 && brandLogoMimeType ? (
+          <img 
+            src={`data:${brandLogoMimeType};base64,${brandLogoBase64}`} 
+            alt={`${displayBrand} Logo`} 
+            className="h-6 w-auto object-contain drop-shadow-md"
+          />
+        ) : (
+          <>
+            <div className="h-[2px] w-6 rounded-full" style={{ backgroundColor: colors.accent }} />
+            <span
+              className="text-[10px] font-black uppercase tracking-[0.3em]"
+              style={{ color: hasAiImage ? (isTextDark ? '#000000' : '#ffffff') : colors.text, fontFamily: titleFont }}
+            >
+              {displayBrand}
+            </span>
+          </>
+        )}
       </div>
 
-      {/* LAYER 2: Main content — glassmorphism wrap when AI photo is active */}
+      {/* LAYER 2: Main content — clean blur overlay when AI photo is active */}
       {hasAiImage ? (
-        <div className="absolute inset-0 z-10 flex flex-col justify-end p-6 lg:p-8">
-          <div
-            className="rounded-3xl p-5 lg:p-7 border border-white/20"
-            style={{
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              background: `${resolvedColors.secondary}B3`,
-              boxShadow: `0 8px 32px 0 ${resolvedColors.primary}33`,
-            }}
-          >
+        <div className="absolute inset-0 z-10">
+          {/* Full coverage base overlay for contrast */}
+          <div className={cn("absolute inset-0 pointer-events-none backdrop-blur-[2px]", isTextDark ? "bg-white/60" : "bg-black/40")} />
+          
+          {/* Additional gradient for depth */}
+          <div className={cn("absolute inset-0 pointer-events-none bg-gradient-to-t", isTextDark ? "from-white/90 via-white/30 to-white/10" : "from-black/80 via-transparent to-black/30")} />
+          
+          {/* Brand color tint */}
+          <div 
+            className="absolute inset-0 pointer-events-none mix-blend-color"
+            style={{ backgroundColor: colors.accent, opacity: 0.4 }}
+          />
+          
+          <div className="relative z-10 w-full h-full p-2 lg:p-4">
             <SlideContent slide={slide} colors={colors} format={format} />
           </div>
         </div>

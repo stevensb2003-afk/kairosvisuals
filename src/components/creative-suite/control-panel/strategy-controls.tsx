@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { useFirestore, useUser } from '@/firebase/provider';
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 
 
@@ -75,6 +77,64 @@ const CTAS = [
   { value: 'Enviar un mensaje directo (DM) para cotizar', label: 'Enviar DM' },
   { value: 'Visitar el Link en la Bio', label: 'Link en Bio' },
 ];
+
+// ─── KairosCombobox ─────────────────────────────────────────────────────────────
+function KairosCombobox({ value, onChange, options, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            'w-full flex items-center justify-between gap-2 p-3.5 bg-white/5 border border-white/10 rounded-2xl',
+            'text-[9px] font-bold uppercase tracking-wider text-white/90 outline-none',
+            'hover:border-[#FF5C2B]/50 focus:ring-2 focus:ring-[#FF5C2B]/20 transition-all text-left'
+          )}
+        >
+          <span className="truncate">{selected?.label || placeholder}</span>
+          <ChevronDown className="w-3.5 h-3.5 text-white/40 shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-[#050D14] border border-white/10 rounded-2xl shadow-xl z-[999] overflow-hidden" align="start">
+        <Command className="bg-transparent border-none">
+          <CommandInput placeholder="Buscar..." className="h-10 text-[9px] text-white/80 uppercase tracking-wider border-none focus:ring-0 focus-visible:ring-0" />
+          <CommandList className="max-h-[260px] overflow-y-auto p-1.5 custom-scrollbar">
+            <CommandEmpty className="text-[9px] text-white/50 uppercase tracking-wider py-6 text-center">No encontrado.</CommandEmpty>
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.value}
+                  value={opt.label}
+                  onSelect={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    'flex items-center justify-between px-3 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-wider cursor-pointer outline-none transition-colors',
+                    'text-white/80 aria-selected:bg-[#FF5C2B]/20 aria-selected:text-white',
+                    value === opt.value && 'bg-[#FF5C2B]/20 text-white'
+                  )}
+                >
+                  {opt.label}
+                  <Check className={cn("w-3 h-3 text-[#FF5C2B]", value === opt.value ? "opacity-100" : "opacity-0")} />
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 // ─── KairosSelect ─────────────────────────────────────────────────────────────
 function KairosSelect({ value, onChange, options, placeholder }: {
@@ -225,7 +285,7 @@ export function StrategyControls({
             <Loader2 className="w-4 h-4 animate-spin mr-2" /> Cargando...
           </div>
         ) : (
-          <KairosSelect value={brandBookId || 'none'} onChange={(v) => onChange('brandBookId', v === 'none' ? null : v)} options={brandBooks} placeholder="Seleccionar Brand Book..." />
+          <KairosCombobox value={brandBookId || 'none'} onChange={(v) => onChange('brandBookId', v === 'none' ? null : v)} options={brandBooks} placeholder="Seleccionar Brand Book..." />
         )}
       </div>
 
