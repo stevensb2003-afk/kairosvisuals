@@ -43,6 +43,8 @@ export function VisionEngine() {
         slides={state.slides}
         currentIndex={state.currentIndex}
         format={state.format}
+        brandName={state.brandName ?? undefined}
+        resolvedColors={state.resolvedColors}
         onNext={nextSlide}
         onPrev={prevSlide}
         onCopyCopys={copyCopys}

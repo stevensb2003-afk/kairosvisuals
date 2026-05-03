@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react';
 import { Firestore } from 'firebase/firestore';
 import { getBrandBookById } from '@/lib/brandbookService';
 import { buildBrandContext } from '@/utils/buildBrandContext';
+import { buildSystemPrompt, buildUserPrompt, buildResponseSchema } from '@/utils/buildVisionPrompt';
+import type { BgType, DecorativeElement, SlideLayout, SlideMood, BrandColors } from '@/constants/creative-palettes';
 
 async function fetchLogoAsBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
   try {
@@ -26,9 +28,14 @@ async function fetchLogoAsBase64(url: string): Promise<{ data: string; mimeType:
 }
 
 export type OutputFormat = 'post' | 'carousel' | 'reel_cover';
-export type BgType = 'navy' | 'orange' | 'cream';
-export type SlideLayout = 'center' | 'split-left' | 'split-right' | 'bottom-heavy' | 'diagonal' | 'minimal-text';
-export type DecorativeElement = 'arrows' | 'grid' | 'circles' | 'lines' | 'abstract' | 'none';
+export type { BgType, DecorativeElement, SlideLayout, SlideMood, BrandColors };
+
+// Default brand colors (Kairós brand identity)
+export const DEFAULT_BRAND_COLORS: BrandColors = {
+  primary: '#FF5C2B',
+  secondary: '#0A1A26',
+  tertiary: '#E8D9C5',
+};
 
 export interface Slide {
   title: string;
@@ -38,6 +45,7 @@ export interface Slide {
   layout: SlideLayout;
   bgType: BgType;
   decorativeElement: DecorativeElement;
+  mood?: SlideMood;
   fontPrimary?: string;
   fontSecondary?: string;
 }
@@ -49,6 +57,8 @@ export interface VisionState {
   cta: string;
   topic: string;
   brandBookId: string | null;
+  brandName: string | null;
+  resolvedColors: BrandColors;               // ← always-accurate brand colors for canvas
   manualColors: { primary: string; secondary: string; tertiary: string } | null;
   manualTypography: { primary: string; secondary: string } | null;
   referenceImageBase64: string | null;
@@ -69,6 +79,8 @@ const initialState: VisionState = {
   cta: 'none',
   topic: '',
   brandBookId: null,
+  brandName: null,
+  resolvedColors: DEFAULT_BRAND_COLORS,
   manualColors: null,
   manualTypography: null,
   referenceImageBase64: null,
@@ -81,6 +93,19 @@ const initialState: VisionState = {
   captionText: '',
   isGeneratingCaption: false,
 };
+
+function makeErrorSlide(title: string, subtitle: string, content: string, imageHint = 'Error visual.'): Slide[] {
+  return [{
+    title,
+    subtitle,
+    content,
+    imageHint,
+    layout: 'center',
+    bgType: 'vibrant',
+    decorativeElement: 'abstract',
+    mood: 'dramatic',
+  }];
+}
 
 export function useVisionEngine(apiKey: string, db: Firestore | null) {
   const [state, setState] = useState<VisionState>(initialState);
@@ -116,19 +141,30 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
   }, []);
 
   const generate = useCallback(async () => {
-    const { format, service, tone, cta, topic, referenceImageBase64, brandBookId, manualColors, manualTypography } = state;
+    const {
+      format, service, tone, cta, topic,
+      referenceImageBase64, brandBookId, manualColors, manualTypography,
+    } = state;
+
     update({ isGenerating: true });
 
     let brandContext = '';
+    let brandName: string | null = null;
+    let resolvedColors: BrandColors = DEFAULT_BRAND_COLORS;
     let logoInlineParts: { inlineData: { mimeType: string; data: string } }[] = [];
 
     if (brandBookId && db) {
       try {
         const brandBook = await getBrandBookById(db, brandBookId);
         if (brandBook) {
-          brandContext = `\n=== IDENTIDAD DE MARCA OFICIAL ===\n${buildBrandContext(brandBook, { includeVisualIdentity: true })}\nElige bgType según el color de la paleta que mejor comunique cada slide.`;
-
-          // Fetch primary + icon logos as actual base64 images (max 2 to control tokens)
+          brandName = brandBook.name ?? null;
+          // Extract real brand colors — these will ALWAYS control canvas rendering
+          resolvedColors = {
+            primary: brandBook.visualIdentity?.primaryColor || DEFAULT_BRAND_COLORS.primary,
+            secondary: brandBook.visualIdentity?.secondaryColor || DEFAULT_BRAND_COLORS.secondary,
+            tertiary: brandBook.visualIdentity?.tertiaryColor || DEFAULT_BRAND_COLORS.tertiary,
+          };
+          brandContext = `\n=== IDENTIDAD DE MARCA OFICIAL: ${brandBook.name} ===\n${buildBrandContext(brandBook, { includeVisualIdentity: true })}\nEl canvas SIEMPRE usa los colores exactos de la marca. Usa bgType solo para definir la ESTRUCTURA (dark=oscuro, light=claro, vibrant=vibrante, gradient=degradado, split=dividido, accent-bg=secundario como fondo, minimal=blanco limpio).`;
           const logoUrls = [brandBook.logoAssets?.primary, brandBook.logoAssets?.icon]
             .filter((u): u is string => Boolean(u));
           if (logoUrls.length > 0) {
@@ -139,53 +175,33 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
           }
         }
       } catch (err) {
-        console.error('Error fetching brandbook', err);
+        console.error('[VisionEngine] Error fetching brandbook:', err);
       }
     } else {
-      const pColor = manualColors?.primary || '#0A1A26';
-      const sColor = manualColors?.secondary || '#FF5C2B';
-      const tColor = manualColors?.tertiary || '#E8D9C5';
+      const pColor = manualColors?.primary || DEFAULT_BRAND_COLORS.primary;
+      const sColor = manualColors?.secondary || DEFAULT_BRAND_COLORS.secondary;
+      const tColor = manualColors?.tertiary || DEFAULT_BRAND_COLORS.tertiary;
+      resolvedColors = { primary: pColor, secondary: sColor, tertiary: tColor };
       const fontPrimary = manualTypography?.primary || 'Montserrat';
       const fontSecondary = manualTypography?.secondary || 'Inter';
-      brandContext = `\n=== ESTÉTICA MANUAL ===\nPALETA: Principal ${pColor} · Secundario ${sColor} · Terciario ${tColor}\nFUENTES: "${fontPrimary}" títulos, "${fontSecondary}" cuerpo.`;
+      brandContext = `\n=== ESTÉTICA MANUAL ===\nPALETA: Principal ${pColor} · Secundario ${sColor} · Terciario ${tColor}\nFUENTES: "${fontPrimary}" títulos, "${fontSecondary}" cuerpo.\nUsa bgType solo para ESTRUCTURA: dark, light, vibrant, gradient, split, accent-bg, minimal.`;
     }
 
-    const formatInstruction =
-      format === 'post'
-        ? `FORMATO POST ESTÁTICO: Genera 3 OPCIONES DISTINTAS (misma idea, diferentes enfoques visuales).
-- Cada opción DEBE tener layout diferente: usa center, bottom-heavy y minimal-text.
-- Alterna bgType entre las 3 opciones.
-- Formato 4:5 (1080x1350px). ZONA SEGURA: El contenido principal debe caber en el área cuadrada central (1080x1080px). Solo logos o detalles decorativos pueden ir en las franjas superior e inferior.`
-        : format === 'carousel'
-        ? `FORMATO CARRUSEL ESTRATÉGICO: Genera exactamente 5 slides con estructura narrativa persuasiva:
-- Slide 1 (HOOK): Pregunta o afirmación disruptiva que genere intriga. Layout: center o minimal-text.
-- Slide 2 (PROBLEMA): Contexto del dolor o necesidad. Layout: bottom-heavy o split-left.
-- Slide 3 (SOLUCIÓN): Valor principal de la marca. Layout: split-right o center.
-- Slide 4 (PROFUNDIZACIÓN): Datos, beneficios o ejemplos concretos. Layout: diagonal o bottom-heavy.
-- Slide 5 (CTA): Llamado a acción claro y directo. Layout: center.
-- Formato 4:5 (1080x1350px). ZONA SEGURA: Contenido principal centrado en área 1:1 central.`
-        : `FORMATO PORTADA REEL: Genera 3 OPCIONES de portadas de reel para impacto máximo.
-- Usa SIEMPRE layout "center" para respetar la zona segura 9:16.
-- Título impactante de máximo 4 palabras en mayúsculas.
-- Formato 9:16 (1080x1920px). Zona segura: área central con margen de 12% en todos los lados.`;
-
-    const creativityRules = `TEXTO: title ≤6 palabras/mayúsculas · subtitle ≤8 · content ≤25/prosa sin listas · imageHint ≤15/inglés. VARIEDAD: no repetir layout ni decorativeElement consecutivos, alterna bgType. ZONA SEGURA: contenido en área central 1:1 del canvas.`;
-
     const logoInstruction = logoInlineParts.length > 0
-      ? `\nLOGOS ADJUNTOS (${logoInlineParts.length}): Se incluyen los logos oficiales de la marca como imágenes de referencia visual. Analiza su estética, formas y estilo. El diseño debe ser coherente con esta identidad visual.`
+      ? `\nLOGOS ADJUNTOS (${logoInlineParts.length}): Se incluyen los logos oficiales como referencia visual. Analiza formas, estética y estilo. El diseño debe ser coherente con esta identidad.`
       : '';
 
-    const systemPrompt = `Eres el Director Creativo Senior de una Agencia de Marketing Digital Premium. Genera contenido visual estratégico de alto impacto para redes sociales.
-${formatInstruction}${brandContext}${logoInstruction}
-${tone && tone !== 'none' ? `TONO: ${tone}.` : ''}${cta && cta !== 'none' ? ` CTA: ${cta}.` : ''}${service && service !== 'none' && service !== 'Equipo Kairós' ? ` SERVICIO: "${service}" como solución ideal.` : ''}${service === 'Equipo Kairós' ? ' ENFOQUE: creatividad, pasión y talento del equipo Kairós.' : ''}${referenceImageBase64 ? ' IMAGEN REFERENCIA: analiza intención, estilo y mensaje; recréalo adaptado a la marca.' : ''}
-${creativityRules}
-FUENTES: En cada slide usa fontPrimary (títulos) y fontSecondary (cuerpo) de Google Fonts. ${brandBookId ? 'Usa OBLIGATORIAMENTE las fuentes del brand book.' : ''}`;
+    const systemPrompt = buildSystemPrompt({
+      format, service, tone, cta, topic,
+      brandContext,
+      logoInstruction,
+      hasReferenceImage: !!referenceImageBase64,
+      brandBookId,
+      manualColors,
+      manualTypography,
+    });
 
-    const userPrompt = topic
-      ? `BRIEF CREATIVO: ${topic}`
-      : referenceImageBase64
-      ? 'Crea contenido estratégico basado en la imagen de referencia adjunta.'
-      : 'Genera contenido creativo y estratégico de alto impacto para esta marca.';
+    const userPrompt = buildUserPrompt(topic, !!referenceImageBase64);
 
     const payload = {
       contents: [{
@@ -198,38 +214,12 @@ FUENTES: En cada slide usa fontPrimary (títulos) y fontSecondary (cuerpo) de Go
       systemInstruction: { parts: [{ text: systemPrompt }] },
       generationConfig: {
         responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'OBJECT',
-          properties: {
-            slides: {
-              type: 'ARRAY',
-              items: {
-                type: 'OBJECT',
-                properties: {
-                  title: { type: 'STRING' },
-                  subtitle: { type: 'STRING' },
-                  content: { type: 'STRING' },
-                  imageHint: { type: 'STRING' },
-                  layout: { type: 'STRING', enum: ['center', 'split-left', 'split-right', 'bottom-heavy', 'diagonal', 'minimal-text'] },
-                  bgType: { type: 'STRING', enum: ['navy', 'orange', 'cream'] },
-                  decorativeElement: { type: 'STRING', enum: ['arrows', 'grid', 'circles', 'lines', 'abstract', 'none'] },
-                  fontPrimary: { type: 'STRING' },
-                  fontSecondary: { type: 'STRING' },
-                },
-                required: ['title', 'subtitle', 'content', 'imageHint', 'layout', 'bgType', 'decorativeElement', 'fontPrimary', 'fontSecondary'],
-              },
-            },
-          },
-          required: ['slides'],
-        },
+        responseSchema: buildResponseSchema(),
       },
     };
 
     try {
-      const url = '/api/gemini';
-
-
-      const res = await fetch(url, {
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -238,123 +228,53 @@ FUENTES: En cada slide usa fontPrimary (títulos) y fontSecondary (cuerpo) de Go
       const result = await res.json();
 
       if (!res.ok) {
-        const errorMessage = result.error?.message || `HTTP ${res.status}: ${res.statusText}`;
-        console.error('[VisionEngine] ❌ HTTP Error:', errorMessage);
-        update({
-          slides: [{
-            title: "ERROR DE API",
-            subtitle: `STATUS ${res.status}`,
-            content: `${errorMessage}`,
-            imageHint: "Verifica tu conexión o límite de peticiones.",
-            layout: "center",
-            bgType: "orange",
-            decorativeElement: "abstract",
-          }],
-          currentIndex: 0,
-        });
+        const msg = result.error?.message || `HTTP ${res.status}: ${res.statusText}`;
+        console.error('[VisionEngine] ❌ HTTP Error:', msg);
+        update({ slides: makeErrorSlide('ERROR DE API', `STATUS ${res.status}`, msg), currentIndex: 0 });
         return;
       }
 
-      if (!result.candidates || result.candidates.length === 0) {
+      if (!result.candidates?.length) {
         const blockReason = result.promptFeedback?.blockReason || 'Sin motivo';
         console.error('[VisionEngine] ❌ No candidates. Block:', blockReason);
-        update({
-          slides: [{
-            title: "SIN RESULTADOS",
-            subtitle: "IA BLOQUEADA",
-            content: `Motivo: ${blockReason}. Intenta cambiar tu prompt.`,
-            imageHint: "Contenido bloqueado por filtros de seguridad.",
-            layout: "center",
-            bgType: "orange",
-            decorativeElement: "abstract",
-          }],
-          currentIndex: 0,
-        });
+        update({ slides: makeErrorSlide('SIN RESULTADOS', 'IA BLOQUEADA', `Motivo: ${blockReason}. Intenta cambiar tu prompt.`), currentIndex: 0 });
         return;
       }
 
       const candidate = result.candidates[0];
       const finishReason = candidate.finishReason || 'UNKNOWN';
 
-
       if (!candidate.content?.parts?.length) {
-        console.error('[VisionEngine] ❌ No content/parts. finishReason:', finishReason);
-        update({
-          slides: [{
-            title: "RESPUESTA VACÍA",
-            subtitle: `REASON: ${finishReason}`,
-            content: `La IA respondió sin contenido utilizable. Intenta con otro prompt.`,
-            imageHint: "Respuesta filtrada o truncada.",
-            layout: "center",
-            bgType: "orange",
-            decorativeElement: "abstract",
-          }],
-          currentIndex: 0,
-        });
+        console.error('[VisionEngine] ❌ No content/parts. Reason:', finishReason);
+        update({ slides: makeErrorSlide('RESPUESTA VACÍA', `REASON: ${finishReason}`, 'La IA respondió sin contenido. Intenta con otro prompt.'), currentIndex: 0 });
         return;
       }
 
       let text = candidate.content.parts[0].text;
 
-
       if (!text) {
         console.error('[VisionEngine] ❌ text vacío');
-        update({
-          slides: [{
-            title: "TEXTO VACÍO",
-            subtitle: "SIN DATOS",
-            content: "La IA devolvió respuesta sin texto. Intenta de nuevo.",
-            imageHint: "Respuesta vacía.",
-            layout: "center",
-            bgType: "orange",
-            decorativeElement: "abstract",
-          }],
-          currentIndex: 0,
-        });
+        update({ slides: makeErrorSlide('TEXTO VACÍO', 'SIN DATOS', 'La IA devolvió respuesta sin texto. Intenta de nuevo.'), currentIndex: 0 });
         return;
       }
 
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();
       const data = JSON.parse(text);
 
-
       if (!data.slides || !Array.isArray(data.slides) || data.slides.length === 0) {
         console.error('[VisionEngine] ❌ JSON sin slides:', data);
-        update({
-          slides: [{
-            title: "JSON INCOMPLETO",
-            subtitle: "FORMATO INVÁLIDO",
-            content: "La IA devolvió JSON sin el array slides. Intenta de nuevo.",
-            imageHint: "Formato de respuesta inesperado.",
-            layout: "center",
-            bgType: "orange",
-            decorativeElement: "abstract",
-          }],
-          currentIndex: 0,
-        });
+        update({ slides: makeErrorSlide('JSON INCOMPLETO', 'FORMATO INVÁLIDO', 'La IA devolvió JSON sin slides. Intenta de nuevo.'), currentIndex: 0 });
         return;
       }
 
-
-      update({ slides: data.slides, currentIndex: 0 });
+      update({ slides: data.slides, currentIndex: 0, brandName, resolvedColors });
     } catch (error: any) {
       console.error('[VisionEngine] 💥 CATCH:', error.message, error);
-      update({
-        slides: [{
-          title: "ERROR INTERNO",
-          subtitle: "EXCEPCIÓN",
-          content: `Fallo: ${error.message || 'Error desconocido'}. Revisa F12.`,
-          imageHint: "Error de procesamiento interno.",
-          layout: "center",
-          bgType: "orange",
-          decorativeElement: "abstract",
-        }],
-        currentIndex: 0,
-      });
+      update({ slides: makeErrorSlide('ERROR INTERNO', 'EXCEPCIÓN', `Fallo: ${error.message || 'Error desconocido'}. Revisa F12.`), currentIndex: 0 });
     } finally {
       update({ isGenerating: false });
     }
-  }, [state, apiKey, db, update]);
+  }, [state, db, update]);
 
   const generateCaption = useCallback(async () => {
     const { slides, currentIndex, format, tone, cta, brandBookId } = state;
@@ -377,9 +297,10 @@ FUENTES: En cada slide usa fontPrimary (títulos) y fontSecondary (cuerpo) de Go
       ? slides.map((s, i) => `Slide ${i + 1}: ${s.title} — ${s.content}`).join('\n')
       : `Título: ${slides[currentIndex].title}\nSubtítulo: ${slides[currentIndex].subtitle}\nContenido: ${slides[currentIndex].content}`;
 
-    const systemPrompt = `Eres el Copywriter de Kairós Studio. Tono: ${effectiveTone}.
-Redacta un caption CORTO para Instagram/LinkedIn. Estructura: 1) Gancho impactante 2) Valor en máx. 2 líneas 3) CTA claro — Objetivo: ${effectiveCta} 4) 3-5 hashtags relevantes.
-Ortografía impecable. Lectura rápida.${captionBrandContext}`;
+    const systemPrompt = `Eres el Copywriter Senior de Kairós Studio. Tono: ${effectiveTone}.
+Redacta un caption corto y poderoso para Instagram/LinkedIn.
+Estructura: 1) Gancho que detiene el scroll 2) Valor en máx. 2 líneas 3) CTA claro — Objetivo: ${effectiveCta} 4) 3-5 hashtags relevantes.
+Ortografía impecable. Lectura fluida en mobile.${captionBrandContext}`;
 
     const payload = {
       contents: [{ parts: [{ text: `Genera un caption para esta publicación:\n\n${slideData}` }] }],
@@ -395,20 +316,17 @@ Ortografía impecable. Lectura rápida.${captionBrandContext}`;
       const result = await res.json();
 
       if (!res.ok || !result.candidates?.length) {
-        console.warn('[VisionEngine] Caption API error:', result);
         update({ captionText: `Error: ${result.error?.message || 'No se pudo generar el caption.'}` });
         return;
       }
 
-      const text = result.candidates[0].content.parts[0].text;
-      update({ captionText: text });
+      update({ captionText: result.candidates[0].content.parts[0].text });
     } catch (error: any) {
-      console.warn('[VisionEngine] Caption catch:', error);
       update({ captionText: `Fallo interno: ${error.message}` });
     } finally {
       update({ isGeneratingCaption: false });
     }
-  }, [state, apiKey, db, update]);
+  }, [state, db, update]);
 
   const copyCopys = useCallback(() => {
     if (!state.slides.length) return;
