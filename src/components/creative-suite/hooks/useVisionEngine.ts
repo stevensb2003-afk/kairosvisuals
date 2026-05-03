@@ -5,6 +5,7 @@ import { Firestore } from 'firebase/firestore';
 import { getBrandBookById } from '@/lib/brandbookService';
 import { buildBrandContext } from '@/utils/buildBrandContext';
 import { buildSystemPrompt, buildUserPrompt, buildResponseSchema } from '@/utils/buildVisionPrompt';
+import { buildImagePromptFromBrand } from '@/utils/buildImagePrompt';
 import type { BgType, DecorativeElement, SlideLayout, SlideMood, BrandColors } from '@/constants/creative-palettes';
 
 async function fetchLogoAsBase64(url: string): Promise<{ data: string; mimeType: string } | null> {
@@ -66,10 +67,21 @@ export interface VisionState {
   slides: Slide[];
   currentIndex: number;
   isGenerating: boolean;
+  generationStatus: string;
   isBrandbookOpen: boolean;
   isCaptionModalOpen: boolean;
   captionText: string;
   isGeneratingCaption: boolean;
+  carouselSlideCount: number;
+  enableImageBackground: boolean;
+  canvasRatio: '1:1' | '16:9' | '9:16' | '4:5' | '3:4' | '21:9';
+  imagePersonGeneration: 'dont_allow' | 'allow_adult' | 'allow_all';
+  imageSeed: number | null;
+  imageNegativePrompt: string;
+  imageCustomPrompt: string;
+  imageSampleCount: number;
+  generatedImages: string[];
+  selectedImageIndex: number;
 }
 
 const initialState: VisionState = {
@@ -88,10 +100,21 @@ const initialState: VisionState = {
   slides: [],
   currentIndex: 0,
   isGenerating: false,
+  generationStatus: '',
   isBrandbookOpen: false,
   isCaptionModalOpen: false,
   captionText: '',
   isGeneratingCaption: false,
+  carouselSlideCount: 5,
+  enableImageBackground: false,
+  canvasRatio: '4:5',
+  imagePersonGeneration: 'dont_allow',
+  imageSeed: null,
+  imageNegativePrompt: '',
+  imageCustomPrompt: '',
+  imageSampleCount: 1,
+  generatedImages: [],
+  selectedImageIndex: 0,
 };
 
 function makeErrorSlide(title: string, subtitle: string, content: string, imageHint = 'Error visual.'): Slide[] {
@@ -115,6 +138,7 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
   }, []);
 
   const setFormat = useCallback((format: OutputFormat) => update({ format }), [update]);
+  const setCarouselSlideCount = useCallback((count: number) => update({ carouselSlideCount: count }), [update]);
 
   const handleImageSelect = useCallback((file: File) => {
     const reader = new FileReader();
@@ -143,22 +167,24 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
   const generate = useCallback(async () => {
     const {
       format, service, tone, cta, topic,
-      referenceImageBase64, brandBookId, manualColors, manualTypography,
+      referenceImageBase64, brandBookId, manualColors, manualTypography, carouselSlideCount,
+      enableImageBackground, canvasRatio, imagePersonGeneration, imageSeed, imageNegativePrompt, imageCustomPrompt, imageSampleCount
     } = state;
 
-    update({ isGenerating: true });
+    update({ isGenerating: true, generationStatus: 'Pensando layout y textos...' });
 
     let brandContext = '';
     let brandName: string | null = null;
     let resolvedColors: BrandColors = DEFAULT_BRAND_COLORS;
     let logoInlineParts: { inlineData: { mimeType: string; data: string } }[] = [];
+    let fetchedBrandBook: any = null;
 
     if (brandBookId && db) {
       try {
         const brandBook = await getBrandBookById(db, brandBookId);
         if (brandBook) {
+          fetchedBrandBook = brandBook;
           brandName = brandBook.name ?? null;
-          // Extract real brand colors — these will ALWAYS control canvas rendering
           resolvedColors = {
             primary: brandBook.visualIdentity?.primaryColor || DEFAULT_BRAND_COLORS.primary,
             secondary: brandBook.visualIdentity?.secondaryColor || DEFAULT_BRAND_COLORS.secondary,
@@ -199,6 +225,7 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
       brandBookId,
       manualColors,
       manualTypography,
+      carouselSlideCount,
     });
 
     const userPrompt = buildUserPrompt(topic, !!referenceImageBase64);
@@ -230,14 +257,14 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
       if (!res.ok) {
         const msg = result.error?.message || `HTTP ${res.status}: ${res.statusText}`;
         console.error('[VisionEngine] ❌ HTTP Error:', msg);
-        update({ slides: makeErrorSlide('ERROR DE API', `STATUS ${res.status}`, msg), currentIndex: 0 });
+        update({ slides: makeErrorSlide('ERROR DE API', `STATUS ${res.status}`, msg), currentIndex: 0, isGenerating: false, generationStatus: '' });
         return;
       }
 
       if (!result.candidates?.length) {
         const blockReason = result.promptFeedback?.blockReason || 'Sin motivo';
         console.error('[VisionEngine] ❌ No candidates. Block:', blockReason);
-        update({ slides: makeErrorSlide('SIN RESULTADOS', 'IA BLOQUEADA', `Motivo: ${blockReason}. Intenta cambiar tu prompt.`), currentIndex: 0 });
+        update({ slides: makeErrorSlide('SIN RESULTADOS', 'IA BLOQUEADA', `Motivo: ${blockReason}. Intenta cambiar tu prompt.`), currentIndex: 0, isGenerating: false, generationStatus: '' });
         return;
       }
 
@@ -246,7 +273,7 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
 
       if (!candidate.content?.parts?.length) {
         console.error('[VisionEngine] ❌ No content/parts. Reason:', finishReason);
-        update({ slides: makeErrorSlide('RESPUESTA VACÍA', `REASON: ${finishReason}`, 'La IA respondió sin contenido. Intenta con otro prompt.'), currentIndex: 0 });
+        update({ slides: makeErrorSlide('RESPUESTA VACÍA', `REASON: ${finishReason}`, 'La IA respondió sin contenido. Intenta con otro prompt.'), currentIndex: 0, isGenerating: false, generationStatus: '' });
         return;
       }
 
@@ -254,7 +281,7 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
 
       if (!text) {
         console.error('[VisionEngine] ❌ text vacío');
-        update({ slides: makeErrorSlide('TEXTO VACÍO', 'SIN DATOS', 'La IA devolvió respuesta sin texto. Intenta de nuevo.'), currentIndex: 0 });
+        update({ slides: makeErrorSlide('TEXTO VACÍO', 'SIN DATOS', 'La IA devolvió respuesta sin texto. Intenta de nuevo.'), currentIndex: 0, isGenerating: false, generationStatus: '' });
         return;
       }
 
@@ -263,11 +290,54 @@ export function useVisionEngine(apiKey: string, db: Firestore | null) {
 
       if (!data.slides || !Array.isArray(data.slides) || data.slides.length === 0) {
         console.error('[VisionEngine] ❌ JSON sin slides:', data);
-        update({ slides: makeErrorSlide('JSON INCOMPLETO', 'FORMATO INVÁLIDO', 'La IA devolvió JSON sin slides. Intenta de nuevo.'), currentIndex: 0 });
+        update({ slides: makeErrorSlide('JSON INCOMPLETO', 'FORMATO INVÁLIDO', 'La IA devolvió JSON sin slides. Intenta de nuevo.'), currentIndex: 0, isGenerating: false, generationStatus: '' });
         return;
       }
 
-      update({ slides: data.slides, currentIndex: 0, brandName, resolvedColors });
+      let newGeneratedImages = state.generatedImages;
+      
+      // FASE 3: Orquestación con Imagen 3 si está activado el fondo IA
+      if (enableImageBackground) {
+        update({ generationStatus: 'Pintando lienzo con IA...' });
+        const mainImageHint = data.slides[0]?.imageHint || 'A creative background layout';
+        const combinedPrompt = imageCustomPrompt 
+          ? `${imageCustomPrompt}. Theme: ${mainImageHint}` 
+          : mainImageHint;
+        const imagePrompt = buildImagePromptFromBrand(fetchedBrandBook, combinedPrompt, topic);
+        
+        try {
+          const imgRes = await fetch('/api/imagen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: imagePrompt,
+              negativePrompt: imageNegativePrompt,
+              aspectRatio: canvasRatio,
+              personGeneration: imagePersonGeneration,
+              seed: imageSeed,
+              sampleCount: imageSampleCount
+            })
+          });
+          
+          const imgData = await imgRes.json();
+          if (imgRes.ok && imgData.images && imgData.images.length > 0) {
+            newGeneratedImages = imgData.images;
+          } else {
+            console.error('[VisionEngine] Error generando imágenes con Imagen 3:', imgData);
+          }
+        } catch (imgErr) {
+          console.error('[VisionEngine] Error en petición a /api/imagen:', imgErr);
+        }
+      }
+
+      update({ 
+        slides: data.slides, 
+        currentIndex: 0, 
+        brandName, 
+        resolvedColors,
+        generatedImages: newGeneratedImages,
+        selectedImageIndex: 0
+      });
     } catch (error: any) {
       console.error('[VisionEngine] 💥 CATCH:', error.message, error);
       update({ slides: makeErrorSlide('ERROR INTERNO', 'EXCEPCIÓN', `Fallo: ${error.message || 'Error desconocido'}. Revisa F12.`), currentIndex: 0 });
@@ -337,5 +407,5 @@ Ortografía impecable. Lectura fluida en mobile.${captionBrandContext}`;
     navigator.clipboard.writeText(text);
   }, [state.slides, state.format]);
 
-  return { state, setFormat, handleImageSelect, removeImage, nextSlide, prevSlide, generate, generateCaption, copyCopys, update };
+  return { state, setFormat, setCarouselSlideCount, handleImageSelect, removeImage, nextSlide, prevSlide, generate, generateCaption, copyCopys, update };
 }

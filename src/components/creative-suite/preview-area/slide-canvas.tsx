@@ -136,16 +136,30 @@ function SlideContent({ slide, colors, format }: {
 export interface SlideCanvasProps {
   slide: Slide;
   format: OutputFormat;
+  canvasRatio: '1:1' | '16:9' | '9:16' | '4:5' | '3:4' | '21:9';
   brandName?: string;
   resolvedColors: BrandColors;
+  generatedImage?: string | null;
 }
 
-export function SlideCanvas({ slide, format, brandName, resolvedColors }: SlideCanvasProps) {
-  // Always resolve colors from brand — bgType only controls structure
+export function getRatioClasses(ratio: string) {
+  switch (ratio) {
+    case '1:1': return 'aspect-square max-w-sm';
+    case '16:9': return 'aspect-video max-w-2xl';
+    case '9:16': return 'aspect-[9/16] max-w-xs';
+    case '4:5': return 'aspect-[4/5] max-w-sm';
+    case '3:4': return 'aspect-[3/4] max-w-sm';
+    case '21:9': return 'aspect-[21/9] max-w-3xl';
+    default: return 'aspect-[4/5] max-w-sm';
+  }
+}
+
+export function SlideCanvas({ slide, format, canvasRatio, brandName, resolvedColors, generatedImage }: SlideCanvasProps) {
   const colors = resolveBrandColors(resolvedColors, slide.bgType as BgType);
   const isReel = format === 'reel_cover';
   const titleFont = resolveTitleFont(slide.fontPrimary);
   const displayBrand = brandName || 'Kairós';
+  const hasAiImage = Boolean(generatedImage);
 
   useGoogleFonts([slide.fontPrimary, slide.fontSecondary]);
 
@@ -153,22 +167,43 @@ export function SlideCanvas({ slide, format, brandName, resolvedColors }: SlideC
     <div
       className={cn(
         'w-full rounded-[3rem] lg:rounded-[4rem] overflow-hidden relative border-[12px] lg:border-[16px] border-white shadow-[0_50px_100px_-20px_rgba(10,26,38,0.4)]',
-        isReel ? 'aspect-[9/16] max-w-xs' : 'aspect-[4/5] max-w-sm'
+        getRatioClasses(canvasRatio)
       )}
-      style={{ background: colors.bg }}
+      style={{ background: hasAiImage ? resolvedColors.secondary : colors.bg }}
     >
-      {/* Structural overlay — adds depth per bgType */}
-      {colors.overlay && (
-        <div className="absolute inset-0 pointer-events-none z-0" style={{ background: colors.overlay }} />
+      {/* LAYER 0: AI Background Photo (when active) */}
+      {hasAiImage && (
+        <img
+          src={generatedImage!}
+          alt="AI generated background"
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        />
       )}
 
-      {/* Decorative elements — bold & large */}
-      <DecorativeLayer
-        element={slide.decorativeElement as DecorativeElement}
-        accent={colors.accent}
-        secondary={resolvedColors.secondary}
-        brandName={displayBrand}
-      />
+      {/* LAYER 0b: Dark scrim over photo for text legibility */}
+      {hasAiImage && (
+        <div
+          className="absolute inset-0 z-[1] pointer-events-none"
+          style={{
+            background: `linear-gradient(160deg, ${resolvedColors.secondary}CC 0%, ${resolvedColors.secondary}66 50%, ${resolvedColors.secondary}99 100%)`,
+          }}
+        />
+      )}
+
+      {/* LAYER 0c: CSS structural overlay (only without AI photo) */}
+      {!hasAiImage && colors.overlay && (
+        <div className="absolute inset-0 pointer-events-none z-[1]" style={{ background: colors.overlay }} />
+      )}
+
+      {/* LAYER 1: Decorative elements — reduced opacity when photo is active */}
+      <div className={cn('transition-opacity duration-500', hasAiImage ? 'opacity-30' : 'opacity-100')}>
+        <DecorativeLayer
+          element={slide.decorativeElement as DecorativeElement}
+          accent={colors.accent}
+          secondary={resolvedColors.secondary}
+          brandName={displayBrand}
+        />
+      </div>
 
       {/* Safe zone indicator */}
       {isReel ? (
@@ -181,19 +216,42 @@ export function SlideCanvas({ slide, format, brandName, resolvedColors }: SlideC
         </div>
       )}
 
-      {/* Dynamic brand watermark */}
-      <div className="absolute top-8 left-8 lg:top-10 lg:left-10 flex items-center gap-3 opacity-60 z-20">
+      {/* LAYER 3: Brand watermark */}
+      <div
+        className={cn(
+          'absolute top-8 left-8 lg:top-10 lg:left-10 flex items-center gap-3 z-20',
+          hasAiImage
+            ? 'bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10'
+            : 'opacity-60'
+        )}
+      >
         <div className="h-[2px] w-6 rounded-full" style={{ backgroundColor: colors.accent }} />
         <span
           className="text-[10px] font-black uppercase tracking-[0.3em]"
-          style={{ color: colors.text, fontFamily: titleFont }}
+          style={{ color: '#ffffff', fontFamily: titleFont }}
         >
           {displayBrand}
         </span>
       </div>
 
-      {/* Main content */}
-      <SlideContent slide={slide} colors={colors} format={format} />
+      {/* LAYER 2: Main content — glassmorphism wrap when AI photo is active */}
+      {hasAiImage ? (
+        <div className="absolute inset-0 z-10 flex flex-col justify-end p-6 lg:p-8">
+          <div
+            className="rounded-3xl p-5 lg:p-7 border border-white/20"
+            style={{
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              background: `${resolvedColors.secondary}B3`,
+              boxShadow: `0 8px 32px 0 ${resolvedColors.primary}33`,
+            }}
+          >
+            <SlideContent slide={slide} colors={colors} format={format} />
+          </div>
+        </div>
+      ) : (
+        <SlideContent slide={slide} colors={colors} format={format} />
+      )}
 
       {/* Glossy overlay */}
       <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none z-30" />

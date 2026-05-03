@@ -9,7 +9,7 @@ import { ImageUploader } from './image-uploader';
 interface ControlPanelProps {
   state: VisionState;
   onFormatChange: (f: OutputFormat) => void;
-  onStrategyChange: (key: 'service' | 'tone' | 'cta' | 'brandBookId' | 'manualColors' | 'manualTypography', value: any) => void;
+  onStrategyChange: (key: 'service' | 'tone' | 'cta' | 'brandBookId' | 'manualColors' | 'manualTypography' | 'carouselSlideCount' | 'canvasRatio' | 'imagePersonGeneration' | 'imageSeed' | 'imageNegativePrompt' | 'imageCustomPrompt' | 'enableImageBackground' | 'imageSampleCount', value: any) => void;
   onTopicChange: (topic: string) => void;
   onImageSelect: (file: File) => void;
   onImageRemove: () => void;
@@ -46,7 +46,12 @@ export function ControlPanel({
 
       {/* Controls */}
       <div className="flex-1 p-7 space-y-6">
-        <FormatSelector value={state.format} onChange={onFormatChange} />
+        <FormatSelector 
+          value={state.format} 
+          onChange={onFormatChange} 
+          slideCount={state.carouselSlideCount}
+          onSlideCountChange={(count) => onStrategyChange('carouselSlideCount', count)}
+        />
         <StrategyControls
           service={state.service}
           tone={state.tone}
@@ -54,6 +59,13 @@ export function ControlPanel({
           brandBookId={state.brandBookId}
           manualColors={state.manualColors}
           manualTypography={state.manualTypography}
+          canvasRatio={state.canvasRatio}
+          imagePersonGeneration={state.imagePersonGeneration}
+          imageSeed={state.imageSeed}
+          imageNegativePrompt={state.imageNegativePrompt}
+          imageCustomPrompt={state.imageCustomPrompt}
+          enableImageBackground={state.enableImageBackground}
+          imageSampleCount={state.imageSampleCount}
           onChange={onStrategyChange}
           apiKey={apiKey}
         />
@@ -85,7 +97,7 @@ export function ControlPanel({
           {state.isGenerating ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Kairisando...</span>
+              <span>{state.generationStatus || 'Kairisando...'}</span>
             </>
           ) : (
             <span>Kairisar Idea ✨</span>

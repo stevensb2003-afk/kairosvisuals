@@ -19,26 +19,26 @@ interface PromptConfig {
   brandBookId: string | null;
   manualColors: { primary: string; secondary: string; tertiary: string } | null;
   manualTypography: { primary: string; secondary: string } | null;
+  carouselSlideCount: number;
+  imageRatio?: string;
+  imagePersonGeneration?: string;
+  imageSeed?: number | null;
+  imageNegativePrompt?: string;
 }
 
-function buildFormatInstruction(format: OutputFormat): string {
+function buildFormatInstruction(format: OutputFormat, slideCount: number): string {
   if (format === 'post') {
     return `FORMATO POST ESTÁTICO: Genera 3 OPCIONES VISUALMENTE DISTINTAS (misma idea, enfoques y estéticas radicalmente diferentes).
-- Opción 1: layout "center" — limpio, impactante, tipografía protagonista.
-- Opción 2: layout "bottom-heavy" — dramático, con espacio visual en la parte superior.
-- Opción 3: layout "minimal-text" — editorial, espacioso, maximalista en concepto y minimalista en texto.
 - OBLIGATORIO: Cada opción DEBE usar diferente bgType, diferente decorativeElement y diferente mood.
+- Genera mucha ASIMETRÍA y distribuciones espaciales poco convencionales. Evita diseños genéricos.
 - Formato 4:5 (1080x1350px). ZONA SEGURA: el contenido principal debe caber en el área cuadrada central (1080x1080px).`;
   }
 
   if (format === 'carousel') {
-    return `FORMATO CARRUSEL ESTRATÉGICO: Genera exactamente 5 slides con narrativa persuasiva cinematográfica:
-- Slide 1 (HOOK): Pregunta disruptiva o afirmación que genera intriga inmediata. Layout: "center" o "minimal-text". Mood: "dramatic" o "bold".
-- Slide 2 (PROBLEMA): El dolor real que siente la audiencia. Layout: "bottom-heavy" o "split-left". Mood: "editorial" o "elegant".
-- Slide 3 (SOLUCIÓN): La propuesta de valor de la marca en su versión más poderosa. Layout: "split-right" o "center". Mood: "bold" o "playful".
-- Slide 4 (PROFUNDIZACIÓN): Evidencia, datos reales, beneficios concretos o ejemplos. Layout: "diagonal" o "bottom-heavy". Mood: "editorial" o "minimal".
-- Slide 5 (CTA): Llamado a acción específico y urgente. Layout: "center". Mood: "bold" o "dramatic".
-- OBLIGATORIO: No repetir bgType, layout ni decorativeElement consecutivos. Máxima variedad visual.
+    return `FORMATO CARRUSEL ESTRATÉGICO: Genera exactamente ${slideCount} slides con narrativa persuasiva cinematográfica:
+- La narrativa debe fluir lógicamente desde un gancho poderoso (Slide 1), pasando por desarrollo/problema, hasta llegar a la conclusión y CTA (Slide ${slideCount}).
+- OBLIGATORIO: No repetir bgType, layout ni decorativeElement consecutivos. Máxima variedad visual y asimetría.
+- Alterna entre slides con mucha carga tipográfica y slides más respirables/visuales.
 - Formato 4:5 (1080x1350px). ZONA SEGURA: contenido centrado en área 1:1 central.`;
   }
 
@@ -52,10 +52,11 @@ function buildFormatInstruction(format: OutputFormat): string {
 export function buildSystemPrompt(config: PromptConfig): string {
   const {
     format, service, tone, cta, brandContext, logoInstruction,
-    hasReferenceImage, brandBookId,
+    hasReferenceImage, brandBookId, carouselSlideCount,
+    imageRatio, imagePersonGeneration, imageNegativePrompt
   } = config;
 
-  const formatInstruction = buildFormatInstruction(format);
+  const formatInstruction = buildFormatInstruction(format, carouselSlideCount);
 
   const tonePart = tone && tone !== 'none' ? ` TONO EMOCIONAL: ${tone}.` : '';
   const ctaPart = cta && cta !== 'none' ? ` ACCIÓN DESEADA: ${cta}.` : '';
@@ -69,6 +70,14 @@ export function buildSystemPrompt(config: PromptConfig): string {
   const imageRefPart = hasReferenceImage
     ? ' IMAGEN DE REFERENCIA ADJUNTA: analiza la composición, jerarquía visual, proporción texto/imagen, distribución espacial y energía de la pieza. Replica y eleva esa estética — adapta layouts, decorativos y mood a la identidad de la marca. Nota: los colores del canvas siempre serán los de la marca, no los de la imagen.'
     : '';
+
+  const ratioPart = imageRatio ? ` PROPORCIÓN OBJETIVO DE IMAGEN: ${imageRatio}. Adapta las ideas visuales para que funcionen bien en este aspecto.` : '';
+  const personGenerationPart = imagePersonGeneration === 'dont_allow'
+    ? ' REGLA ESTRICTA DE IMAGEN: NO incluir personas, rostros, siluetas ni partes del cuerpo humano en el imageHint.'
+    : imagePersonGeneration === 'allow_adult'
+    ? ' REGLA DE IMAGEN: Si incluyes personas en el imageHint, deben ser únicamente adultos.'
+    : '';
+  const negativePromptPart = imageNegativePrompt ? ` ELEMENTOS PROHIBIDOS EN LA IMAGEN (Negative Prompt): ${imageNegativePrompt}. NUNCA sugieras estos elementos en el imageHint.` : '';
 
   const creativityRules = `
 REGLAS DE CALIDAD CREATIVA MÁXIMA:
@@ -98,6 +107,7 @@ ${Object.entries(DECORATIVE_DESCRIPTIONS).map(([key, desc]) => `  * ${key}: ${de
 ${formatInstruction}
 ${brandContext}${logoInstruction}
 ${tonePart}${ctaPart}${servicePart}${imageRefPart}
+${ratioPart}${personGenerationPart}${negativePromptPart}
 ${creativityRules}
 ${fontInstructions}`;
 }

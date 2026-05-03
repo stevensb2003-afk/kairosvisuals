@@ -14,6 +14,7 @@ export function VisionEngine() {
   const {
     state,
     setFormat,
+    setCarouselSlideCount,
     handleImageSelect,
     removeImage,
     nextSlide,
@@ -43,12 +44,16 @@ export function VisionEngine() {
         slides={state.slides}
         currentIndex={state.currentIndex}
         format={state.format}
+        canvasRatio={state.canvasRatio}
         brandName={state.brandName ?? undefined}
         resolvedColors={state.resolvedColors}
+        generatedImages={state.generatedImages}
+        selectedImageIndex={state.selectedImageIndex}
         onNext={nextSlide}
         onPrev={prevSlide}
         onCopyCopys={copyCopys}
         onGenerateCaption={generateCaption}
+        onSelectImage={(i) => update({ selectedImageIndex: i })}
       />
 
       {/* Modals */}

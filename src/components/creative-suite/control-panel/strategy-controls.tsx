@@ -6,6 +6,7 @@ import { ChevronDown, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirestore, useUser } from '@/firebase/provider';
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 
 
 
@@ -24,9 +25,29 @@ interface StrategyControlsProps {
   brandBookId: string | null;
   manualColors: { primary: string; secondary: string; tertiary: string } | null;
   manualTypography: { primary: string; secondary: string } | null;
-  onChange: (key: 'service' | 'tone' | 'cta' | 'brandBookId' | 'manualColors' | 'manualTypography', value: any) => void;
+  canvasRatio?: string;
+  imagePersonGeneration?: string;
+  imageSeed?: number | null;
+  imageNegativePrompt?: string;
+  imageCustomPrompt?: string;
+  enableImageBackground?: boolean;
+  imageSampleCount?: number;
+  onChange: (key: 'service' | 'tone' | 'cta' | 'brandBookId' | 'manualColors' | 'manualTypography' | 'canvasRatio' | 'imagePersonGeneration' | 'imageSeed' | 'imageNegativePrompt' | 'imageCustomPrompt' | 'enableImageBackground' | 'imageSampleCount', value: any) => void;
   apiKey: string;
 }
+
+const IMAGE_RATIOS = [
+  { value: '1:1', label: '1:1 (Cuadrado)' },
+  { value: '4:5', label: '4:5 (Post)' },
+  { value: '16:9', label: '16:9 (Horizontal)' },
+  { value: '9:16', label: '9:16 (Historia / Reel)' },
+];
+
+const PERSON_GENERATION = [
+  { value: 'dont_allow', label: 'Sin Personas' },
+  { value: 'allow_adult', label: 'Adultos' },
+  { value: 'allow_all', label: 'Todos (Sin filtro)' },
+];
 
 const SERVICES = [
   { value: 'none', label: 'Ninguno (Enfoque General)' },
@@ -157,7 +178,12 @@ function FontSelect({ label, value, onChange }: { label: string; value: string; 
 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export function StrategyControls({ service, tone, cta, brandBookId, manualColors, manualTypography, onChange, apiKey }: StrategyControlsProps) {
+export function StrategyControls({ 
+  service, tone, cta, brandBookId, manualColors, manualTypography, 
+  canvasRatio, imagePersonGeneration, imageSeed, imageNegativePrompt, imageCustomPrompt,
+  enableImageBackground, imageSampleCount,
+  onChange, apiKey 
+}: StrategyControlsProps) {
   const [brandBooks, setBrandBooks] = useState<{value: string, label: string}[]>([]);
   const [isLoadingBooks, setIsLoadingBooks] = useState(true);
   
@@ -236,6 +262,112 @@ export function StrategyControls({ service, tone, cta, brandBookId, manualColors
           <KairosSelect value={cta} onChange={(v) => onChange('cta', v)} options={CTAS} placeholder="CTA (Auto)" />
         </div>
       </div>
+
+      <div className="space-y-2.5">
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Proporción del Canvas</label>
+        <KairosSelect 
+          value={canvasRatio || '4:5'} 
+          onChange={(v) => onChange('canvasRatio', v)} 
+          options={IMAGE_RATIOS} 
+          placeholder="Proporción" 
+        />
+      </div>
+
+      {/* IA Background Toggle */}
+      <div 
+        className={cn(
+          "p-4 border rounded-2xl transition-all cursor-pointer select-none",
+          enableImageBackground 
+            ? "bg-gradient-to-br from-[#FF5C2B]/10 to-transparent border-[#FF5C2B]/30" 
+            : "bg-white/5 border-white/10 hover:border-white/20"
+        )}
+        onClick={() => onChange('enableImageBackground', !enableImageBackground)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Fondo IA (Imagen 3)</h3>
+            <p className="text-[9px] font-medium text-white/50 leading-relaxed">Genera fondos fotorrealistas alineados a tu marca.</p>
+          </div>
+          <div className={cn(
+            "w-10 h-5 rounded-full p-0.5 transition-colors duration-300 ease-in-out relative flex items-center",
+            enableImageBackground ? "bg-[#FF5C2B]" : "bg-white/10"
+          )}>
+            <div className={cn(
+              "w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 ease-in-out",
+              enableImageBackground ? "translate-x-5" : "translate-x-0"
+            )} />
+          </div>
+        </div>
+      </div>
+
+      {enableImageBackground && (
+        <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="advanced-image" className="border-white/5">
+          <AccordionTrigger className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF5C2B] hover:no-underline py-2">
+            Ajustes Avanzados de Imagen
+          </AccordionTrigger>
+          <AccordionContent className="space-y-4 pt-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold uppercase tracking-wider text-white/40 block">Detalles Adicionales del Fondo</label>
+                <textarea
+                  value={imageCustomPrompt || ''}
+                  onChange={(e) => onChange('imageCustomPrompt', e.target.value)}
+                  placeholder="Detalles extra (ej. 'fondo de playa al atardecer')"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-[10px] font-medium text-white/80 outline-none placeholder:text-white/20 hover:border-[#FF5C2B]/40 focus:ring-2 focus:ring-[#FF5C2B]/20 transition-all min-h-[40px] resize-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold uppercase tracking-wider text-white/40 block">Personas</label>
+                <KairosSelect 
+                  value={imagePersonGeneration || 'allow_adult'} 
+                  onChange={(v) => onChange('imagePersonGeneration', v)} 
+                  options={PERSON_GENERATION} 
+                  placeholder="Filtro" 
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold uppercase tracking-wider text-white/40 block">Variantes</label>
+                <KairosSelect 
+                  value={String(imageSampleCount || 1)} 
+                  onChange={(v) => onChange('imageSampleCount', parseInt(v))} 
+                  options={[
+                    { value: '1', label: '1 Imagen' },
+                    { value: '2', label: '2 Imágenes' },
+                    { value: '3', label: '3 Imágenes' },
+                    { value: '4', label: '4 Imágenes' }
+                  ]} 
+                  placeholder="Cantidad" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold uppercase tracking-wider text-white/40 block">Semilla</label>
+                <input
+                  type="number"
+                  value={imageSeed === null || imageSeed === undefined ? '' : imageSeed}
+                  onChange={(e) => onChange('imageSeed', e.target.value ? parseInt(e.target.value) : null)}
+                  placeholder="Aleatorio"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-[10px] font-mono text-white/80 outline-none placeholder:text-white/20 hover:border-[#FF5C2B]/40 focus:ring-2 focus:ring-[#FF5C2B]/20 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-bold uppercase tracking-wider text-white/40 block">Prompt Negativo</label>
+              <textarea
+                value={imageNegativePrompt || ''}
+                onChange={(e) => onChange('imageNegativePrompt', e.target.value)}
+                placeholder="Elementos a evitar (ej. texto, logos...)"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-[10px] font-medium text-white/80 outline-none placeholder:text-white/20 hover:border-[#FF5C2B]/40 focus:ring-2 focus:ring-[#FF5C2B]/20 transition-all min-h-[60px] resize-none"
+              />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+      )}
     </div>
   );
 }

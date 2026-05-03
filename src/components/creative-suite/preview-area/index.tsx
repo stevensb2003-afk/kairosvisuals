@@ -1,36 +1,71 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { Slide, OutputFormat, BrandColors, DEFAULT_BRAND_COLORS } from '../hooks/useVisionEngine';
-import { SlideCanvas } from './slide-canvas';
+import { SlideCanvas, getRatioClasses } from './slide-canvas';
 import { ActionBar } from './action-bar';
+import html2canvas from 'html2canvas';
+import { useState } from 'react';
 
 interface PreviewAreaProps {
   slides: Slide[];
   currentIndex: number;
   format: OutputFormat;
+  canvasRatio: '1:1' | '16:9' | '9:16' | '4:5' | '3:4' | '21:9';
   brandName?: string;
   resolvedColors: BrandColors;
+  generatedImages: string[];
+  selectedImageIndex: number;
   onNext: () => void;
   onPrev: () => void;
   onCopyCopys: () => void;
   onGenerateCaption: () => void;
+  onSelectImage: (index: number) => void;
 }
 
 export function PreviewArea({
   slides,
   currentIndex,
   format,
+  canvasRatio,
   brandName,
   resolvedColors,
+  generatedImages,
+  selectedImageIndex,
   onNext,
   onPrev,
   onCopyCopys,
   onGenerateCaption,
+  onSelectImage,
 }: PreviewAreaProps) {
   const hasSlides = slides.length > 0;
   const currentSlide = hasSlides ? slides[currentIndex] : null;
   const isMulti = hasSlides && slides.length > 1;
+  const activeImage = generatedImages.length > 0 ? generatedImages[selectedImageIndex] : null;
+  const hasMultipleImages = generatedImages.length > 1;
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    const el = document.getElementById('slide-canvas-export');
+    if (!el) return;
+    try {
+      setIsExporting(true);
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `kairisar-slide-${currentIndex + 1}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error('Error exporting PNG:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <main className="flex-1 bg-[#050D14] flex flex-col relative overflow-hidden h-full">
@@ -50,11 +85,18 @@ export function PreviewArea({
         {/* Canvas area */}
         <div className="relative flex items-center justify-center w-full min-h-[400px]">
           {currentSlide ? (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <SlideCanvas slide={currentSlide} format={format} brandName={brandName} resolvedColors={resolvedColors} />
+            <div id="slide-canvas-export" className="animate-in fade-in slide-in-from-bottom-4 duration-500 rounded-[2.5rem] lg:rounded-[3.5rem] overflow-hidden">
+              <SlideCanvas
+                slide={currentSlide}
+                format={format}
+                canvasRatio={canvasRatio}
+                brandName={brandName}
+                resolvedColors={resolvedColors}
+                generatedImage={activeImage}
+              />
             </div>
           ) : (
-            <div className={`w-full rounded-[2.5rem] lg:rounded-[3.5rem] overflow-hidden bg-white/5 backdrop-blur-2xl border-[4px] lg:border-[8px] border-[#0A1A26] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-center p-12 ${format === 'reel_cover' ? 'aspect-[9/16] max-w-xs' : 'aspect-[4/5] max-w-sm'}`}>
+            <div className={`w-full rounded-[2.5rem] lg:rounded-[3.5rem] overflow-hidden bg-white/5 backdrop-blur-2xl border-[4px] lg:border-[8px] border-[#0A1A26] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-center p-12 mx-auto ${getRatioClasses(canvasRatio)}`}>
               <div className="w-16 h-16 bg-[#FF5C2B]/10 rounded-3xl flex items-center justify-center mb-6">
                 <Sparkles className="w-8 h-8 text-[#FF5C2B]" />
               </div>
@@ -67,6 +109,54 @@ export function PreviewArea({
             </div>
           )}
         </div>
+
+        {/* ─── AI Image Variant Gallery ─────────────────────────────────────── */}
+        {hasMultipleImages && (
+          <div className="mt-4 mb-2 flex flex-col items-center gap-2 w-full max-w-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="flex items-center gap-2 mb-1">
+              <ImageIcon className="w-3 h-3 text-white/40" />
+              <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40">
+                Variantes de Fondo IA
+              </span>
+            </div>
+            <div className="flex gap-3 items-center justify-center flex-wrap">
+              {generatedImages.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => onSelectImage(i)}
+                  aria-label={`Seleccionar variante ${i + 1}`}
+                  className="relative group focus:outline-none"
+                >
+                  <div
+                    className="transition-all duration-300 rounded-2xl overflow-hidden"
+                    style={{
+                      width: '3.5rem',
+                      height: '3.5rem',
+                      boxShadow: i === selectedImageIndex
+                        ? '0 0 0 3px #FF5C2B, 0 8px 20px rgba(255,92,43,0.4)'
+                        : '0 0 0 1px rgba(255,255,255,0.1)',
+                      transform: i === selectedImageIndex ? 'scale(1.1)' : 'scale(1)',
+                    }}
+                  >
+                    <img
+                      src={img}
+                      alt={`Variante ${i + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    {i === selectedImageIndex && (
+                      <div className="absolute inset-0 bg-[#FF5C2B]/20 flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-[#FF5C2B] shadow-[0_0_8px_#FF5C2B]" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[7px] font-black uppercase text-white/30">
+                    {i + 1}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ─── Navigation Controls — integrated bar ─────────────────────── */}
         {isMulti && (
@@ -105,13 +195,14 @@ export function PreviewArea({
           </div>
         )}
 
-        {/* Action bar */}
         <ActionBar
           slideCount={slides.length}
           currentIndex={currentIndex}
           format={format}
           onCopyCopys={onCopyCopys}
           onGenerateCaption={onGenerateCaption}
+          onExport={handleExport}
+          isExporting={isExporting}
         />
 
         {/* Bottom spacer */}
