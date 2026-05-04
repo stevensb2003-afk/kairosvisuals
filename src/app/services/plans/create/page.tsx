@@ -11,12 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import { formatCurrency } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatCurrency } from '@/lib/utils';
 import { ProductOrService, PlanItem } from '@/lib/types';
 
 // We use a local interface that matches what we'll save in predefined_plans
@@ -191,20 +188,20 @@ export default function CreatePlanPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Nuevo Plan Predeterminado</h1>
-            <p className="text-muted-foreground text-sm">Crea una plantilla de servicios para cotizaciones rápidas.</p>
+            <h1 className="text-xl sm:text-3xl font-bold tracking-tight">Nuevo Plan Predeterminado</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm">Crea una plantilla de servicios para cotizaciones rápidas.</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => router.back()}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={isSaving} className="shadow-lg shadow-primary/20">
-            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+        <div className="flex items-center gap-2 ml-11 sm:ml-0">
+          <Button variant="outline" size="sm" onClick={() => router.back()}>Cancelar</Button>
+          <Button size="sm" onClick={handleSave} disabled={isSaving} className="shadow-lg shadow-primary/20 gap-2">
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Guardar Plan
           </Button>
         </div>
@@ -283,164 +280,145 @@ export default function CreatePlanPage() {
               Añadir Servicio
             </Button>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-4 sm:p-0">
             {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground animate-in slide-in-from-bottom-4">
-                <Package className="w-12 h-12 mb-4 opacity-20" />
-                <p className="text-sm">Agrega el primer servicio para comenzar a diseñar tu plan.</p>
-                <Button variant="link" onClick={addItem} className="mt-2 text-primary">Añadir ahora</Button>
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Package className="w-10 h-10 mb-3 opacity-20" />
+                <p className="text-sm">Agrega el primer servicio para comenzar.</p>
+                <Button variant="link" onClick={addItem} className="mt-1 text-primary">Añadir ahora</Button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow className="hover:bg-transparent border-b-primary/10">
-                      <TableHead className="w-[30%] min-w-[200px] text-[10px] font-bold uppercase tracking-widest px-6">Servicio</TableHead>
-                      <TableHead className="text-center w-24 text-[10px] font-bold uppercase tracking-widest px-6">Cant.</TableHead>
-                      <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest px-6">P. Unitario</TableHead>
-                      <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest px-6">Total</TableHead>
-                      <TableHead className="w-12 px-6"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item) => {
-                      const service = services.find(s => s.id === item.serviceId);
-                      const unitPrice = getEffectiveUnitPrice(item);
+              <>
+                {/* ── Desktop Table (sm+) ───────────────────────────────────── */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/30 text-left">
+                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-[38%]">Servicio</th>
+                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center w-20">Cant.</th>
+                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">P. Unitario</th>
+                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Total</th>
+                        <th className="w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {items.map((item) => {
+                        const service = services.find(s => s.id === item.serviceId);
+                        const unitPrice = getEffectiveUnitPrice(item);
+                        const hasConfig = service && (service.pricingModel === 'scalable' || service.pricingModel === 'package' || service.useComplexityMatrix);
+                        return (
+                          <React.Fragment key={item.id}>
+                            <tr className={hasConfig ? 'border-b-0' : ''}>
+                              <td className="px-4 py-3 align-top">
+                                <Select value={item.serviceId} onValueChange={(val) => updateItem(item.id, 'serviceId', val)}>
+                                  <SelectTrigger className="h-9 bg-background/50 border-border/50 text-sm">
+                                    <SelectValue placeholder="Seleccionar..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {services.map(s => (
+                                      <SelectItem key={s.id} value={s.id}>
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color || '#ccc' }} />
+                                          <span className="text-sm">{s.name}</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="px-4 py-3 align-top">
+                                <Input type="number" min="0"
+                                  value={item.quantity === 0 ? '' : item.quantity}
+                                  onChange={e => updateItem(item.id, 'quantity', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
+                                  className="h-9 text-center w-16 mx-auto"
+                                  disabled={service?.pricingModel !== 'fixed' && service?.pricingModel !== undefined}
+                                />
+                              </td>
+                              <td className="px-4 py-3 align-top text-right text-sm font-medium">{formatCurrency(unitPrice)}</td>
+                              <td className="px-4 py-3 align-top text-right text-sm font-bold text-primary">{formatCurrency(item.quantity * unitPrice)}</td>
+                              <td className="px-2 py-3 align-top">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeItem(item.id)}>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </td>
+                            </tr>
+                            {hasConfig && (
+                              <tr className="bg-primary/5 border-t border-primary/10">
+                                <td colSpan={5} className="px-4 py-3">
+                                  <ConfigRow item={item} service={service} updateItem={updateItem} formatCurrency={formatCurrency} />
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-                      return (
-                        <React.Fragment key={item.id}>
-                          <TableRow className={service && (service.pricingModel !== 'fixed' || service.useComplexityMatrix) ? 'border-b-0' : ''}>
-                            <TableCell className="align-top py-4">
-                              <Select value={item.serviceId} onValueChange={(val) => updateItem(item.id, 'serviceId', val)}>
-                                <SelectTrigger className="h-10 bg-background/50 border-border/50">
-                                  <SelectValue placeholder="Seleccionar Servicio..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {services.map(s => (
-                                    <SelectItem key={s.id} value={s.id}>
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color || '#ccc' }} />
-                                        {s.name}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell className="align-top py-4 text-center">
-                              <Input 
-                                type="number" 
-                                min="0" 
-                                value={item.quantity === 0 ? "" : item.quantity} 
-                                onChange={(e) => updateItem(item.id, 'quantity', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
-                                placeholder="0"
-                                className="h-10 text-center bg-background/50 border-border/50"
-                                disabled={service?.pricingModel !== 'fixed' && service?.pricingModel !== undefined}
-                              />
-                            </TableCell>
-                            <TableCell className="align-top py-4 text-right font-medium">
-                              {formatCurrency(unitPrice)}
-                            </TableCell>
-                            <TableCell className="align-top py-4 text-right font-bold text-primary">
-                              {formatCurrency(item.quantity * unitPrice)}
-                            </TableCell>
-                            <TableCell className="align-top py-4">
-                              <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="text-destructive hover:bg-destructive/10">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-
-                          {/* Configuration Row */}
-                          {service && (service.pricingModel === 'scalable' || service.pricingModel === 'package' || service.useComplexityMatrix) && (
-                            <TableRow className="bg-primary/5 hover:bg-primary/10 transition-colors border-t border-primary/10">
-                              <TableCell colSpan={5} className="py-4 px-6">
-                                <div className="flex flex-col gap-4">
-                                  <div className="flex items-center gap-6 flex-wrap">
-                                    {/* Scalable */}
-                                    {service.pricingModel === 'scalable' && (
-                                       <div className="flex items-center gap-4 flex-1 min-w-[300px]">
-                                         <div className="flex items-center gap-2 shrink-0">
-                                            <Layers className="w-4 h-4 text-primary" />
-                                            <Label className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Unidades totales:</Label>
-                                         </div>
-                                         <div className="flex-1 max-w-[150px]">
-                                            <Input 
-                                              type="number" 
-                                              min="0" 
-                                              value={item.overriddenQuantity === 0 ? "" : (item.overriddenQuantity || 0)} 
-                                              onChange={(e) => updateItem(item.id, 'overriddenQuantity', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
-                                              placeholder="0"
-                                              className="h-8 bg-background border-primary/20"
-                                            />
-                                         </div>
-                                         <div className="text-[10px] text-muted-foreground flex items-center gap-2 uppercase tracking-tight">
-                                            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">Incluye {service.includedUnits} base</span>
-                                            <span>Extra: {formatCurrency(service.unitPrice || 0)}/u</span>
-                                         </div>
-                                       </div>
-                                    )}
-
-                                    {/* Package Selection */}
-                                    {service.pricingModel === 'package' && service.packages && service.packages.length > 0 && (
-                                       <div className="flex items-center gap-4 flex-1 min-w-[300px]">
-                                         <div className="flex items-center gap-2 shrink-0">
-                                            <Package className="w-4 h-4 text-primary" />
-                                            <Label className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Paquete:</Label>
-                                         </div>
-                                         <div className="flex-1 max-w-[200px]">
-                                            <Select 
-                                              value={item.selectedPackage || ''} 
-                                              onValueChange={(val) => updateItem(item.id, 'selectedPackage', val)}
-                                            >
-                                              <SelectTrigger className="h-8 bg-background border-primary/20">
-                                                <SelectValue placeholder="Elegir..." />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                {service.packages.map(p => (
-                                                  <SelectItem key={p.name} value={p.name}>{p.name} - {formatCurrency(p.price)}</SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                         </div>
-                                       </div>
-                                    )}
-
-                                    {/* Complexity Matrix */}
-                                    {service.useComplexityMatrix && service.complexityTiers && service.complexityTiers.length > 0 && (
-                                       <div className="flex items-center gap-4 flex-1 min-w-[300px]">
-                                         <div className="flex items-center gap-2 shrink-0">
-                                            <Layers className="w-4 h-4 text-primary" />
-                                            <Label className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Complejidad:</Label>
-                                         </div>
-                                         <div className="flex-1 max-w-[200px]">
-                                            <Select 
-                                              value={item.selectedComplexityLevel?.toString() || ''} 
-                                              onValueChange={(val) => updateItem(item.id, 'selectedComplexityLevel', parseInt(val) || 1)}
-                                            >
-                                              <SelectTrigger className="h-8 bg-background border-primary/20">
-                                                <SelectValue placeholder="Elegir..." />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                {service.complexityTiers.map(t => (
-                                                  <SelectItem key={t.level} value={t.level.toString()}>Lvl {t.level}: {t.name} (+{formatCurrency(t.surcharge)})</SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                         </div>
-                                       </div>
-                                    )}
-                                  </div>
+                {/* ── Mobile Cards (< sm) ───────────────────────────────────── */}
+                <div className="flex flex-col gap-3 sm:hidden">
+                  {items.map((item) => {
+                    const service = services.find(s => s.id === item.serviceId);
+                    const unitPrice = getEffectiveUnitPrice(item);
+                    const hasConfig = service && (service.pricingModel === 'scalable' || service.pricingModel === 'package' || service.useComplexityMatrix);
+                    return (
+                      <div key={item.id} className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                        {/* Card header: selector + delete */}
+                        <div className="flex items-start gap-2 p-3">
+                          <div className="flex-1 min-w-0">
+                            <Select value={item.serviceId} onValueChange={(val) => updateItem(item.id, 'serviceId', val)}>
+                              <SelectTrigger className="h-10 bg-background/50 border-border/50 w-full text-sm font-medium">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {service && <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: service.color || '#ccc' }} />}
+                                  <SelectValue placeholder="Seleccionar servicio..." />
                                 </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {services.map(s => (
+                                  <SelectItem key={s.id} value={s.id}>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color || '#ccc' }} />
+                                      {s.name}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive shrink-0" onClick={() => removeItem(item.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        {/* Config row (package/scalable/complexity) */}
+                        {hasConfig && (
+                          <div className="px-3 pb-2">
+                            <ConfigRow item={item} service={service} updateItem={updateItem} formatCurrency={formatCurrency} />
+                          </div>
+                        )}
+
+                        {/* Footer: qty + pricing */}
+                        <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-muted/30 border-t">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Cant.</span>
+                            <Input type="number" min="0"
+                              value={item.quantity === 0 ? '' : item.quantity}
+                              onChange={e => updateItem(item.id, 'quantity', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
+                              className="h-8 w-16 text-center text-sm"
+                              disabled={service?.pricingModel !== 'fixed' && service?.pricingModel !== undefined}
+                            />
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] text-muted-foreground">{formatCurrency(unitPrice)} c/u</p>
+                            <p className="font-black text-primary text-base">{formatCurrency(item.quantity * unitPrice)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -492,6 +470,72 @@ export default function CreatePlanPage() {
           </DialogContent>
         </Dialog>
       </div>
+    </div>
+  );
+}
+
+// ── ConfigRow: renders scalable/package/complexity config ─────────────────
+function ConfigRow({ item, service, updateItem, formatCurrency: fc }: {
+  item: InternalPlanItem;
+  service: ProductOrService;
+  updateItem: (id: string, field: keyof InternalPlanItem, value: any) => void;
+  formatCurrency: (n: number) => string;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      {service.pricingModel === 'scalable' && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Layers className="w-3.5 h-3.5 text-primary shrink-0" />
+          <Label className="text-[10px] font-bold uppercase tracking-widest text-primary/70 shrink-0">Unidades:</Label>
+          <Input type="number" min="0"
+            value={item.overriddenQuantity === 0 ? '' : (item.overriddenQuantity || 0)}
+            onChange={e => updateItem(item.id, 'overriddenQuantity', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
+            className="h-8 w-20 bg-background border-primary/20 text-sm"
+          />
+          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded">Base: {service.includedUnits}</span>
+          <span className="text-[10px] text-muted-foreground">Extra: {fc(service.unitPrice || 0)}/u</span>
+        </div>
+      )}
+      {service.pricingModel === 'package' && service.packages && service.packages.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Package className="w-3.5 h-3.5 text-primary shrink-0" />
+          <Label className="text-[10px] font-bold uppercase tracking-widest text-primary/70 shrink-0">Paquete:</Label>
+          <Select value={item.selectedPackage || ''} onValueChange={val => updateItem(item.id, 'selectedPackage', val)}>
+            <SelectTrigger className="h-8 bg-background border-primary/20 min-w-[180px] flex-1 max-w-xs text-xs">
+              <SelectValue placeholder="Elegir paquete..." />
+            </SelectTrigger>
+            <SelectContent>
+              {service.packages.map(p => (
+                <SelectItem key={p.name} value={p.name}>
+                  <span>{p.name}</span>
+                  <span className="ml-3 font-bold text-primary">{fc(p.price)}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {service.useComplexityMatrix && service.complexityTiers && service.complexityTiers.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Layers className="w-3.5 h-3.5 text-primary shrink-0" />
+          <Label className="text-[10px] font-bold uppercase tracking-widest text-primary/70 shrink-0">Complejidad:</Label>
+          <Select
+            value={item.selectedComplexityLevel?.toString() || ''}
+            onValueChange={val => updateItem(item.id, 'selectedComplexityLevel', parseInt(val) || 1)}
+          >
+            <SelectTrigger className="h-8 bg-background border-primary/20 min-w-[180px] flex-1 max-w-xs text-xs">
+              <SelectValue placeholder="Nivel..." />
+            </SelectTrigger>
+            <SelectContent>
+              {service.complexityTiers.map(t => (
+                <SelectItem key={t.level} value={t.level.toString()}>
+                  {t.name} — <span className="text-primary font-bold">+{fc(t.surcharge)}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );
 }

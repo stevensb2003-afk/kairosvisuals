@@ -211,61 +211,40 @@ export default function RequestDetailPage() {
   return (
     <div className="min-h-screen bg-muted/5 pb-20 selection:bg-primary/20">
       {/* Header Sticky */}
-      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-primary/5 px-6 py-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4 w-full sm:w-auto">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => router.push('/requests')}
-              className="rounded-xl hover:bg-primary/10 hover:text-primary transition-all shrink-0"
-            >
-              <ArrowLeft className="h-6 w-6" />
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-primary/5 px-4 py-3 md:px-6 md:py-4 shadow-sm">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => router.push('/requests')}
+              className="rounded-xl hover:bg-primary/10 hover:text-primary transition-all shrink-0 h-9 w-9">
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex flex-col">
-              <h1 className="text-xl sm:text-2xl font-bold font-headline leading-none mb-1">
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold font-headline leading-none mb-0.5 truncate">
                 {request.firstName} {request.lastName}
               </h1>
-              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <Calendar className="w-3 h-3" />
                 Recibido el {formatDate(request.createdAt)}
               </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div className="hidden md:block mr-2 text-right">
-              <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mb-0.5">Gestión de Lead</p>
-              <p className="text-xs font-medium text-muted-foreground">Última actualización: hoy</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Select 
-                value={request.status} 
-                onValueChange={handleStatusChange}
-                disabled={isUpdating || isConverted}
-              >
-                <SelectTrigger className="w-[180px] h-12 bg-background border-primary/10 rounded-xl font-bold shadow-sm focus:ring-primary/20">
-                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-primary/10 shadow-2xl">
-                  <SelectItem value="pending">Pendiente</SelectItem>
-                  <SelectItem value="reviewed">Revisado</SelectItem>
-                  <SelectItem value="frozen" className="text-cyan-600 font-bold">
-                    <div className="flex items-center gap-2">
-                      <Snowflake className="w-3 h-3" /> Congelar
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="converted" className="text-green-600 font-bold">
-                    <div className="flex items-center gap-2">
-                       <UserCheck className="w-3 h-3" /> Convertir en Cliente
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="rejected" className="text-red-600">Rechazado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <Select value={request.status} onValueChange={handleStatusChange} disabled={isUpdating || isConverted}>
+            <SelectTrigger className="w-full sm:w-[200px] h-10 bg-background border-primary/10 rounded-xl font-bold shadow-sm focus:ring-primary/20">
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-primary/10 shadow-2xl">
+              <SelectItem value="pending">Pendiente</SelectItem>
+              <SelectItem value="reviewed">Revisado</SelectItem>
+              <SelectItem value="frozen" className="text-cyan-600 font-bold">
+                <div className="flex items-center gap-2"><Snowflake className="w-3 h-3" /> Congelar</div>
+              </SelectItem>
+              <SelectItem value="converted" className="text-green-600 font-bold">
+                <div className="flex items-center gap-2"><UserCheck className="w-3 h-3" /> Convertir en Cliente</div>
+              </SelectItem>
+              <SelectItem value="rejected" className="text-red-600">Rechazado</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -291,7 +270,7 @@ export default function RequestDetailPage() {
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
           {/* Lado Izquierdo: Información de Contacto y Perfil */}
@@ -304,12 +283,12 @@ export default function RequestDetailPage() {
                 </CardTitle>
                 <CardDescription className="font-medium">Vías de comunicación rápidas.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-8 space-y-6">
+              <CardContent className="pt-5 md:pt-8 space-y-5 md:space-y-6">
                 {/* Teléfono */}
                 <div className="space-y-4">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Teléfono / WhatsApp</p>
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 p-5 bg-muted/40 rounded-2xl border border-primary/10 font-bold text-lg flex items-center justify-between group hover:border-primary/30 transition-all cursor-default shadow-sm">
+                    <div className="flex-1 p-4 md:p-5 bg-muted/40 rounded-2xl border border-primary/10 font-bold text-lg flex items-center justify-between group hover:border-primary/30 transition-all cursor-default shadow-sm">
                       <span className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform">
                           <Phone className="w-5 h-5" />
@@ -441,30 +420,30 @@ export default function RequestDetailPage() {
               <>
                 {/* Sección: El Negocio */}
                 <section className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-3xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
-                      <Building className="w-7 h-7" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl md:rounded-3xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+                      <Building className="w-5 h-5 md:w-7 md:h-7" />
                     </div>
                     <div>
-                      <h2 className="text-3xl font-headline font-black text-foreground tracking-tight">Análisis del Negocio</h2>
-                      <p className="text-muted-foreground font-medium">Contexto comercial e identidad industrial.</p>
+                      <h2 className="text-xl md:text-3xl font-headline font-black text-foreground tracking-tight">Análisis del Negocio</h2>
+                      <p className="text-muted-foreground font-medium text-sm md:text-base">Contexto comercial e identidad industrial.</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="p-8 bg-card border border-primary/5 rounded-[2rem] shadow-sm space-y-2">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Nombre de Marca</p>
-                        <p className="text-2xl font-black text-primary font-headline tracking-tighter">{request.companyName || 'Sin Nombre Específico'}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-5 md:p-8 bg-card border border-primary/5 rounded-[1.5rem] md:rounded-[2rem] shadow-sm space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nombre de Marca</p>
+                        <p className="text-xl md:text-2xl font-black text-primary font-headline tracking-tighter">{request.companyName || 'Sin Nombre Específico'}</p>
                     </div>
-                    <div className="p-8 bg-card border border-primary/5 rounded-[2rem] shadow-sm space-y-2">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Sector / Industria</p>
-                        <Badge className="text-lg font-bold bg-primary/10 text-primary border-none px-4 py-2 rounded-2xl">
+                    <div className="p-5 md:p-8 bg-card border border-primary/5 rounded-[1.5rem] md:rounded-[2rem] shadow-sm space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sector / Industria</p>
+                        <Badge className="text-base md:text-lg font-bold bg-primary/10 text-primary border-none px-3 md:px-4 py-1.5 rounded-2xl">
                             {request.industry}
                         </Badge>
                     </div>
                   </div>
 
-                  <div className="group p-10 bg-gradient-to-br from-primary/5 to-transparent border border-primary/10 rounded-[3rem] shadow-inner">
+                  <div className="group p-6 md:p-10 bg-gradient-to-br from-primary/5 to-transparent border border-primary/10 rounded-[2rem] md:rounded-[3rem] shadow-inner">
                     <div className="flex items-center gap-3 mb-6">
                        <Target className="w-5 h-5 text-primary" />
                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ADN del Negocio y Actividad</h3>
@@ -479,13 +458,13 @@ export default function RequestDetailPage() {
 
                 {/* Sección: Metas y Aspiraciones */}
                 <section className="space-y-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-3xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
-                      <Target className="w-7 h-7" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl md:rounded-3xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+                      <Target className="w-5 h-5 md:w-7 md:h-7" />
                     </div>
                     <div>
-                      <h2 className="text-3xl font-headline font-black text-foreground tracking-tight">Objetivos Estratégicos</h2>
-                      <p className="text-muted-foreground font-medium">Lo que el cliente busca lograr con Kairos.</p>
+                      <h2 className="text-xl md:text-3xl font-headline font-black text-foreground tracking-tight">Objetivos Estratégicos</h2>
+                      <p className="text-muted-foreground font-medium text-sm md:text-base">Lo que el cliente busca lograr con Kairos.</p>
                     </div>
                   </div>
 
@@ -528,7 +507,7 @@ export default function RequestDetailPage() {
                   </div>
 
                   {/* Motivación */}
-                  <div className="p-10 bg-primary/10 rounded-[3rem] border border-primary/20 relative overflow-hidden group">
+                  <div className="p-6 md:p-10 bg-primary/10 rounded-[2rem] md:rounded-[3rem] border border-primary/20 relative overflow-hidden group">
                     <div className="relative z-10">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-4 opacity-70">Factor de Conversión / Dolores</p>
                         <h3 className="text-2xl font-black text-primary leading-tight font-headline">

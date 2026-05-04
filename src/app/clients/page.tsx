@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Contact, Loader2, Search, AlertTriangle, TrendingUp, MoreVertical, Receipt, LayoutDashboard, ExternalLink, Mail, MessageCircle, List, LayoutGrid, CheckCircle2, Filter, ChevronDown, FolderArchive } from "lucide-react";
+import { Plus, Contact, Loader2, Search, AlertTriangle, TrendingUp, MoreVertical, Receipt, LayoutDashboard, ExternalLink, Mail, MessageCircle, List, LayoutGrid, CheckCircle2, Filter, ChevronDown, FolderArchive, SlidersHorizontal, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -56,6 +57,7 @@ export default function ClientsPage() {
   const [planFilter, setPlanFilter] = useState<'all' | 'active' | 'none' | 'onboarding' | 'recurring' | 'archived'>('all');
   const [financialFilter, setFinancialFilter] = useState<'all' | 'upToDate' | 'pending' | 'overdue' | 'suspended'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
 
@@ -331,157 +333,175 @@ export default function ClientsPage() {
 
 
 
+  const activeFilterCount = (planFilter !== 'all' ? 1 : 0) + (financialFilter !== 'all' ? 1 : 0);
+
   return (
     <div className="space-y-6">
 
+      {/* Mobile Filter Sheet */}
+      <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl pb-8">
+          <SheetHeader className="mb-4">
+            <SheetTitle className="text-left">Filtros de Clientes</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Categoría de Plan</p>
+              <div className="grid grid-cols-2 gap-2">
+                {(['all', 'active', 'onboarding', 'recurring', 'none'] as const).map((f) => (
+                  <Button key={f} variant={planFilter === f ? 'default' : 'outline'} size="sm"
+                    className="h-10 rounded-xl text-xs justify-start"
+                    onClick={() => setPlanFilter(f)}>
+                    {f === 'all' ? '🔵 Todos' : f === 'active' ? '📈 Con Plan' : f === 'onboarding' ? '🚀 Onboarding' : f === 'recurring' ? '🔄 Recurrente' : '👤 Sin Plan'}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Estado Financiero</p>
+              <div className="grid grid-cols-2 gap-2">
+                {(['all', 'upToDate', 'pending', 'overdue', 'suspended'] as const).map((f) => (
+                  <Button key={f} variant={financialFilter === f ? 'default' : 'outline'} size="sm"
+                    className="h-10 rounded-xl text-xs justify-start"
+                    onClick={() => setFinancialFilter(f)}>
+                    {f === 'all' ? '🔵 Todos' : f === 'upToDate' ? '✅ Al Día' : f === 'pending' ? '⏳ Pendiente' : f === 'overdue' ? '🔴 En Mora' : '🚫 Suspendido'}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="pt-2 border-t border-border/40">
+              <Button
+                variant={planFilter === 'archived' ? 'secondary' : 'outline'}
+                className={`w-full h-10 rounded-xl text-sm gap-2 ${planFilter === 'archived' ? 'bg-red-500/10 text-red-600 border-red-500/30' : ''}`}
+                onClick={() => setPlanFilter(planFilter === 'archived' ? 'all' : 'archived')}>
+                <FolderArchive className="w-4 h-4" /> {planFilter === 'archived' ? 'Viendo Archivados' : 'Ver Archivados'}
+              </Button>
+            </div>
+          </div>
+          <SheetFooter className="mt-6">
+            <Button className="w-full h-11 rounded-xl" onClick={() => setIsFilterSheetOpen(false)}>Aplicar Filtros</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
       <Card className="border-none shadow-none bg-transparent">
         <CardHeader className="px-0 pt-0">
-          <CardTitle>Fichas de Cliente</CardTitle>
-          <CardDescription>Gestiona datos de contacto, tarifas y estados de facturación de tus clientes registrados.</CardDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle>Fichas de Cliente</CardTitle>
+              <CardDescription className="mt-1">Gestiona datos de contacto, tarifas y estados de facturación.</CardDescription>
+            </div>
+            {/* Mobile: Nuevo Cliente button */}
+            <Button onClick={() => setIsCreateClientOpen(true)} size="sm"
+              className="shrink-0 sm:hidden gap-1.5 bg-primary h-9 px-3 rounded-xl font-bold">
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-col gap-4 flex-1">
-                {/* Top Row: Search and View Mode */}
-                <div className="flex items-center gap-4">
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="client-search-bar"
-                      name="client-search-bar"
-                      placeholder="Buscar por nombre, email o empresa..."
-                      className="pl-10 h-10 bg-card border-border/50 focus:border-primary/50 transition-all rounded-lg"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 border-l pl-4 border-border/50">
-                    <Button
-                      variant={viewMode === 'grid' ? 'default' : 'outline'}
-                      size="icon"
-                      className="h-10 w-10 rounded-lg transition-all"
-                      onClick={() => setViewMode('grid')}
-                      title="Vista de Tarjetas"
-                    >
-                      <LayoutGrid className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'list' ? 'default' : 'outline'}
-                      size="icon"
-                      className="h-10 w-10 rounded-lg transition-all"
-                      onClick={() => setViewMode('list')}
-                      title="Vista de Lista"
-                    >
-                      <List className="w-5 h-5" />
-                    </Button>
-                  </div>
-                </div>
+          <div className="flex flex-col gap-4">
 
-                {/* Bottom Row: Filters and Action */}
-                <div className="flex flex-wrap items-center justify-between gap-4 w-full">
-                  <div className="flex flex-wrap items-center gap-2 p-1 bg-muted/30 border border-border/40 rounded-xl">
-                    {/* Plan Group */}
-                    <div className="flex items-center gap-1.5 px-2 py-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Filtros:</span>
-                      
-                      {/* Plan Filters Dropdown */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-9 text-xs gap-2 rounded-lg bg-background border-border/50 hover:bg-accent/50 transition-all shadow-sm">
-                            <LayoutDashboard className="w-3.5 h-3.5 text-primary" />
-                            <span className="font-medium">Plan:</span>
-                            <span className="font-bold text-primary">
-                              {planFilter === 'all' ? 'Todos' : 
-                               planFilter === 'active' ? 'Con Plan' : 
-                               planFilter === 'onboarding' ? 'Onboarding' : 
-                               planFilter === 'recurring' ? 'Recurrente' : 
-                               planFilter === 'none' ? 'Sin Plan' : 'Todos'}
-                            </span>
-                            <ChevronDown className="w-3 h-3 opacity-50" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56 p-1">
-                          <DropdownMenuLabel className="text-[10px] px-2 py-1.5 uppercase tracking-widest opacity-50 font-bold">Categoría de Plan</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setPlanFilter('all')} className="gap-2 rounded-md">
-                            <List className="w-4 h-4" /> Ver Todos los Clientes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setPlanFilter('active')} className="gap-2 rounded-md">
-                            <TrendingUp className="w-4 h-4 text-blue-500" /> Clientes con Plan Activo
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setPlanFilter('onboarding')} className="gap-2 rounded-md">
-                            <LayoutDashboard className="w-4 h-4 text-indigo-500" /> Onboarding (Mes 1)
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setPlanFilter('recurring')} className="gap-2 rounded-md">
-                            <TrendingUp className="w-4 h-4 text-emerald-500" /> Recurrente (Mes 2+)
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setPlanFilter('none')} className="gap-2 rounded-md">
-                            <Contact className="w-4 h-4 text-muted-foreground" /> Clientes sin Plan
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+            {/* Toolbar */}
+            <div className="flex items-center gap-2">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="client-search-bar"
+                  name="client-search-bar"
+                  placeholder="Buscar clientes..."
+                  className="pl-10 h-10 bg-card border-border/50 focus:border-primary/50 transition-all rounded-lg"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoComplete="off"
+                />
+              </div>
 
-                      {/* Financial Filters Dropdown */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-9 text-xs gap-2 rounded-lg bg-background border-border/50 hover:bg-accent/50 transition-all shadow-sm">
-                            <Receipt className="w-3.5 h-3.5 text-primary" />
-                            <span className="font-medium">Estado:</span>
-                            <span className="font-bold text-primary">
-                              {financialFilter === 'all' ? 'Todos' : 
-                               financialFilter === 'upToDate' ? 'Al Día' : 
-                               financialFilter === 'pending' ? 'Pendiente' : 
-                               financialFilter === 'overdue' ? 'En Mora' : 
-                               financialFilter === 'suspended' ? 'Suspendido' : 'Todos'}
-                            </span>
-                            <ChevronDown className="w-3 h-3 opacity-50" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56 p-1">
-                          <DropdownMenuLabel className="text-[10px] px-2 py-1.5 uppercase tracking-widest opacity-50 font-bold">Estado Financiero</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setFinancialFilter('all')} className="gap-2 rounded-md">
-                            <Filter className="w-4 h-4" /> Ver Todos los Estados
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setFinancialFilter('upToDate')} className="gap-2 rounded-md">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Al Día (Pagado)
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setFinancialFilter('pending')} className="gap-2 rounded-md">
-                            <Receipt className="w-4 h-4 text-amber-500" /> Pendiente de Pago
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setFinancialFilter('overdue')} className="gap-2 rounded-md">
-                            <AlertTriangle className="w-4 h-4 text-red-500" /> En Mora (Atrasado)
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setFinancialFilter('suspended')} className="gap-2 rounded-md">
-                            <AlertTriangle className="w-4 h-4 text-zinc-900" /> Suspendido (+5 días)
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+              {/* Mobile: Filter button */}
+              <Button variant="outline" size="icon"
+                className={`sm:hidden h-10 w-10 rounded-lg shrink-0 relative ${activeFilterCount > 0 ? 'border-primary text-primary' : ''}`}
+                onClick={() => setIsFilterSheetOpen(true)}>
+                <SlidersHorizontal className="w-4 h-4" />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>
+                )}
+              </Button>
 
-                    <div className="h-6 w-px bg-border/60 mx-1" />
+              {/* Desktop: View mode + filters */}
+              <div className="hidden sm:flex items-center gap-2">
+                <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon"
+                  className="h-10 w-10 rounded-lg" onClick={() => setViewMode('grid')}>
+                  <LayoutGrid className="w-4 h-4" />
+                </Button>
+                <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon"
+                  className="h-10 w-10 rounded-lg" onClick={() => setViewMode('list')}>
+                  <List className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
 
-                    {/* Archived Toggle */}
-                    <div className="px-2">
-                      <Button
-                        variant={planFilter === 'archived' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        className={`h-9 text-xs px-4 gap-2 transition-all rounded-lg ${planFilter === 'archived' ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-500/30 shadow-sm font-bold' : 'text-muted-foreground hover:bg-red-50 hover:text-red-500'}`}
-                        onClick={() => setPlanFilter(planFilter === 'archived' ? 'all' : 'archived')}
-                      >
-                        <FolderArchive className={`w-4 h-4 ${planFilter === 'archived' ? 'text-red-600' : 'text-red-400'}`} />
-                        Archivados
+            {/* Desktop filters row */}
+            <div className="hidden sm:flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-2 p-1 bg-muted/30 border border-border/40 rounded-xl">
+                <div className="flex items-center gap-1.5 px-2 py-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Filtros:</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 text-xs gap-2 rounded-lg bg-background border-border/50 hover:bg-accent/50 transition-all shadow-sm">
+                        <LayoutDashboard className="w-3.5 h-3.5 text-primary" />
+                        <span className="font-medium">Plan:</span>
+                        <span className="font-bold text-primary">
+                          {planFilter === 'all' ? 'Todos' : planFilter === 'active' ? 'Con Plan' : planFilter === 'onboarding' ? 'Onboarding' : planFilter === 'recurring' ? 'Recurrente' : planFilter === 'none' ? 'Sin Plan' : 'Todos'}
+                        </span>
+                        <ChevronDown className="w-3 h-3 opacity-50" />
                       </Button>
-                    </div>
-                  </div>
-
-                  <Button onClick={() => setIsCreateClientOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all whitespace-nowrap h-11 px-6 rounded-xl font-bold">
-                    <Plus className="w-5 h-5" /> Nuevo Cliente
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 p-1">
+                      <DropdownMenuLabel className="text-[10px] px-2 py-1.5 uppercase tracking-widest opacity-50 font-bold">Categoría de Plan</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setPlanFilter('all')} className="gap-2 rounded-md"><List className="w-4 h-4" /> Ver Todos</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setPlanFilter('active')} className="gap-2 rounded-md"><TrendingUp className="w-4 h-4 text-blue-500" /> Con Plan Activo</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setPlanFilter('onboarding')} className="gap-2 rounded-md"><LayoutDashboard className="w-4 h-4 text-indigo-500" /> Onboarding</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setPlanFilter('recurring')} className="gap-2 rounded-md"><TrendingUp className="w-4 h-4 text-emerald-500" /> Recurrente</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setPlanFilter('none')} className="gap-2 rounded-md"><Contact className="w-4 h-4 text-muted-foreground" /> Sin Plan</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 text-xs gap-2 rounded-lg bg-background border-border/50 hover:bg-accent/50 transition-all shadow-sm">
+                        <Receipt className="w-3.5 h-3.5 text-primary" />
+                        <span className="font-medium">Estado:</span>
+                        <span className="font-bold text-primary">
+                          {financialFilter === 'all' ? 'Todos' : financialFilter === 'upToDate' ? 'Al Día' : financialFilter === 'pending' ? 'Pendiente' : financialFilter === 'overdue' ? 'En Mora' : 'Suspendido'}
+                        </span>
+                        <ChevronDown className="w-3 h-3 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 p-1">
+                      <DropdownMenuLabel className="text-[10px] px-2 py-1.5 uppercase tracking-widest opacity-50 font-bold">Estado Financiero</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setFinancialFilter('all')} className="gap-2 rounded-md"><Filter className="w-4 h-4" /> Ver Todos</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setFinancialFilter('upToDate')} className="gap-2 rounded-md"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Al Día</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setFinancialFilter('pending')} className="gap-2 rounded-md"><Receipt className="w-4 h-4 text-amber-500" /> Pendiente</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setFinancialFilter('overdue')} className="gap-2 rounded-md"><AlertTriangle className="w-4 h-4 text-red-500" /> En Mora</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setFinancialFilter('suspended')} className="gap-2 rounded-md"><AlertTriangle className="w-4 h-4 text-zinc-900" /> Suspendido</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="h-6 w-px bg-border/60 mx-1" />
+                <div className="px-2">
+                  <Button variant={planFilter === 'archived' ? 'secondary' : 'ghost'} size="sm"
+                    className={`h-9 text-xs px-4 gap-2 transition-all rounded-lg ${planFilter === 'archived' ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-500/30 shadow-sm font-bold' : 'text-muted-foreground hover:bg-red-50 hover:text-red-500'}`}
+                    onClick={() => setPlanFilter(planFilter === 'archived' ? 'all' : 'archived')}>
+                    <FolderArchive className={`w-4 h-4 ${planFilter === 'archived' ? 'text-red-600' : 'text-red-400'}`} />
+                    Archivados
                   </Button>
                 </div>
               </div>
+              <Button onClick={() => setIsCreateClientOpen(true)}
+                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all whitespace-nowrap h-11 px-6 rounded-xl font-bold">
+                <Plus className="w-5 h-5" /> Nuevo Cliente
+              </Button>
             </div>
 
             {isLoading && acceptedClients.length === 0 ? (
@@ -595,7 +615,7 @@ export default function ClientsPage() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {filteredClients.map((client) => {
                   const clientDoc = clientDocs.get(client.clientId);
                   const consumptionPercent = (clientDoc?.consumptionLimit || client.consumptionLimit) > 0

@@ -145,10 +145,10 @@ export default function Home() {
   const firstName = user?.displayName ? user.displayName.split(' ')[0] : 'Equipo';
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 overflow-x-hidden max-w-[1400px] mx-auto">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-4 overflow-x-hidden max-w-[1400px] mx-auto">
       
       {/* Header Area */}
-      <div className="flex flex-col md:flex-row justify-between items-start lg:items-end gap-6 relative">
+      <div className="flex flex-col gap-3 md:flex-row md:justify-between md:items-end relative">
         <div className="absolute top-0 left-10 w-96 h-96 bg-primary/20 rounded-full blur-[100px] -z-10 opacity-60"></div>
         <div className="absolute top-20 right-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-[100px] -z-10 opacity-50"></div>
 
@@ -156,27 +156,27 @@ export default function Home() {
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest mb-3 border border-primary/20">
              <Activity className="w-3.5 h-3.5" /> Torre de Control
           </span>
-          <h1 className="text-4xl md:text-5xl font-black font-headline tracking-tighter text-foreground mb-2">
+          <h1 className="text-3xl md:text-5xl font-black font-headline tracking-tighter text-foreground mb-1 md:mb-2">
              Hola, <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-400">{firstName}</span> 🚀
           </h1>
-          <p className="text-muted-foreground text-lg md:text-xl font-medium max-w-xl">
+          <p className="text-muted-foreground text-base md:text-xl font-medium max-w-xl">
              Bienvenido a tu hub central. Aquí tienes el pulso de las operaciones creativas y financieras.
           </p>
         </div>
         
-        <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 bg-muted/30 p-2 rounded-2xl border border-border/50 backdrop-blur-md shadow-xl">
+        <div className="flex items-center gap-1.5 w-full sm:w-auto bg-muted/30 p-2 rounded-2xl border border-border/50 backdrop-blur-md shadow-xl">
            {/* Quick Actions Mode */}
-           <Button size="sm" variant="ghost" className="rounded-xl flex-1 md:flex-none justify-start md:justify-center px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2" onClick={() => router.push('/clients')}>
-             <Users className="w-4 h-4 text-blue-500" /> Clientes
+           <Button size="sm" variant="ghost" className="flex-1 sm:flex-none rounded-xl sm:px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2 justify-center" onClick={() => router.push('/clients')}>
+             <Users className="w-4 h-4 text-blue-500" /> <span className="hidden sm:inline">Clientes</span>
            </Button>
-           <Button size="sm" variant="ghost" className="rounded-xl flex-1 md:flex-none justify-start md:justify-center px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2" onClick={() => router.push('/requests')}>
-             <Inbox className="w-4 h-4 text-amber-500" /> Leads
+           <Button size="sm" variant="ghost" className="flex-1 sm:flex-none rounded-xl sm:px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2 justify-center" onClick={() => router.push('/requests')}>
+             <Inbox className="w-4 h-4 text-amber-500" /> <span className="hidden sm:inline">Leads</span>
            </Button>
-           <Button size="sm" variant="ghost" className="rounded-xl flex-1 md:flex-none justify-start md:justify-center px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2" onClick={() => router.push('/solicitudes/create')}>
-             <FileText className="w-4 h-4 text-orange-500" /> Cotizar
+           <Button size="sm" variant="ghost" className="flex-1 sm:flex-none rounded-xl sm:px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2 justify-center" onClick={() => router.push('/solicitudes/create')}>
+             <FileText className="w-4 h-4 text-orange-500" /> <span className="hidden sm:inline">Cotizar</span>
            </Button>
-           <Button size="sm" variant="ghost" className="rounded-xl flex-1 md:flex-none justify-start md:justify-center px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2" onClick={() => router.push('/invoicing')}>
-             <Receipt className="w-4 h-4 text-emerald-500" /> Facturación
+           <Button size="sm" variant="ghost" className="flex-1 sm:flex-none rounded-xl sm:px-4 py-5 hover:bg-background/80 hover:text-primary transition-all font-bold gap-2 justify-center" onClick={() => router.push('/invoicing')}>
+             <Receipt className="w-4 h-4 text-emerald-500" /> <span className="hidden sm:inline">Facturación</span>
            </Button>
            
            <div className="w-[1px] h-8 bg-border hidden md:block mx-1"></div>
@@ -184,18 +184,18 @@ export default function Home() {
            <Button 
              size="sm" 
              variant="outline" 
-             className="rounded-xl px-4 py-5 font-bold gap-2 flex-1 md:flex-none" 
+             className="flex-1 sm:flex-none rounded-xl sm:px-4 py-5 font-bold gap-2 justify-center" 
              onClick={() => fetchDashboardData(true)}
              disabled={isLoading || isRefreshing}
            >
              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} /> 
-             <span className="hidden md:inline">Refrescar</span>
+             <span className="hidden sm:inline">Refrescar</span>
            </Button>
         </div>
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         
         <Card className="border-border/40 shadow-sm bg-card/40 backdrop-blur-md relative overflow-hidden group hover:border-primary/30 transition-all hover:-translate-y-1 duration-300">
           <div className="absolute top-0 right-0 p-4 opacity-10 blur-xl group-hover:opacity-30 transition-opacity bg-primary w-24 h-24 rounded-bl-full"></div>
@@ -261,7 +261,7 @@ export default function Home() {
 
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
         {/* Main Analytics Chart */}
         <Card className="md:col-span-2 border-border/40 shadow-sm bg-card/40 backdrop-blur-md flex flex-col">
           <CardHeader className="pb-0 border-b border-white/5 mb-4">
@@ -273,7 +273,7 @@ export default function Home() {
              </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 pb-6 pt-2">
-             <div className="h-[280px] w-full">
+             <div className="h-[220px] md:h-[280px] w-full">
                {isLoading ? (
                   <div className="w-full h-full flex items-center justify-center bg-primary/5 rounded-xl border border-primary/10">
                      <span className="animate-pulse text-primary font-bold">Analizando datos históricos...</span>

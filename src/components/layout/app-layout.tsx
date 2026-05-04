@@ -311,10 +311,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset className="h-screen overflow-hidden flex flex-col">
         {pageTitle ? (
-          <header className="sticky top-0 z-50 flex h-20 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6 md:px-8">
-              <SidebarTrigger className="md:hidden" />
-              <div className="flex-1">
-                  <h1 className="text-2xl font-bold font-headline">
+          <header className="sticky top-0 z-50 flex h-16 md:h-20 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6 md:px-8">
+              <SidebarTrigger />
+              <div className="flex-1 min-w-0">
+                  <h1 className="text-lg md:text-2xl font-bold font-headline truncate">
                       {pageTitle}
                   </h1>
                   {isNearBilling && !isBillingDismissed && (
@@ -336,13 +336,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </Button>
                     </div>
                   )}
-                  {pathname === '/' && <p className="text-sm text-muted-foreground">Visión general de las métricas de producción y rutas críticas actuales.</p>}
+                  {pathname === '/' && <p className="hidden sm:block text-sm text-muted-foreground">Visión general de las métricas de producción y rutas críticas actuales.</p>}
               </div>
               {/* Notification Center — visible en todas las páginas internas */}
               <NotificationCenter />
           </header>
         ) : null}
-        <main className={`flex-1 min-h-0 ${isCreativeSuite ? 'overflow-y-auto' : 'p-4 sm:p-6 md:p-8 overflow-y-auto'}`}>
+        <main className={`flex-1 min-h-0 ${isCreativeSuite ? 'overflow-y-auto' : 'p-3 sm:p-6 md:p-8 overflow-y-auto'}`}>
             {children}
         </main>
       </SidebarInset>
