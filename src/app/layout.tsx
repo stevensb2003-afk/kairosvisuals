@@ -21,7 +21,10 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: 'Kairos Visuals',
   description: 'Sistema central de Kairos Visuals',
-  manifest: '/manifest.json'
+  manifest: '/manifest.json',
+  icons: {
+    apple: '/kv_app_logo.png',
+  },
 };
 
 export default function RootLayout({

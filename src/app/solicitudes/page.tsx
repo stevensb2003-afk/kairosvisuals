@@ -1,319 +1,41 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useState } from 'react';
 import Link from "next/link";
-import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  FilePlus2, Search, Filter, MoreHorizontal, Edit, Trash2, 
-  FileText, CheckCircle2, Clock, AlertCircle, Loader2,
-  ArrowRight, Check, Share2, X, Download, Printer, Receipt,
-  User, Mail, Phone, Building2
-} from "lucide-react";
-import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, deleteDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
-import { acceptQuotationClient } from '@/lib/billing_utils';
-import { formatCurrency, cn } from '@/lib/utils';
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { FilePlus2, Search, Filter, FileText, Loader2 } from "lucide-react";
+import { cn } from '@/lib/utils';
 import { Input } from "@/components/ui/input";
-import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from "@/components/ui/table";
-import { 
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { 
-  Dialog, DialogContent, DialogDescription, DialogTitle 
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
-import { CartaTemplate } from '@/components/invoicing/DocumentTemplates';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { Quotation } from '@/lib/types';
-
+import { useQuotationsList } from './_hooks/useQuotationsList';
+import { QuotationsTable } from './_components/QuotationsTable';
+import { QuotationPreviewDialog } from './_components/QuotationPreviewDialog';
 
 export default function SolicitudesPage() {
-  const router = useRouter();
-  const firestore = useFirestore();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [companySettings, setCompanySettings] = useState<any>(null);
+  const {
+    loading,
+    quotations,
+    searchTerm,
+    setSearchTerm,
+    statusFilter,
+    setStatusFilter,
+    companySettings,
+    isExporting,
+    isAccepting,
+    handleDelete,
+    handlePublish,
+    handleAccept,
+    handleShare,
+    handleDownload
+  } = useQuotationsList();
+
   const [previewQuotation, setPreviewQuotation] = useState<Quotation | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isAccepting, setIsAccepting] = useState<string | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
-  const [openClientCard, setOpenClientCard] = useState<string | null>(null);
-  const clientCardRef = useRef<HTMLDivElement | null>(null);
-  const [cardPosition, setCardPosition] = useState<{ top: number; left: number } | null>(null);
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Close the inline client card when clicking outside
-  useEffect(() => {
-    if (!openClientCard) return;
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (clientCardRef.current && !clientCardRef.current.contains(e.target as Node)) {
-        setOpenClientCard(null);
-      }
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [openClientCard]);
-
-  // Safety fix for "Ghost Overlay" issue
-  useEffect(() => {
-    if (!isPreviewOpen && isMounted) {
-      // If the dialog is closed, ensure the body is not stuck in pointer-events: none
-      const timer = setTimeout(() => {
-        if (typeof document !== 'undefined') {
-          if (document.body.style.pointerEvents === 'none') {
-            document.body.style.pointerEvents = '';
-            document.body.style.overflow = '';
-          }
-        }
-      }, 400); // Wait for Radix animations to finish
-      return () => clearTimeout(timer);
-    }
-  }, [isPreviewOpen, isMounted]);
-
-  useEffect(() => {
-    async function fetchQuotations() {
-      if (!firestore) return;
-      
-      try {
-        setLoading(true);
-        
-        // Step 1: Fetch all clients
-        const clientsSnapshot = await getDocs(collection(firestore, 'clients'));
-        const allQuotations: Quotation[] = [];
-        const clientsMap = new Map();
-        
-        clientsSnapshot.docs.forEach(doc => {
-          clientsMap.set(doc.id, { id: doc.id, ...doc.data() });
-        });
-        
-        // Step 2: Fetch quotations for each client
-        // This avoids collectionGroup index issues and handles "missing collection" scenarios
-        await Promise.all(clientsSnapshot.docs.map(async (clientDoc) => {
-          const quotesSnapshot = await getDocs(collection(firestore, 'clients', clientDoc.id, 'quotations'));
-          quotesSnapshot.docs.forEach(qDoc => {
-            const data = qDoc.data();
-            allQuotations.push({
-              id: qDoc.id,
-              clientId: clientDoc.id,
-              clientCompany: clientDoc.data().company || null,
-              clientData: clientsMap.get(clientDoc.id),
-              ...data
-            } as any);
-          });
-        }));
-        
-        // Sort in memory (Newest first)
-        allQuotations.sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return dateB - dateA;
-        });
-
-        setQuotations(allQuotations);
-      } catch (error) {
-        console.error("Error fetching quotations:", error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar las propuestas. Verifica tu conexión.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchQuotations();
-
-    async function loadSettings() {
-      if (!firestore) return;
-      const settingsSnap = await getDoc(doc(firestore, 'settings', 'general'));
-      if (settingsSnap.exists()) {
-        setCompanySettings(settingsSnap.data());
-      }
-    }
-    loadSettings();
-  }, [firestore, toast]);
-
-  const filteredQuotations = quotations.filter(q => {
-    const matchesSearch = 
-      q.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (q.quotationNumber && String(q.quotationNumber).includes(searchTerm));
-    
-    const matchesStatus = statusFilter === 'all' || q.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-slate-200 uppercase text-[10px] font-bold">Borrador</Badge>;
-      case 'published':
-        return <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 uppercase text-[10px] font-bold tracking-wider">Enviada</Badge>;
-      case 'accepted':
-        return <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 uppercase text-[10px] font-bold tracking-wider">Aceptada</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive" className="uppercase text-[10px] font-bold tracking-wider">Rechazada</Badge>;
-      case 'superseded':
-        return <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 uppercase text-[10px] font-bold tracking-wider">Superada</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const handleDelete = async (quotation: Quotation) => {
-    if (!firestore || !confirm("¿Estás seguro de que deseas eliminar esta propuesta?")) return;
-    
-    try {
-      await deleteDoc(doc(firestore, 'clients', quotation.clientId, 'quotations', quotation.id));
-      setQuotations(prev => prev.filter(q => q.id !== quotation.id));
-      toast({ title: "Eliminado", description: "La propuesta ha sido eliminada." });
-    } catch (e) {
-      console.error(e);
-      toast({ title: "Error", description: "No se pudo eliminar la propuesta.", variant: "destructive" });
-    }
-  };
-
-  const handlePublish = async (quotation: Quotation) => {
-    if (!firestore || !confirm("¿Deseas publicar esta propuesta y marcarla como enviada?")) return;
-    
-    try {
-      await updateDoc(doc(firestore, 'clients', quotation.clientId, 'quotations', quotation.id), {
-        status: 'published',
-        updatedAt: new Date().toISOString()
-      });
-      
-      setQuotations(prev => prev.map(q => 
-        q.id === quotation.id ? { ...q, status: 'published' } : q
-      ));
-      
-      toast({ title: "Publicada", description: "La propuesta ahora está marcada como enviada." });
-    } catch (e) {
-      console.error(e);
-      toast({ title: "Error", description: "No se pudo publicar la propuesta.", variant: "destructive" });
-    }
-  };
-
-  const handleAccept = async (quotation: Quotation) => {
-    if (!firestore || !confirm("¿Confirmas la aceptación de esta propuesta y la generación de la factura correspondiente?")) return;
-    
-    setIsAccepting(quotation.id || null);
-    try {
-      const invoiceId = await acceptQuotationClient(
-        firestore, 
-        quotation, 
-        { id: quotation.clientId, clientName: quotation.clientName }, 
-        quotation.isPlanUpdate
-      );
-      
-      setQuotations(prev => prev.map(q => 
-        q.id === quotation.id ? { ...q, status: 'accepted' } : q
-      ));
-      
-      if (invoiceId) {
-        toast({ title: "¡Trato Cerrado!", description: `Propuesta aceptada. Factura borrador generada con éxito.` });
-      } else {
-        toast({ title: "¡Actualización Confirmada!", description: "El plan ha sido actualizado correctamente. El cobro aplicará en el próximo ciclo." });
-      }
-    } catch (e: any) {
-      console.error(e);
-      toast({ title: "Error", description: e.message || "No se pudo aceptar la propuesta ni generar la factura.", variant: "destructive" });
-    } finally {
-      setIsAccepting(null);
-    }
-  };
-
-  const generatePdfBlob = async (elementId: string, qNum: string) => {
-    const element = document.getElementById(elementId);
-    if (!element) throw new Error("Plantilla no encontrada");
-
-    const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-    const imgData = canvas.toDataURL('image/png');
-
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    const pdfBlob = pdf.output('blob');
-    const fileName = `Cotizacion_${qNum}.pdf`;
-    
-    return { pdfBlob, fileName };
-  };
-
-  const handleShare = async (quotation: any) => {
-    if (!quotation) return;
-    setIsExporting(true);
-    try {
-      const qNum = quotation.quotationNumber || quotation.id;
-      const { pdfBlob, fileName } = await generatePdfBlob('print-area-preview', qNum);
-
-      if (navigator.share && navigator.canShare) {
-        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: `Cotizacion ${quotation.title}`,
-            text: `Adjunto envío la cotización`,
-            files: [file]
-          });
-          toast({ title: 'Cotización compartida' });
-          return;
-        }
-      }
-      
-      toast({ title: 'Compartir no soportado', description: 'Tu navegador no soporta compartir archivos directamente. Por favor descarga el PDF.', variant: 'destructive' });
-
-    } catch (err) {
-      console.error(err);
-      toast({ title: 'Error al compartir', variant: 'destructive' });
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleDownload = async (quotation: any) => {
-    if (!quotation) return;
-    setIsExporting(true);
-    try {
-      const qNum = quotation.quotationNumber || quotation.id;
-      const { pdfBlob, fileName } = await generatePdfBlob('print-area-preview', qNum);
-
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast({ title: 'Cotización descargada' });
-
-    } catch (err) {
-      console.error(err);
-      toast({ title: 'Error al descargar', variant: 'destructive' });
-    } finally {
-      setIsExporting(false);
-    }
+  const handlePreview = (q: Quotation) => {
+    setPreviewQuotation(q);
+    setIsPreviewOpen(true);
   };
 
   return (
@@ -373,7 +95,7 @@ export default function SolicitudesPage() {
             <p className="text-muted-foreground animate-pulse font-medium">Cargando propuestas comerciales...</p>
           </CardContent>
         </Card>
-      ) : filteredQuotations.length === 0 ? (
+      ) : quotations.length === 0 ? (
         <Card className="border-2 border-dashed bg-muted/10">
           <CardContent className="flex flex-col items-center justify-center h-80 text-center p-8">
             <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-6">
@@ -388,7 +110,7 @@ export default function SolicitudesPage() {
             {!(searchTerm || statusFilter !== 'all') && (
               <Link href="/solicitudes/create">
                 <Button variant="outline" className="rounded-full px-8 border-primary/20 text-primary hover:bg-primary/5 font-bold">
-                  <Plus className="mr-2 w-4 h-4" /> Crear mi primera propuesta
+                  <FilePlus2 className="mr-2 w-4 h-4" /> Crear mi primera propuesta
                 </Button>
               </Link>
             )}
@@ -396,303 +118,26 @@ export default function SolicitudesPage() {
         </Card>
       ) : (
         <Card className="overflow-hidden border-border/50 shadow-sm rounded-2xl">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="hover:bg-transparent border-b-border/50">
-                  <TableHead className="w-[80px] font-bold text-xs uppercase tracking-wider pl-6"># Cotiz.</TableHead>
-                  <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider">Fecha</TableHead>
-                  <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider">Vence</TableHead>
-                  <TableHead className="w-[220px] font-bold text-xs uppercase tracking-wider">Cliente</TableHead>
-                  <TableHead className="min-w-[200px] font-bold text-xs uppercase tracking-wider">Título de Propuesta</TableHead>
-                  <TableHead className="w-[120px] text-right font-bold text-xs uppercase tracking-wider pr-4">Total</TableHead>
-                  <TableHead className="w-[120px] text-center font-bold text-xs uppercase tracking-wider">Estado</TableHead>
-                  <TableHead className="w-[140px] text-right font-bold text-xs uppercase tracking-wider pr-6">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredQuotations.map((q) => (
-                  <TableRow key={q.id} className="group hover:bg-primary/[0.01] border-b-border/40 transition-colors">
-                    <TableCell className="pl-6 whitespace-nowrap min-w-[80px]">
-                      <span className="font-bold text-primary text-xs">
-                        {q.quotationNumber ? String(q.quotationNumber).padStart(4, '0') : '—'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="font-medium text-muted-foreground whitespace-nowrap">
-                      {new Date(q.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
-                    </TableCell>
-                    <TableCell className="font-medium text-muted-foreground whitespace-nowrap">
-                      {q.validUntil ? new Date(q.validUntil).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      {/* Inline non-modal client info card — uses portal to escape overflow */}
-                      <div className="relative">
-                        <button
-                          className="flex flex-col items-start text-left group/client w-full"
-                          onClick={(e) => {
-                            if (openClientCard === q.id) {
-                              setOpenClientCard(null);
-                              setCardPosition(null);
-                            } else {
-                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                              setCardPosition({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX });
-                              setOpenClientCard(q.id);
-                            }
-                          }}
-                        >
-                          <span className={cn(
-                            "font-bold leading-none mb-1 transition-colors",
-                            openClientCard === q.id ? "text-primary" : "text-foreground group-hover/client:text-primary"
-                          )}>
-                            {q.clientName || 'Cliente sin nombre'}
-                          </span>
-                          {(q as any).clientCompany && (
-                            <span className="text-[11px] font-medium text-slate-400 mb-0.5">{(q as any).clientCompany}</span>
-                          )}
-                          <span className="text-[11px] text-muted-foreground">{q.clientEmail}</span>
-                        </button>
-                      </div>
-
-                      {/* Portal card rendered at body level — escapes all overflow:hidden parents */}
-                      {openClientCard === q.id && cardPosition && isMounted && ReactDOM.createPortal(
-                        <div
-                          ref={clientCardRef}
-                          style={{ position: 'absolute', top: cardPosition.top, left: cardPosition.left }}
-                          className="z-[9999] w-72 rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-slate-950/95 backdrop-blur-md animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150"
-                        >
-                          {/* Header */}
-                          <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-slate-900/80">
-                            <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                              <User className="w-4 h-4 text-primary" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-sm text-white truncate">{q.clientName || 'Cliente'}</p>
-                              {(q as any).clientCompany && (
-                                <p className="text-[11px] text-muted-foreground truncate">{(q as any).clientCompany}</p>
-                              )}
-                            </div>
-                          </div>
-                          {/* Info rows */}
-                          <div className="px-4 py-3 space-y-2.5">
-                            <div className="flex items-center gap-2.5">
-                              <Mail className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                              <span className="text-xs text-slate-300 truncate">{q.clientEmail || 'Sin correo'}</span>
-                            </div>
-                            <div className="flex items-center gap-2.5">
-                              <Phone className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                              <span className="text-xs text-slate-300">{(q as any).clientData?.clientPhone || (q as any).clientData?.phone || 'Sin teléfono'}</span>
-                            </div>
-                            {(q as any).clientCompany && (
-                              <div className="flex items-center gap-2.5">
-                                <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                                <span className="text-xs text-slate-300 truncate">{(q as any).clientCompany}</span>
-                              </div>
-                            )}
-                          </div>
-                          {/* CTA */}
-                          <div className="px-4 pb-4">
-                            <button
-                              className="w-full text-xs font-bold text-primary border border-primary/30 rounded-xl py-2 hover:bg-primary/10 transition-colors"
-                              onClick={(e) => { e.stopPropagation(); setOpenClientCard(null); router.push(`/clients/${q.clientId}`); }}
-                            >
-                              Ver Perfil Completo →
-                            </button>
-                          </div>
-                        </div>,
-                        document.body
-                      )}
-                    </TableCell>
-                    <TableCell className="font-semibold text-slate-700">
-                      <div className="flex items-center gap-2">
-                        <span>{q.title || 'Propuesta sin título'}</span>
-                        {q.version > 1 && <Badge variant="outline" className="text-[10px] py-0 h-4 bg-muted/50 border-muted-foreground/20">v{q.version}</Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-black text-primary text-right pr-4">
-                      {formatCurrency(q.totalAmount)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {getStatusBadge(q.status)}
-                    </TableCell>
-                    <TableCell className="text-right pr-4">
-                      <div className="flex justify-end gap-1 transition-all">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className={cn("h-9 w-9 rounded-full", q.status === 'accepted' ? "opacity-50 cursor-not-allowed" : "hover:text-primary hover:bg-primary/10")}
-                          onClick={() => q.status !== 'accepted' && router.push(`/solicitudes/create?quotationId=${q.id}&clientId=${q.clientId}`)}
-                          disabled={q.status === 'accepted'}
-                          title={q.status === 'accepted' ? 'No se puede editar una propuesta aceptada' : 'Editar Propuesta'}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl border-border/50">
-                            <DropdownMenuItem 
-                              className="cursor-pointer rounded-lg gap-2 font-medium"
-                              onClick={() => {
-                                setPreviewQuotation(q);
-                                setIsPreviewOpen(true);
-                              }}
-                            >
-                              <FileText className="w-4 h-4 text-muted-foreground" /> Ver Detalles
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-destructive focus:text-destructive cursor-pointer rounded-lg gap-2 font-medium"
-                              onClick={() => handleDelete(q)}
-                            >
-                              <Trash2 className="w-4 h-4" /> Eliminar Propuesta
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        {q.status === 'draft' && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-full transition-all shadow-sm text-emerald-600 hover:bg-emerald-50 bg-emerald-50/30 border border-emerald-100 hover:scale-110" 
-                            onClick={() => handlePublish(q)}
-                            title="Confirmar y Publicar"
-                          >
-                            <Check className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {q.status === 'published' && (
-                          <Button 
-                            variant="default" 
-                            size="sm" 
-                            className="h-9 rounded-full transition-all shadow-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs" 
-                            onClick={() => handleAccept(q)}
-                            disabled={isAccepting === q.id}
-                            title="Confirmar y Facturar"
-                          >
-                            {isAccepting === q.id ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
-                            Facturar
-                          </Button>
-                        )}
-                        {q.status === 'accepted' && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-9 rounded-full transition-all text-muted-foreground hover:text-primary hover:bg-primary/10 text-xs font-semibold" 
-                            onClick={() => router.push('/invoicing')}
-                            title="Ver en Facturación"
-                          >
-                            <Receipt className="w-4 h-4 mr-1" />
-                            Facturas
-                          </Button>
-                        )}
-                        {['superseded', 'rejected'].includes(q.status) && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-full transition-all shadow-sm text-primary hover:bg-primary/10" 
-                            onClick={() => router.push(`/solicitudes/create?quotationId=${q.id}&clientId=${q.clientId}`)}
-                            title="Ver Propuesta"
-                          >
-                            <ArrowRight className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <QuotationsTable 
+            quotations={quotations}
+            isAccepting={isAccepting}
+            onPreview={handlePreview}
+            onDelete={handleDelete}
+            onPublish={handlePublish}
+            onAccept={handleAccept}
+          />
         </Card>
       )}
 
-      {/* Preview Modal */}
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-[850px] max-h-[95vh] p-0 overflow-hidden rounded-2xl border-none shadow-2xl bg-slate-950 select-none">
-          {previewQuotation && (
-            <div className="flex flex-col h-full bg-slate-950 text-white selection:bg-primary/30">
-              <div className="flex justify-between items-center p-4 bg-slate-900 border-b border-white/10 sticky top-0 z-50 backdrop-blur-md">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border border-primary/40 shadow-inner">
-                    <FileText className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <DialogTitle className="font-bold text-lg leading-tight text-white tracking-tight">
-                      {previewQuotation.title}
-                    </DialogTitle>
-                    <DialogDescription className="text-xs text-muted-foreground font-medium">
-                      {previewQuotation.clientName} • {formatCurrency(previewQuotation.totalAmount)}
-                    </DialogDescription>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full text-muted-foreground hover:text-white hover:bg-white/10 h-9 w-9"
-                    onClick={() => handleShare(previewQuotation)}
-                    disabled={isExporting}
-                    title="Compartir"
-                  >
-                    {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-                  </Button>
-                  <Button 
-                    variant="default" 
-                    size="icon" 
-                    className="rounded-full shadow-lg shadow-primary/10 transition-transform active:scale-95 h-9 w-9"
-                    onClick={() => handleDownload(previewQuotation)}
-                    disabled={isExporting}
-                    title="Descargar PDF"
-                  >
-                    <Download className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full w-8 h-8 ml-2 hover:bg-white/10 hover:text-white" 
-                    onClick={() => setIsPreviewOpen(false)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              <ScrollArea className="flex-1 p-4 sm:p-8 bg-black/40">
-                <div id="print-area-preview" className="shadow-2xl mx-auto bg-white overflow-hidden origin-top scale-[0.7] sm:scale-100 mb-20 rounded-sm" style={{ width: '800px' }}>
-                  <CartaTemplate 
-                    invoice={previewQuotation} 
-                    client={{ 
-                      clientName: (previewQuotation as any).clientName || (previewQuotation as any).clientData?.clientName || 'Cliente', 
-                      company: (previewQuotation as any).clientCompany || (previewQuotation as any).clientData?.company,
-                      contactEmail: (previewQuotation as any).clientEmail || (previewQuotation as any).clientData?.clientEmail || '',
-                      contactPhone: (previewQuotation as any).clientPhone || (previewQuotation as any).clientData?.clientPhone || ''
-                    }} 
-                    settings={companySettings} 
-                  />
-                </div>
-              </ScrollArea>
-
-              <div className="p-4 bg-slate-900 border-t border-white/5 flex justify-between items-center sm:hidden">
-                <Button 
-                  variant="outline" 
-                  className="w-full rounded-full gap-2 border-white/10 hover:bg-white/5 text-white"
-                  onClick={() => handleShare(previewQuotation)}
-                  disabled={isExporting}
-                >
-                  <Share2 className="w-4 h-4" />
-                  Compartir Propuesta
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
+      <QuotationPreviewDialog 
+        isOpen={isPreviewOpen}
+        setIsOpen={setIsPreviewOpen}
+        quotation={previewQuotation}
+        companySettings={companySettings}
+        isExporting={isExporting}
+        onShare={handleShare}
+        onDownload={handleDownload}
+      />
     </div>
   );
 }
-
-const Plus = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-);

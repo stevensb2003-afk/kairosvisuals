@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Laptop, Plus, Search, HelpCircle, HardDrive, ChevronLeft } from 'lucide-react';
+import { Laptop, Plus, Search, ChevronLeft, Loader2, HelpCircle, HardDrive } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore } from '@/firebase';
 import { query, collection, onSnapshot, orderBy, where } from 'firebase/firestore';
@@ -14,173 +12,180 @@ import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ExpenseDialog } from '@/components/finance/expense-dialog';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const calcValue = (amount: number, date: string) => {
+  const years = differenceInDays(new Date(), new Date(date)) / 365.25;
+  return amount * Math.max(0, 1 - years * 0.2);
+};
+
+const depreciationPct = (amount: number, date: string) =>
+  Math.min(100, (differenceInDays(new Date(), new Date(date)) / 365.25) * 20);
+
+// ─── Asset card row ───────────────────────────────────────────────────────────
+function AssetRow({ asset }: { asset: Expense }) {
+  const currentValue = calcValue(asset.amount, asset.date);
+  const deprPct = depreciationPct(asset.amount, asset.date);
+  const retainedPct = Math.max(0, 100 - deprPct);
+
+  return (
+    <div className="py-4 border-b border-border/50 last:border-0 space-y-2">
+      {/* Top row */}
+      <div className="flex items-start gap-3">
+        <div className="shrink-0 w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+          <Laptop className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{asset.description}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-xs text-muted-foreground">
+              {asset.date ? format(new Date(asset.date), 'dd MMM yyyy', { locale: es }) : '—'}
+            </span>
+            {asset.vendor && (
+              <span className="text-xs text-muted-foreground">· {asset.vendor}</span>
+            )}
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+              asset.isRecurring
+                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+            }`}>
+              {asset.isRecurring ? 'Crédito' : 'Contado'}
+            </span>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+            ₡{Math.round(currentValue).toLocaleString('es-CR')}
+          </p>
+          <p className="text-[10px] text-muted-foreground line-through">
+            ₡{asset.amount.toLocaleString('es-CR')}
+          </p>
+        </div>
+      </div>
+
+      {/* Depreciation bar */}
+      <div className="pl-13 space-y-1 ml-13" style={{ marginLeft: '52px' }}>
+        <div className="flex justify-between text-[10px] text-muted-foreground">
+          <span>Valor retenido</span>
+          <span className="font-medium text-emerald-600 dark:text-emerald-400">{Math.round(retainedPct)}%</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-700"
+            style={{ width: `${retainedPct}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AssetsPage() {
+  const firestore = useFirestore();
   const [assets, setAssets] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const firestore = useFirestore();
 
   useEffect(() => {
     if (!firestore) return;
-
-    try {
-      // Query to get expenses marked as assets (activo)
-      const q = query(
-        collection(firestore, 'expenses'),
-        where('expenseType', '==', 'activo'),
-        orderBy('date', 'desc')
-      );
-
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
-        setAssets(data);
-        setLoading(false);
-      }, (error) => {
-        console.error("Error fetching assets:", error);
-        setLoading(false);
-      });
-
-      return () => unsubscribe();
-    } catch (error) {
-      console.error("Firebase query error:", error);
+    const q = query(
+      collection(firestore, 'expenses'),
+      where('expenseType', '==', 'activo'),
+      orderBy('date', 'desc')
+    );
+    return onSnapshot(q, (snap) => {
+      setAssets(snap.docs.map(d => ({ id: d.id, ...d.data() } as Expense)));
       setLoading(false);
-    }
+    }, () => setLoading(false));
   }, [firestore]);
 
-  const calculateCurrentValue = (amount: number, date: string) => {
-    const acquisitionDate = new Date(date);
-    const today = new Date();
-    const daysElapsed = differenceInDays(today, acquisitionDate);
-    const yearsElapsed = daysElapsed / 365.25;
-    const depreciationRate = 0.20; // 20% annual
-    
-    const value = amount * Math.max(0, 1 - (yearsElapsed * depreciationRate));
-    return value;
-  };
+  const filtered = useMemo(() =>
+    assets.filter(a =>
+      a.description.toLowerCase().includes(search.toLowerCase()) ||
+      (a.vendor?.toLowerCase().includes(search.toLowerCase()))
+    ), [assets, search]);
 
-  const filteredAssets = assets.filter(asset => 
-    asset.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (asset.vendor && asset.vendor.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  const totalValue = filteredAssets.reduce((acc, current) => acc + current.amount, 0);
-  const totalCurrentValue = filteredAssets.reduce((acc, current) => acc + calculateCurrentValue(current.amount, current.date), 0);
+  const totalOriginal = filtered.reduce((s, a) => s + a.amount, 0);
+  const totalCurrent = filtered.reduce((s, a) => s + calcValue(a.amount, a.date), 0);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Link href="/finance">
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <h1 className="text-2xl font-bold font-headline flex items-center gap-2">
-              <Laptop className="w-6 h-6 text-emerald-500" />
-              Activos y Equipo
-            </h1>
-          </div>
-          <p className="text-muted-foreground text-sm ml-11">Inventario de hardware de la empresa, valorización y amortización.</p>
+    <div className="max-w-2xl mx-auto space-y-4 pb-24 animate-in fade-in duration-500">
+
+      {/* Header */}
+      <div className="flex items-center gap-3 pt-2">
+        <Link href="/finance">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full shrink-0">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+        </Link>
+        <div className="flex-1">
+          <h1 className="text-xl font-bold font-headline flex items-center gap-2">
+            <Laptop className="w-5 h-5 text-emerald-500" /> Activos y Equipo
+          </h1>
+          <p className="text-xs text-muted-foreground">Inventario y amortización 20% anual</p>
         </div>
-        <Button className="shrink-0 group" onClick={() => setIsDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" /> Añadir Equipo
+        <Button size="sm" onClick={() => setIsDialogOpen(true)} className="shrink-0">
+          <Plus className="w-4 h-4 mr-1" /> Añadir
         </Button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-card p-4 rounded-xl border border-border/50 shadow-sm">
-        <div className="relative w-full sm:w-[300px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar por equipo o marca..." 
-            className="pl-9 bg-background"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-card border border-border/50 rounded-2xl p-3">
+          <div className="flex items-center gap-1.5 mb-1">
+            <HardDrive className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Costo original</span>
+          </div>
+          <p className="text-lg font-bold">₡{Math.round(totalOriginal).toLocaleString('es-CR')}</p>
         </div>
-        <div className="flex items-center gap-4 w-full sm:w-auto">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground border-r pr-4 border-border">
-            <HardDrive className="w-4 h-4" /> Registros: <span className="font-bold text-foreground">{filteredAssets.length}</span>
+        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-3">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Laptop className="w-3.5 h-3.5 text-emerald-500" />
+            <span className="text-xs text-emerald-600 dark:text-emerald-400">Valor real hoy</span>
           </div>
-          <div className="bg-muted px-4 py-2 rounded-md font-semibold whitespace-nowrap text-sm">
-            Costo Orig: ₡{totalValue.toLocaleString('es-CR')}
-          </div>
-          <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-md font-semibold whitespace-nowrap">
-            Valor Real: ₡{totalCurrentValue.toLocaleString('es-CR', { maximumFractionDigits: 0 })}
-          </div>
+          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+            ₡{Math.round(totalCurrent).toLocaleString('es-CR')}
+          </p>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Fecha Adquisición</TableHead>
-                <TableHead>Equipo / Descripción</TableHead>
-                <TableHead>Proveedor</TableHead>
-                <TableHead>Tipo Adquisición</TableHead>
-                <TableHead className="text-right">Costo Original</TableHead>
-                <TableHead className="text-right">Valor Actual (-20% anual)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Cargando inventario...
-                  </TableCell>
-                </TableRow>
-              ) : filteredAssets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12">
-                    <div className="flex flex-col items-center justify-center text-muted-foreground">
-                      <Laptop className="w-8 h-8 mb-4 opacity-20" />
-                      <p>El inventario de activos está vacío.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAssets.map((asset) => (
-                  <TableRow key={asset.id} className="hover:bg-muted/50 cursor-pointer transition-colors">
-                     <TableCell className="font-medium">
-                      {asset.date ? format(new Date(asset.date), 'dd MMM yyyy', { locale: es }) : 'N/A'}
-                    </TableCell>
-                    <TableCell className="font-medium">{asset.description}</TableCell>
-                    <TableCell className="text-muted-foreground">{asset.vendor || '-'}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-medium ${asset.isRecurring ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300' : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'}`}>
-                        {asset.isRecurring ? 'A Crédito / Cuotas' : 'Contado'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ₡{asset.amount.toLocaleString('es-CR')}
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-400">
-                      ₡{calculateCurrentValue(asset.amount, asset.date).toLocaleString('es-CR', { maximumFractionDigits: 0 })}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-      
-      <div className="bg-emerald-500/5 rounded-lg p-4 flex items-start gap-4 mt-8 border border-emerald-500/10">
-          <HelpCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-          <div className="text-sm text-muted-foreground text-balance">
-              <p className="font-medium text-foreground mb-1">Amortización Aplicada</p>
-              El sistema calcula automáticamente una depreciación lineal del 20% anual basándose en la fecha de adquisición. Este valor es orientativo para control interno de activos de la empresa.
-          </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar equipo o marca..."
+          className="pl-9"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
-      <ExpenseDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen} 
-        type="activo" 
-      />
+      {/* List */}
+      <div className="bg-card rounded-2xl border border-border/50 px-4">
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center py-14 text-muted-foreground gap-3">
+            <Laptop className="w-10 h-10 opacity-20" />
+            <p className="text-sm">{search ? 'Sin resultados' : 'Inventario vacío'}</p>
+          </div>
+        ) : (
+          filtered.map(a => <AssetRow key={a.id} asset={a} />)
+        )}
+      </div>
+
+      {/* Note */}
+      <div className="flex items-start gap-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3">
+        <HelpCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Depreciación lineal 20% anual</span> — aplicada automáticamente desde la fecha de adquisición. Es orientativo para control interno.
+        </p>
+      </div>
+
+      <ExpenseDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} type="activo" />
     </div>
   );
 }
