@@ -33,7 +33,7 @@ export function PlansTab({ plans, services, calculatePlanTotal, onDelete }: Prop
           </thead>
           <tbody className="divide-y">
             {plans.map(plan => (
-              <tr key={plan.id} className="hover:bg-muted/30 transition-colors">
+              <tr key={plan.id} className="hover:bg-muted/40 cursor-pointer transition-colors" onClick={() => router.push(`/services/plans/${plan.id}`)}>
                 <td className="px-4 py-3">
                   <div>
                     <p className="font-bold text-sm">{plan.name}</p>
@@ -51,10 +51,10 @@ export function PlansTab({ plans, services, calculatePlanTotal, onDelete }: Prop
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => router.push(`/services/plans/${plan.id}/edit`)}>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); router.push(`/services/plans/${plan.id}/edit`); }}>
                       <Edit className="h-4 w-4 text-muted-foreground" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(plan.id)}>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(plan.id); }}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -68,7 +68,7 @@ export function PlansTab({ plans, services, calculatePlanTotal, onDelete }: Prop
       {/* ── Mobile Cards ──────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:hidden">
         {plans.map(plan => (
-          <div key={plan.id} className="rounded-xl border bg-card p-4 space-y-3 shadow-sm">
+          <div key={plan.id} className="rounded-xl border bg-card p-4 space-y-3 shadow-sm cursor-pointer hover:border-primary/30 hover:shadow-md transition-all" onClick={() => router.push(`/services/plans/${plan.id}`)}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-bold text-sm truncate">{plan.name}</p>
@@ -79,11 +79,11 @@ export function PlansTab({ plans, services, calculatePlanTotal, onDelete }: Prop
               <div className="flex gap-1 shrink-0">
                 <Button
                   variant="ghost" size="icon" className="h-8 w-8"
-                  onClick={() => router.push(`/services/plans/${plan.id}/edit`)}
+                  onClick={(e) => { e.stopPropagation(); router.push(`/services/plans/${plan.id}/edit`); }}
                 >
                   <Edit className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(plan.id)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onDelete(plan.id); }}>
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                 </Button>
               </div>
