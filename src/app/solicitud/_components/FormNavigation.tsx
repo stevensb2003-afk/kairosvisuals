@@ -81,16 +81,13 @@ export function FormNavigation({
                 key={i}
                 animate={{
                   width: currentStep === i + 1 ? 28 : 8,
-                  backgroundColor:
-                    currentStep > i + 1
-                      ? 'hsl(var(--primary))'
-                      : currentStep === i + 1
-                      ? 'hsl(var(--primary))'
-                      : 'hsl(var(--muted-foreground) / 0.3)',
-                  opacity: currentStep >= i + 1 ? 1 : 0.5,
+                  opacity: currentStep >= i + 1 ? 1 : 0.4,
                 }}
                 transition={{ duration: 0.35, ease: 'easeInOut' }}
-                className="h-2 rounded-full"
+                className={cn(
+                  "h-2 rounded-full transition-colors duration-300",
+                  currentStep >= i + 1 ? "bg-primary" : "bg-muted-foreground/30"
+                )}
               />
             ))}
           </div>

@@ -50,8 +50,8 @@ export default function SolicitudPage() {
       <div className="fixed -top-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-primary/8 blur-[160px] pointer-events-none z-0" />
       <div className="fixed -bottom-[20%] -left-[10%] w-[40%] h-[40%] rounded-full bg-accent/5 blur-[120px] pointer-events-none z-0" />
 
-      {/* Sidebar — transparent on mobile so global bg shines through, card bg on desktop */}
-      <div className="w-full lg:w-[340px] xl:w-[380px] bg-transparent lg:bg-card/80 border-b lg:border-b-0 lg:border-r border-border/40 px-5 py-4 sm:px-7 sm:py-5 lg:p-10 xl:p-12 flex flex-col relative z-30 shrink-0 lg:backdrop-blur-sm sticky top-0 lg:static">
+      {/* Sidebar — Glassmorphism on mobile for sticky header, card bg on desktop */}
+      <div className="w-full lg:w-[340px] xl:w-[380px] bg-background/95 backdrop-blur-md lg:bg-card/80 border-b lg:border-b-0 lg:border-r border-border/40 px-5 py-4 sm:px-7 sm:py-5 lg:p-10 xl:p-12 flex flex-col relative z-30 shrink-0 lg:backdrop-blur-sm sticky top-0 lg:static">
         {/* Logo */}
         <div
           className="flex items-center gap-3 mb-5 lg:mb-14 group cursor-pointer"
