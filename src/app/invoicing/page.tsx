@@ -13,13 +13,15 @@ import {
 } from 'date-fns';
 import {
   Receipt, Plus, FileText, CheckCircle, Search,
-  SlidersHorizontal, Loader2, ArrowUpRight, RefreshCw, Users
+  SlidersHorizontal, Loader2, ArrowUpRight, RefreshCw, Users, Clock, X
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PremiumDatePicker } from '@/components/ui/premium-date-picker';
 import { cn, formatCurrency } from '@/lib/utils';
 
 import { STATUS_CONFIG } from './_utils/status';
@@ -151,10 +153,14 @@ export default function InvoicingPage() {
 
   const stats = useMemo(() => {
     const valid = filteredInvoices.filter(i => i.status !== 'cancelled' && i.status !== 'draft');
+    const totalInvoiced = valid.reduce((s, i) => s + (i.totalAmount || 0), 0);
+    const totalReceived = valid.reduce((s, i) => s + (i.amountPaid || 0), 0);
+
     return {
       totalClients: clients?.filter((c: any) => !c.isArchived).length || 0,
-      totalInvoiced: valid.reduce((s, i) => s + (i.totalAmount || 0), 0),
-      totalReceived: valid.reduce((s, i) => s + (i.amountPaid || 0), 0),
+      totalInvoiced,
+      totalReceived,
+      totalPending: totalInvoiced - totalReceived,
     };
   }, [clients, filteredInvoices]);
 
@@ -177,59 +183,76 @@ export default function InvoicingPage() {
       </div>
 
       {/* ── Hero KPI Cards ──────────────────────────────────────────────────── */}
-      {/* "Facturado" is the hero, takes full width; Recibido + Clientes split below */}
-      <div className="space-y-2.5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         {/* Hero: Facturado */}
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden relative">
+        <Card className="col-span-2 lg:col-span-1 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden relative">
           <CardContent className="pt-4 pb-4 px-5 flex items-center justify-between gap-4">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-widest text-primary/70 mb-1">
                 Total Facturado
               </p>
-              <p className="text-3xl sm:text-4xl font-black tabular-nums text-primary leading-none">
+              <p className="text-3xl sm:text-4xl lg:text-3xl xl:text-4xl font-black tabular-nums text-primary leading-none">
                 {formatCurrency(stats.totalInvoiced)}
               </p>
               <p className="text-xs text-muted-foreground mt-1.5">
                 {filteredInvoices.filter(i => i.status !== 'cancelled' && i.status !== 'draft').length} facturas activas
               </p>
             </div>
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Receipt className="w-7 h-7 text-primary" />
+            <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Receipt className="w-6 h-6 lg:w-7 h-7 text-primary" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Secondary: Recibido + Clientes */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <Card className="border-emerald-500/20 bg-emerald-500/5">
-            <CardContent className="pt-3 pb-3 px-4">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1.5">
-                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-                Recibido
-              </div>
-              <p className="text-xl sm:text-2xl font-black tabular-nums text-emerald-600 leading-none">
-                {formatCurrency(stats.totalReceived)}
+        {/* Secondary: Recibido */}
+        <Card className="col-span-1 border-emerald-500/20 bg-emerald-500/5">
+          <CardContent className="pt-3 pb-3 px-4">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1.5">
+              <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+              Recibido
+            </div>
+            <p className="text-xl sm:text-2xl font-black tabular-nums text-emerald-600 leading-none">
+              {formatCurrency(stats.totalReceived)}
+            </p>
+            {stats.totalInvoiced > 0 && (
+              <p className="text-[10px] text-emerald-600/60 mt-1 font-medium">
+                {Math.round((stats.totalReceived / stats.totalInvoiced) * 100)}% cobrado
               </p>
-              {stats.totalInvoiced > 0 && (
-                <p className="text-[10px] text-emerald-600/60 mt-1 font-medium">
-                  {Math.round((stats.totalReceived / stats.totalInvoiced) * 100)}% cobrado
-                </p>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="border-blue-500/20 bg-blue-500/5">
-            <CardContent className="pt-3 pb-3 px-4">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-500 mb-1.5">
-                <Users className="w-3.5 h-3.5 shrink-0" />
-                Clientes
-              </div>
-              <p className="text-4xl font-black tabular-nums text-blue-500 leading-none">
-                {stats.totalClients}
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Secondary: Por cobrar */}
+        <Card className="col-span-1 border-amber-500/20 bg-amber-500/5">
+          <CardContent className="pt-3 pb-3 px-4">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1.5">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              Por Cobrar
+            </div>
+            <p className="text-xl sm:text-2xl font-black tabular-nums text-amber-600 leading-none">
+              {formatCurrency(stats.totalPending)}
+            </p>
+            {stats.totalInvoiced > 0 && (
+              <p className="text-[10px] text-amber-600/60 mt-1 font-medium">
+                {Math.round((stats.totalPending / stats.totalInvoiced) * 100)}% pendiente
               </p>
-              <p className="text-[10px] text-blue-500/60 mt-1 font-medium">activos</p>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Secondary: Clientes */}
+        <Card className="col-span-2 lg:col-span-1 border-blue-500/20 bg-blue-500/5">
+          <CardContent className="pt-3 pb-3 px-4">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-500 mb-1.5">
+              <Users className="w-3.5 h-3.5 shrink-0" />
+              Clientes
+            </div>
+            <p className="text-3xl sm:text-4xl lg:text-3xl xl:text-4xl font-black tabular-nums text-blue-500 leading-none">
+              {stats.totalClients}
+            </p>
+            <p className="text-[10px] text-blue-500/60 mt-1 font-medium">activos</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* ── Invoice List ─────────────────────────────────────────────────────── */}
@@ -249,7 +272,9 @@ export default function InvoicingPage() {
         </div>
 
         {/* ── Search + Filter Bar ──────────────────────────────────────────── */}
-        <div className="flex gap-2">
+
+        {/* Mobile: search + sheet trigger */}
+        <div className="flex gap-2 lg:hidden">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
@@ -278,33 +303,80 @@ export default function InvoicingPage() {
           </Button>
         </div>
 
-        {/* Active filter pills — desktop summary */}
-        {activeFilterCount > 0 && (
-          <div className="hidden sm:flex items-center gap-2 flex-wrap">
-            {statusFilter !== 'all' && (
-              <Badge variant="secondary" className="gap-1.5 text-xs font-medium">
-                {STATUS_CONFIG[statusFilter]?.label || statusFilter}
-              </Badge>
-            )}
-            {datePreset !== 'thisMonth' && datePreset !== 'custom' && (
-              <Badge variant="secondary" className="gap-1.5 text-xs font-medium">
-                {{
-                  thisWeek: 'Esta Semana',
-                  thisYear: 'Este Año',
-                  lastWeek: 'Sem. Pasada',
-                  lastMonth: 'Mes Pasado',
-                  lastYear: 'Año Anterior',
-                }[datePreset] || datePreset}
-              </Badge>
-            )}
-            <button
-              onClick={handleResetFilters}
-              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-            >
-              Limpiar
-            </button>
+        {/* Desktop: full inline filter toolbar */}
+        <div className="hidden lg:flex items-center gap-2">
+          {/* Search */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar factura o cliente..."
+              className="pl-9 bg-card/60 border-border/40 h-9"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
           </div>
-        )}
+
+          {/* Period preset */}
+          <Select value={datePreset} onValueChange={setDatePreset}>
+            <SelectTrigger className="h-9 w-[130px] shrink-0 bg-card/60 border-border/40 text-sm">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="thisWeek">Esta Semana</SelectItem>
+              <SelectItem value="thisMonth">Este Mes</SelectItem>
+              <SelectItem value="thisYear">Este Año</SelectItem>
+              <SelectItem value="lastWeek">Sem. Pasada</SelectItem>
+              <SelectItem value="lastMonth">Mes Pasado</SelectItem>
+              <SelectItem value="lastYear">Año Anterior</SelectItem>
+              <SelectItem value="custom">Rango custom</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Date range pickers */}
+          <PremiumDatePicker
+            date={startDate}
+            onSelect={(d) => { setStartDate(d); setDatePreset('custom'); }}
+            placeholder="Desde"
+            className="w-[120px] shrink-0 h-9"
+          />
+          <PremiumDatePicker
+            date={endDate}
+            onSelect={(d) => { setEndDate(d); setDatePreset('custom'); }}
+            placeholder="Hasta"
+            className="w-[120px] shrink-0 h-9"
+          />
+
+          {/* Status */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-9 w-[130px] shrink-0 bg-card/60 border-border/40 text-sm">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                <SelectItem key={key} value={key}>
+                  <span className="flex items-center gap-1.5">
+                    {cfg.icon}
+                    {cfg.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Reset button — only when filters are active */}
+          {activeFilterCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 gap-1.5 shrink-0 text-muted-foreground hover:text-foreground px-2.5"
+              onClick={handleResetFilters}
+            >
+              <X className="w-3.5 h-3.5" />
+              Limpiar
+            </Button>
+          )}
+        </div>
 
         {/* List Content */}
         {isLoadingInvoices ? (

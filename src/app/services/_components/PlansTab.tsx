@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Layers, ExternalLink } from 'lucide-react';
+import { Edit, Trash2, Layers, ExternalLink, Copy } from 'lucide-react';
 import { PredefinedPlan, ProductOrService } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -51,6 +51,9 @@ export function PlansTab({ plans, services, calculatePlanTotal, onDelete }: Prop
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon" title="Duplicar" onClick={(e) => { e.stopPropagation(); router.push(`/services/plans/create?duplicateId=${plan.id}`); }}>
+                      <Copy className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); router.push(`/services/plans/${plan.id}/edit`); }}>
                       <Edit className="h-4 w-4 text-muted-foreground" />
                     </Button>
@@ -77,6 +80,12 @@ export function PlansTab({ plans, services, calculatePlanTotal, onDelete }: Prop
                 </p>
               </div>
               <div className="flex gap-1 shrink-0">
+                <Button
+                  variant="ghost" size="icon" className="h-8 w-8"
+                  onClick={(e) => { e.stopPropagation(); router.push(`/services/plans/create?duplicateId=${plan.id}`); }}
+                >
+                  <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
                 <Button
                   variant="ghost" size="icon" className="h-8 w-8"
                   onClick={(e) => { e.stopPropagation(); router.push(`/services/plans/${plan.id}/edit`); }}

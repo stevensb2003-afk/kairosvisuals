@@ -128,7 +128,7 @@ export default function PlanViewPage() {
         <div className="flex items-start gap-3">
           <Button
             variant="ghost" size="icon"
-            onClick={() => router.push('/services')}
+            onClick={() => router.push('/services?tab=plans')}
             className="rounded-full shrink-0 mt-0.5"
           >
             <ArrowLeft className="w-5 h-5" />

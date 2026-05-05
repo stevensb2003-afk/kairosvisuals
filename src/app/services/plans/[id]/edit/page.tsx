@@ -53,7 +53,7 @@ export default function EditPlanPage() {
           setItems((planData.items || []).map(item => ({ ...item, id: crypto.randomUUID() })));
         } else {
           toast({ title: "Error", description: "El plan solicitado no existe.", variant: "destructive" });
-          router.push('/services');
+          router.push('/services?tab=plans');
         }
       } catch (e) {
         console.error("Error loading plan:", e);
@@ -134,7 +134,7 @@ export default function EditPlanPage() {
         name: planName, description: planDescription, items: cleanItems, updatedAt: serverTimestamp()
       });
       toast({ title: "¡Actualizado!", description: "Cambios guardados correctamente." });
-      router.push('/services');
+      router.push('/services?tab=plans');
     } catch (e) {
       console.error("Error updating plan:", e);
       toast({ title: "Error", description: "No se pudo actualizar el plan.", variant: "destructive" });
@@ -157,7 +157,7 @@ export default function EditPlanPage() {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full shrink-0">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/services?tab=plans')} className="rounded-full shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
@@ -166,7 +166,7 @@ export default function EditPlanPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 ml-11 sm:ml-0">
-          <Button variant="outline" size="sm" onClick={() => router.back()}>Cancelar</Button>
+          <Button variant="outline" size="sm" onClick={() => router.push('/services?tab=plans')}>Cancelar</Button>
           <Button size="sm" onClick={handleSave} disabled={isSaving} className="shadow-lg shadow-primary/20 gap-2">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Actualizar Plan

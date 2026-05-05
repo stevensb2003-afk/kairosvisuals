@@ -1,20 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { ArrowLeft, Save, Plus, Trash2, Loader2, Package, Layers, Info } from "lucide-react";
 import { useFirestore } from '@/firebase';
 import { collection, doc, getDoc, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useToast } from "@/hooks/use-toast";
+import { useToast, toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatCurrency } from '@/lib/utils';
-import { ProductOrService, PlanItem } from '@/lib/types';
+import { ProductOrService, PlanItem, PredefinedPlan } from '@/lib/types';
 
 // We use a local interface that matches what we'll save in predefined_plans
 interface InternalPlanItem extends PlanItem {
@@ -24,7 +24,8 @@ interface InternalPlanItem extends PlanItem {
 export default function CreatePlanPage() {
   const router = useRouter();
   const firestore = useFirestore();
-  const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const duplicateId = searchParams.get('duplicateId');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -48,7 +49,8 @@ export default function CreatePlanPage() {
       if (!firestore) return;
       try {
         const servicesSnap = await getDocs(collection(firestore, 'services'));
-        const _services = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ProductOrService));
+        const _services = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ProductOrService))
+          .sort((a, b) => a.name.localeCompare(b.name));
         setServices(_services);
       } catch (e) {
         console.error("Error loading services:", e);
@@ -59,6 +61,33 @@ export default function CreatePlanPage() {
     }
     loadData();
   }, [firestore]);
+
+  // Handle Duplication
+  useEffect(() => {
+    async function loadDuplicateData() {
+      if (!firestore || !duplicateId) return;
+      
+      try {
+        const planSnap = await getDoc(doc(firestore, 'predefined_plans', duplicateId));
+        if (planSnap.exists()) {
+          const planData = planSnap.data() as PredefinedPlan;
+          setPlanName(`Copia de ${planData.name}`);
+          setPlanDescription(planData.description || '');
+          if (planData.items) {
+            setItems(planData.items.map(item => ({
+              ...item,
+              id: crypto.randomUUID()
+            })));
+          }
+          toast({ title: "Modo Duplicación", description: `Cargando datos de "${planData.name}"` });
+        }
+      } catch (e) {
+        console.error("Error loading duplicate plan:", e);
+        toast({ title: "Error", description: "No se pudo cargar el plan a duplicar.", variant: "destructive" });
+      }
+    }
+    loadDuplicateData();
+  }, [firestore, duplicateId]);
 
   const addItem = () => {
     setItems([...items, {
@@ -167,7 +196,7 @@ export default function CreatePlanPage() {
       });
       
       toast({ title: "¡Éxito!", description: "El plan predeterminado ha sido creado." });
-      router.push('/services');
+      router.push('/services?tab=plans');
     } catch (e) {
       console.error("Error saving plan:", e);
       toast({ title: "Error", description: "No se pudo guardar el plan.", variant: "destructive" });
@@ -190,7 +219,7 @@ export default function CreatePlanPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full shrink-0">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/services?tab=plans')} className="rounded-full shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
@@ -199,7 +228,7 @@ export default function CreatePlanPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 ml-11 sm:ml-0">
-          <Button variant="outline" size="sm" onClick={() => router.back()}>Cancelar</Button>
+          <Button variant="outline" size="sm" onClick={() => router.push('/services?tab=plans')}>Cancelar</Button>
           <Button size="sm" onClick={handleSave} disabled={isSaving} className="shadow-lg shadow-primary/20 gap-2">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Guardar Plan

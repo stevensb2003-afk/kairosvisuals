@@ -122,7 +122,8 @@ export function useQuoteBuilder() {
         }
 
         const servicesSnap = await getDocs(collection(firestore, 'services'));
-        setServices(servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ProductOrService)));
+        const servicesList = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ProductOrService));
+        setServices(servicesList.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
 
         const leadsSnap = await getDocs(collection(firestore, 'requests'));
         const pendingClientIds = new Set(
@@ -148,10 +149,11 @@ export function useQuoteBuilder() {
           })
           .filter(c => !pendingClientIds.has(c.id) && !c.isArchived);
 
-        setAllClients(officialClients);
+        setAllClients(officialClients.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
 
         const plansSnap = await getDocs(collection(firestore, 'predefined_plans'));
-        setPredefinedPlans(plansSnap.docs.map(d => ({ id: d.id, ...d.data() } as PredefinedPlan)));
+        const plansList = plansSnap.docs.map(d => ({ id: d.id, ...d.data() } as PredefinedPlan));
+        setPredefinedPlans(plansList.sort((a, b) => (a.name || '').localeCompare(b.name || '')));
       } catch (e) {
         console.error("Error loading initial data:", e);
       }

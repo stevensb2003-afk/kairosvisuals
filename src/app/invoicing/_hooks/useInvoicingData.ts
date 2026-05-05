@@ -79,11 +79,29 @@ export function useInvoicingData() {
     return map;
   }, [clients, usersData]);
 
+  // Sorted Lists
+  const sortedServices = useMemo(() => {
+    if (!services) return [];
+    return [...services].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [services]);
+
+  const sortedPlans = useMemo(() => {
+    if (!predefinedPlans) return [];
+    return [...predefinedPlans].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [predefinedPlans]);
+
+  const sortedClients = useMemo(() => {
+    if (!clients) return [];
+    return [...clients].sort((a, b) => (
+      (a.clientName || a.name || '').localeCompare(b.clientName || b.name || '')
+    ));
+  }, [clients]);
+
   return {
-    clients,
+    clients: sortedClients,
     usersData,
-    services,
-    predefinedPlans,
+    services: sortedServices,
+    predefinedPlans: sortedPlans,
     settings,
     clientMap,
     isLoading: isLoadingClients || isLoadingUsers || isLoadingServices || isLoadingPlans || isLoadingSettings

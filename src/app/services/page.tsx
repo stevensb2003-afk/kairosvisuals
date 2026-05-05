@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Package, Layers, Search, X, Plus, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,9 @@ export default function ServicesPage() {
   const router = useRouter();
   const data = useServicesData();
 
-  const [activeTab, setActiveTab] = useState('services');
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'services';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [serviceSearch, setServiceSearch] = useState('');
   const [planSearch, setPlanSearch] = useState('');
 
@@ -26,20 +28,26 @@ export default function ServicesPage() {
 
   const filteredServices = useMemo(() => {
     if (!data.services) return [];
-    if (!serviceSearch.trim()) return data.services;
-    const q = serviceSearch.toLowerCase();
-    return data.services.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      s.description?.toLowerCase().includes(q) ||
-      s.pricingModel.toLowerCase().includes(q) ||
-      s.packages?.some(p => p.name.toLowerCase().includes(q))
-    );
+    let result = [...data.services];
+    if (serviceSearch.trim()) {
+      const q = serviceSearch.toLowerCase();
+      result = result.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        s.description?.toLowerCase().includes(q) ||
+        s.pricingModel.toLowerCase().includes(q) ||
+        s.packages?.some(p => p.name.toLowerCase().includes(q))
+      );
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
   }, [data.services, serviceSearch]);
 
   const filteredPlans = useMemo(() => {
     if (!data.plans) return [];
-    if (!planSearch.trim()) return data.plans;
-    return data.plans.filter(p => p.name.toLowerCase().includes(planSearch.toLowerCase()));
+    let result = [...data.plans];
+    if (planSearch.trim()) {
+      result = result.filter(p => p.name.toLowerCase().includes(planSearch.toLowerCase()));
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
   }, [data.plans, planSearch]);
 
   const isLoadingAny = data.isLoading || data.isLoadingPlans;
@@ -68,7 +76,7 @@ export default function ServicesPage() {
       </div>
 
       {/* ── Tabs ────────────────────────────────────────────────────────── */}
-      <Tabs defaultValue="services" onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full max-w-sm grid-cols-2 h-11">
           <TabsTrigger value="services" className="h-full flex items-center gap-2 text-xs sm:text-sm">
             <Package className="w-4 h-4" />
