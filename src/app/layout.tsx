@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   description: 'Sistema central de Kairos Visuals',
   manifest: '/manifest.json',
   icons: {
+    icon: '/logo.svg',
     apple: '/kv_app_logo.png',
   },
 };
